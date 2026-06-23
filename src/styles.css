@@ -23,3 +23,267 @@ app-root {
   flex-direction: column;
   height: 100vh;
 }
+
+.mat-menu-panel.column-filter-menu-panel {
+  min-width: 220px !important;
+  max-width: 360px !important;
+  background: rgb(255, 255, 255) !important;
+  color: rgb(29, 30, 32) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-menu-content {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px 4px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-toolbar .mat-button {
+  min-width: auto;
+  padding: 0 8px;
+  line-height: 28px;
+  font-size: 12px;
+  color: inherit;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-divider {
+  border-top-color: rgba(0, 0, 0, 0.12);
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-options {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0 8px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-option {
+  padding: 0 12px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .column-filter-option .mat-checkbox {
+  width: 100%;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-label {
+  color: inherit !important;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
+  border-color: rgba(0, 0, 0, 0.54) !important;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background {
+  background-color: rgb(29, 30, 32) !important;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
+  stroke: rgb(255, 255, 255) !important;
+}
+
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel {
+  background: rgb(29, 30, 32) !important;
+  color: rgba(255, 255, 255, 0.87) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-divider {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .column-filter-title,
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .column-filter-toolbar .mat-button {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
+  border-color: rgba(255, 255, 255, 0.54) !important;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background {
+  background-color: rgb(235, 235, 235) !important;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
+  stroke: rgb(29, 30, 32) !important;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-advanced {
+  padding: 8px 12px 4px;
+  font-family: sans-serif;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-input-wide {
+  width: 100%;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-separator {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-apply,
+.mat-menu-panel.column-filter-menu-panel .ip-filter-clear {
+  min-width: auto;
+  padding: 0;
+  line-height: 24px;
+  font-size: 12px;
+  align-self: flex-start;
+}
+
+.mat-menu-panel.column-filter-menu-panel .ip-filter-error {
+  font-size: 12px;
+  color: #c62828;
+  margin-bottom: 4px;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-input {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.mat-menu-panel.column-filter-menu-panel .path-filter-advanced {
+  padding: 8px 12px 4px;
+  font-family: sans-serif;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
+  color: #ef9a9a;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-advanced {
+  padding: 8px 12px 4px;
+  font-family: sans-serif;
+  min-width: 280px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-range-label {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-input-wide {
+  width: 100%;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-apply,
+.mat-menu-panel.column-filter-menu-panel .time-filter-clear {
+  min-width: auto;
+  padding: 0;
+  line-height: 24px;
+  font-size: 12px;
+  align-self: flex-start;
+}
+
+.mat-menu-panel.column-filter-menu-panel .time-filter-error {
+  font-size: 12px;
+  color: #c62828;
+  margin-bottom: 4px;
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .time-filter-input {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+body.dark-theme .mat-menu-panel.column-filter-menu-panel .time-filter-error {
+  color: #ef9a9a;
+}

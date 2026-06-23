@@ -10,6 +10,10 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { AngularSplitModule } from 'angular-split';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDividerModule } from '@angular/material/divider';
+
 
 @NgModule({
   declarations: [],
@@ -27,6 +31,9 @@ import { MatDialogModule } from '@angular/material/dialog';
     AngularSplitModule,
     MatProgressBarModule,
     MatDialogModule,
+    MatMenuModule,
+    MatCheckboxModule,
+    MatDividerModule,
   ]
 })
 export class AngularMaterialModule { }

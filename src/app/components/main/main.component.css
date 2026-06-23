@@ -12,7 +12,39 @@ tr.mat-footer-row {
 }
 
 tr.mat-header-row {
-  height: 30px;
+  height: 36px;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.column-header .mat-sort-header-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.column-filter-button {
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.54;
+}
+
+.column-filter-button mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+.column-filter-button.filter-active {
+  opacity: 1;
 }
 
 .mat-table .mat-cell,
@@ -227,4 +259,5 @@ as-split>as-split-area>div>button {
     background-color: #ff6f00;
     outline-color: #ffab40;
   }
+
 }
