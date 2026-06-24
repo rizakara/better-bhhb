@@ -30,6 +30,23 @@ export interface BurpExport {
   }
 }
 
+interface SaveFilePickerOptions {
+  suggestedName?: string;
+  types?: Array<{
+    description?: string;
+    accept: Record<string, string[]>;
+  }>;
+}
+
+interface FileSystemWritableFileStream {
+  write(data: Blob | string): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface FileSystemFileHandle {
+  createWritable(): Promise<FileSystemWritableFileStream>;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -149,7 +166,7 @@ export class FileHandleService {
     this.emitSelectedFileData();
   }
 
-  saveAs(scope: 'all' | 'filtered' = 'all'): void {
+  async saveAs(scope: 'all' | 'filtered' = 'all'): Promise<void> {
     if (!this.selectedFileContent) {
       throw new Error('No data to save. Open or merge a file first.');
     }
@@ -176,12 +193,11 @@ export class FileHandleService {
     });
     const xml = builder.buildObject({ items: exportContent.items });
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = downloadName;
-    anchor.click();
-    URL.revokeObjectURL(url);
+
+    const savedWithPicker = await this.tryShowSaveFilePicker(blob, downloadName);
+    if (!savedWithPicker) {
+      this.downloadBlob(blob, downloadName);
+    }
   }
 
   private async parseFile(file: File): Promise<any> {
@@ -363,5 +379,50 @@ export class FileHandleService {
     const rawName = (this.selectedFileName ?? 'burp-export').trim();
     const withoutExtension = rawName.replace(/\.xml$/i, '');
     return `${withoutExtension}-filtered-${visibleCount}.xml`;
+  }
+
+  private async tryShowSaveFilePicker(blob: Blob, suggestedName: string): Promise<boolean> {
+    const showSaveFilePicker = (window as Window & {
+      showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+    }).showSaveFilePicker;
+
+    if (!showSaveFilePicker) {
+      return false;
+    }
+
+    try {
+      const handle = await showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'Burp XML export',
+          accept: {
+            'application/xml': ['.xml'],
+            'text/xml': ['.xml'],
+          },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return true;
+      }
+      console.warn('Native save dialog unavailable, falling back to download.', error);
+      return false;
+    }
+  }
+
+  private downloadBlob(blob: Blob, downloadName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = downloadName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
 }

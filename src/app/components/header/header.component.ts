@@ -64,12 +64,13 @@ export class HeaderComponent implements OnInit {
   }
 
   saveCurrentFile(scope: 'all' | 'filtered' = 'all'): void {
-    try {
-      this.FileHandleService.saveAs(scope);
-    } catch (err) {
+    void this.FileHandleService.saveAs(scope).catch((err) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to save file.');
-    }
+    });
   }
 
   fileRemoved(): void {
