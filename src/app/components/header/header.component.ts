@@ -22,6 +22,14 @@ export class HeaderComponent implements OnInit {
     totalCount: 0,
     positions: [],
     isSubset: false,
+    uniqueHosts: 0,
+    statusBreakdown: {
+      success: 0,
+      redirect: 0,
+      clientError: 0,
+      serverError: 0,
+      other: 0,
+    },
   };
   isLoading: boolean = false;
 

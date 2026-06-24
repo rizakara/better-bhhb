@@ -1,29 +1,119 @@
 .navbar-footer {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   width: 100%;
-  height: 20px;
+  min-height: 20px;
+  padding: 2px 16px;
   background: rgb(255, 255, 255);
   color: inherit;
-  margin: 0 16px;
+  box-sizing: border-box;
 }
 
-.navbar-footer span {
-  padding: 0 2px;
-  height: 20px;
-  font-size: 15px;
+.footer-stats,
+.footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stat-item,
+.footer-meta span {
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.stat-item-active {
+  font-weight: 600;
+}
+
+.stat-separator {
+  color: rgba(0, 0, 0, 0.38);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.status-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.status-2xx {
+  background: rgba(46, 125, 50, 0.14);
+  color: rgb(27, 94, 32);
+}
+
+.status-3xx {
+  background: rgba(2, 119, 189, 0.14);
+  color: rgb(1, 87, 155);
+}
+
+.status-4xx {
+  background: rgba(239, 108, 0, 0.16);
+  color: rgb(191, 54, 12);
+}
+
+.status-5xx {
+  background: rgba(198, 40, 40, 0.14);
+  color: rgb(183, 28, 28);
+}
+
+.status-other {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .toolbar-spacer {
   flex: 1 1 auto;
 }
 
-.hidden {
-  display: none;
-}
-
 @media (prefers-color-scheme: dark) {
   .navbar-footer {
     background: rgb(29, 30, 32);
+  }
+
+  .stat-separator {
+    color: rgba(255, 255, 255, 0.38);
+  }
+
+  .status-2xx {
+    background: rgba(102, 187, 106, 0.2);
+    color: rgb(165, 214, 167);
+  }
+
+  .status-3xx {
+    background: rgba(66, 165, 245, 0.2);
+    color: rgb(144, 202, 249);
+  }
+
+  .status-4xx {
+    background: rgba(255, 167, 38, 0.2);
+    color: rgb(255, 204, 128);
+  }
+
+  .status-5xx {
+    background: rgba(239, 83, 80, 0.2);
+    color: rgb(239, 154, 154);
+  }
+
+  .status-other {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
   }
 }

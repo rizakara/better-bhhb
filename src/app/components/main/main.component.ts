@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
-import { FileHandleService, BurpExport } from '../../services/file-handle/file-handle.service'
+import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
 import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
@@ -872,16 +872,57 @@ export class MainComponent implements OnInit {
 
   private syncExportFilterState(): void {
     const totalCount = this.ELEMENT_DATA.length;
-    const filteredRows = (this.dataSource.filteredData ?? []) as Array<{ position: number }>;
+    const filteredRows = (this.dataSource.filteredData ?? []) as Array<{ position: number; host: string; status: string }>;
     const visibleCount = filteredRows.length;
     const positions = filteredRows.map((row) => row.position);
+    const uniqueHosts = new Set(filteredRows.map((row) => row.host ?? '')).size;
+    const statusBreakdown = this.buildStatusBreakdown(filteredRows);
 
     this.FileHandleService.setExportFilterState({
       totalCount,
       visibleCount,
       positions,
       isSubset: totalCount > 0 && visibleCount < totalCount,
+      uniqueHosts,
+      statusBreakdown,
     });
+  }
+
+  private buildStatusBreakdown(rows: Array<{ status: string }>): StatusBreakdown {
+    const breakdown: StatusBreakdown = {
+      success: 0,
+      redirect: 0,
+      clientError: 0,
+      serverError: 0,
+      other: 0,
+    };
+
+    rows.forEach((row) => {
+      const code = Number(row.status);
+      if (!Number.isFinite(code)) {
+        breakdown.other += 1;
+        return;
+      }
+      if (code >= 200 && code < 300) {
+        breakdown.success += 1;
+        return;
+      }
+      if (code >= 300 && code < 400) {
+        breakdown.redirect += 1;
+        return;
+      }
+      if (code >= 400 && code < 500) {
+        breakdown.clientError += 1;
+        return;
+      }
+      if (code >= 500 && code < 600) {
+        breakdown.serverError += 1;
+        return;
+      }
+      breakdown.other += 1;
+    });
+
+    return breakdown;
   }
 
   private resetTreeView() {

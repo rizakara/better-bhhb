@@ -1,10 +1,38 @@
 <nav class="navbar-footer">
-    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-        <path
-            d="M680-160q8 0 14-6t6-14v-120q0-8-6-14t-14-6q-8 0-14 6t-6 14v120q0 8 6 14t14 6Zm0-200q8 0 14-6t6-14q0-8-6-14t-14-6q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0 280q-83 0-141.5-58.5T480-280q0-83 58.5-141.5T680-480q83 0 141.5 58.5T880-280q0 83-58.5 141.5T680-80ZM520-600h160L480-800l200 200-200-200v160q0 17 11.5 28.5T520-600ZM200-80q-33 0-56.5-23.5T120-160v-640q0-33 23.5-56.5T200-880h287q16 0 30.5 6t25.5 17l194 194q11 11 17 25.5t6 30.5v13q0 17-13.5 28t-31.5 8q-8-1-17-1.5t-18-.5q-57 0-107.5 21.5T484-480H320q-17 0-28.5 11.5T280-440q0 17 11.5 28.5T320-400h107q-9 19-15 39t-9 41h-83q-17 0-28.5 11.5T280-280q0 17 11.5 28.5T320-240h83q5 29 15 56.5t26 52.5q11 17 2.5 34T420-80H200Z" />
-    </svg>
-    <span *ngIf="burpVersion">Burp Version: {{ burpVersion }}</span>
-    <span *ngIf="exportTime && burpVersion">&nbsp;|&nbsp;</span>
-    <span *ngIf="exportTime">Exported at: {{ exportTime }}</span>
-    <span *ngIf="!burpVersion || !exportTime">Details about the export will be available here.</span>
+    <div class="footer-stats" *ngIf="hasData">
+        <span class="stat-item">{{ viewState.totalCount | number }} items</span>
+        <span class="stat-separator">|</span>
+        <span class="stat-item" [class.stat-item-active]="viewState.isSubset">
+            {{ viewState.visibleCount | number }} shown
+        </span>
+        <span class="stat-separator">|</span>
+        <span class="stat-item">{{ viewState.uniqueHosts | number }} hosts</span>
+        <ng-container *ngIf="hasStatusBreakdown">
+            <span class="stat-separator">|</span>
+            <span class="status-breakdown">
+                <span class="status-chip status-2xx" *ngIf="viewState.statusBreakdown.success">
+                    {{ viewState.statusBreakdown.success | number }} 2xx
+                </span>
+                <span class="status-chip status-3xx" *ngIf="viewState.statusBreakdown.redirect">
+                    {{ viewState.statusBreakdown.redirect | number }} 3xx
+                </span>
+                <span class="status-chip status-4xx" *ngIf="viewState.statusBreakdown.clientError">
+                    {{ viewState.statusBreakdown.clientError | number }} 4xx
+                </span>
+                <span class="status-chip status-5xx" *ngIf="viewState.statusBreakdown.serverError">
+                    {{ viewState.statusBreakdown.serverError | number }} 5xx
+                </span>
+                <span class="status-chip status-other" *ngIf="viewState.statusBreakdown.other">
+                    {{ viewState.statusBreakdown.other | number }} other
+                </span>
+            </span>
+        </ng-container>
+    </div>
+    <span class="toolbar-spacer"></span>
+    <div class="footer-meta">
+        <span *ngIf="burpVersion">Burp {{ burpVersion }}</span>
+        <span class="stat-separator" *ngIf="burpVersion && exportTime">|</span>
+        <span *ngIf="exportTime" [title]="exportTime">Exported {{ exportTime }}</span>
+        <span *ngIf="!hasData && !burpVersion">Open a Burp XML export to begin.</span>
+    </div>
 </nav>

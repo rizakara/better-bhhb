@@ -2,11 +2,21 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
 
+export interface StatusBreakdown {
+  success: number;
+  redirect: number;
+  clientError: number;
+  serverError: number;
+  other: number;
+}
+
 export interface ExportFilterState {
   visibleCount: number;
   totalCount: number;
   positions: number[];
   isSubset: boolean;
+  uniqueHosts: number;
+  statusBreakdown: StatusBreakdown;
 }
 
 export interface BurpExport {
@@ -209,6 +219,18 @@ export class FileHandleService {
       totalCount: 0,
       positions: [],
       isSubset: false,
+      uniqueHosts: 0,
+      statusBreakdown: this.createEmptyStatusBreakdown(),
+    };
+  }
+
+  private createEmptyStatusBreakdown(): StatusBreakdown {
+    return {
+      success: 0,
+      redirect: 0,
+      clientError: 0,
+      serverError: 0,
+      other: 0,
     };
   }
 
