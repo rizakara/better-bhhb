@@ -24,6 +24,57 @@ app-root {
   height: 100vh;
 }
 
+.mat-menu-panel.import-menu-panel {
+  min-width: 180px !important;
+  background: rgb(255, 255, 255) !important;
+  color: rgb(29, 30, 32) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+}
+
+.mat-menu-panel.import-menu-panel .mat-menu-content {
+  padding: 4px 0 !important;
+  background: transparent !important;
+}
+
+.mat-menu-panel.import-menu-panel .mat-menu-item {
+  font-size: 13px;
+  line-height: 36px;
+  height: 36px;
+  color: inherit !important;
+}
+
+.mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]) {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.mat-menu-panel.import-menu-panel .mat-divider {
+  border-top-color: rgba(0, 0, 0, 0.12);
+}
+
+body.dark-theme .mat-menu-panel.import-menu-panel {
+  background: rgb(29, 30, 32) !important;
+  color: rgba(255, 255, 255, 0.87) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
+}
+
+body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item[disabled] {
+  color: rgba(255, 255, 255, 0.38) !important;
+}
+
+body.dark-theme .mat-menu-panel.import-menu-panel .mat-divider {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
 .mat-menu-panel.column-filter-menu-panel {
   min-width: 220px !important;
   max-width: 360px !important;

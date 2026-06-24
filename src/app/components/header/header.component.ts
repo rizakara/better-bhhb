@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FileHandleService } from "../../services/file-handle/file-handle.service"
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
@@ -11,6 +11,8 @@ import { MatDialog } from '@angular/material/dialog';
 export class HeaderComponent implements OnInit {
 
   constructor(private FileHandleService: FileHandleService, public dialog: MatDialog) { }
+
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   fileSub!: Subscription
   selectedFileName!: string;
@@ -27,13 +29,28 @@ export class HeaderComponent implements OnInit {
       })
   }
 
-  fileChanged(event: Event): void {
+  openFilePicker(): void {
+    this.fileInput.nativeElement.click();
+  }
+
+  importFiles(event: Event): void {
     this.isLoading = true
-    this.FileHandleService.fileChange(event)
+    this.FileHandleService.importFiles(event)
       .then(() => { })
       .catch((err) => {
+        console.error(err);
+        alert(err instanceof Error ? err.message : 'Failed to import files.');
         this.isLoading = false
       })
+  }
+
+  saveCurrentFile(): void {
+    try {
+      this.FileHandleService.saveAs();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save file.');
+    }
   }
 
   fileRemoved(): void {

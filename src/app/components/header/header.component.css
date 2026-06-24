@@ -23,6 +23,13 @@ svg {
   display: none;
 }
 
+.selected-file-name {
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 ::ng-deep .mat-progress-bar-fill::after {
   background-color: currentColor
 }

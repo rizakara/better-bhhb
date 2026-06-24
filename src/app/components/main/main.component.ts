@@ -130,7 +130,9 @@ export class MainComponent implements OnInit {
   elementDataGen(content: any) {
     this.ELEMENT_DATA = []
     let position = 1
-    content.items.item.forEach((element: any) => {
+    const items = content?.items?.item;
+    const itemList = Array.isArray(items) ? items : items ? [items] : [];
+    itemList.forEach((element: any) => {
       this.ELEMENT_DATA.push(
         {
           position: position,
