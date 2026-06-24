@@ -301,13 +301,37 @@ as-split>as-split-area .content.wrapy {
   word-break: break-word;
 }
 
+.replay-hint {
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, 0.6);
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.replay-editor {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  resize: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  flex: 1 1 auto;
+  min-height: 120px;
+  user-select: text;
+  cursor: text;
+}
+
 as-split>as-split-area div.label button.active {
   font-weight: bold;
   color: rgba(255, 255, 255, 0.87);
   background-color: rgb(29, 30, 32);
 }
 
-as-split>as-split-area>div>button {
+as-split>as-split-area .panel-header button {
   box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
   user-select: none;
   cursor: pointer;
@@ -316,6 +340,17 @@ as-split>as-split-area>div>button {
   border-radius: 4px;
   color: rgb(29, 30, 32);
   background-color: rgb(235, 235, 235);
+}
+
+.request-toolbar {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.edit-status {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
 }
 
 .toolbar-spacer {
@@ -487,6 +522,16 @@ as-split>as-split-area>div>button {
 
   .panel-search-row {
     border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .replay-hint {
+    color: rgba(255, 255, 255, 0.62);
+    border-top-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .edit-status {
+    color: rgba(255, 255, 255, 0.6);
   }
 
   .search-status {

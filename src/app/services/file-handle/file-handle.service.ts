@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
+import { Base64 } from 'js-base64';
 
 export interface StatusBreakdown {
   success: number;
@@ -41,6 +42,8 @@ export class FileHandleService {
 
   private selectedFileData = new Subject<{ selectedFileName: string, selectedFileContent: BurpExport | undefined }>();
   private exportFilterState = new BehaviorSubject<ExportFilterState>(this.createEmptyExportFilterState());
+  private beforeSave = new Subject<void>();
+  private requestEdits = new Map<number, string>();
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
@@ -54,6 +57,30 @@ export class FileHandleService {
     this.exportFilterState.next(state);
   }
 
+  onBeforeSave() {
+    return this.beforeSave.asObservable();
+  }
+
+  setRequestEdit(position: number, raw: string | null): void {
+    if (raw === null) {
+      this.requestEdits.delete(position);
+      return;
+    }
+    this.requestEdits.set(position, raw);
+  }
+
+  hasRequestEdit(position: number): boolean {
+    return this.requestEdits.has(position);
+  }
+
+  getRequestEdit(position: number): string | undefined {
+    return this.requestEdits.get(position);
+  }
+
+  clearRequestEdits(): void {
+    this.requestEdits.clear();
+  }
+
   async importFiles(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const files = target.files ? Array.from(target.files) : [];
@@ -64,6 +91,7 @@ export class FileHandleService {
     if (files.length === 1) {
       const content = await this.parseFile(files[0]);
       this.selectedFileName = files[0].name;
+      this.clearRequestEdits();
       this.selectedFileContent = this.normalizeExport(content);
       this.emitSelectedFileData();
       this.resetFileInput(target);
@@ -81,6 +109,7 @@ export class FileHandleService {
       : files.map((file) => file.name);
 
     this.selectedFileName = this.formatMergedFileName(names);
+    this.clearRequestEdits();
     this.selectedFileContent = this.mergeExports(exportsToMerge);
     this.emitSelectedFileData();
     this.resetFileInput(target);
@@ -89,6 +118,7 @@ export class FileHandleService {
   async fileClear(): Promise<void> {
     this.selectedFileName = undefined;
     this.selectedFileContent = undefined;
+    this.clearRequestEdits();
     this.exportFilterState.next(this.createEmptyExportFilterState());
     this.emitSelectedFileData();
   }
@@ -97,6 +127,9 @@ export class FileHandleService {
     if (!this.selectedFileContent) {
       throw new Error('No data to save. Open or merge a file first.');
     }
+
+    this.beforeSave.next();
+    this.applyRequestEditsToContent();
 
     const filterState = this.exportFilterState.value;
     let exportContent = this.selectedFileContent;
@@ -193,8 +226,44 @@ export class FileHandleService {
     target.value = '';
   }
 
+  private applyRequestEditsToContent(): void {
+    if (!this.selectedFileContent || !this.requestEdits.size) {
+      return;
+    }
+
+    const items = this.normalizeItems(this.selectedFileContent.items.item);
+    this.requestEdits.forEach((rawRequest, position) => {
+      const item = items[position - 1];
+      if (item) {
+        this.writeRequestToItem(item, rawRequest);
+      }
+    });
+    this.selectedFileContent.items.item = items;
+  }
+
+  private normalizeItems(items: object[] | object | undefined): object[] {
+    if (!items) {
+      return [];
+    }
+    return Array.isArray(items) ? items : [items];
+  }
+
+  private writeRequestToItem(item: any, rawRequest: string): void {
+    if (!item.request) {
+      item.request = [{ $: { base64: 'false' }, _: rawRequest }];
+      return;
+    }
+
+    const requestNode = Array.isArray(item.request) ? item.request[0] : item.request;
+    const useBase64 = requestNode.$?.base64 === 'true';
+    if (!requestNode.$) {
+      requestNode.$ = { base64: useBase64 ? 'true' : 'false' };
+    }
+    requestNode._ = useBase64 ? Base64.encode(rawRequest) : rawRequest;
+  }
+
   private buildSubsetExport(positions: number[]): BurpExport {
-    const allItems = this.selectedFileContent?.items?.item ?? [];
+    const allItems = this.normalizeItems(this.selectedFileContent?.items?.item);
     const positionSet = new Set(positions);
     const filteredItems = allItems.filter((_item, index) => positionSet.has(index + 1));
     const metadata = this.selectedFileContent?.items?.$ ?? {

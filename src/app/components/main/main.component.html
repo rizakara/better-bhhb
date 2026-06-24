@@ -214,9 +214,21 @@
                                 <div class="label">
                                     <span>Request #{{clickedRow.position}}</span>
                                     <span class="toolbar-spacer"></span>
-                                    <button [class.active]="wrapRequest" (click)="wrapRequest = !wrapRequest">Wrap</button>
+                                    <button type="button" [class.active]="!replayMode" (click)="setReplayMode(false)">View</button>
+                                    <button type="button" [class.active]="replayMode" (click)="setReplayMode(true)"
+                                        matTooltip="Edit request and copy as cURL">Edit</button>
+                                    <button type="button" [class.active]="wrapRequest"
+                                        (click)="wrapRequest = !wrapRequest">Wrap</button>
                                 </div>
-                                <div class="panel-search-row">
+                                <div class="panel-search-row request-toolbar">
+                                    <button type="button" (click)="copyRequestAsCurl()" matTooltip="Copy as cURL">cURL</button>
+                                    <button type="button" (click)="copyRequestRaw()" matTooltip="Copy raw HTTP request">Raw</button>
+                                    <button type="button" *ngIf="replayMode && replayRequestDirty"
+                                        (click)="resetReplayRequest()">Reset</button>
+                                    <span class="toolbar-spacer"></span>
+                                    <span class="edit-status" *ngIf="requestIsEdited">Edited</span>
+                                </div>
+                                <div class="panel-search-row" *ngIf="!replayMode">
                                     <input matInput type="search" id="request-search" (input)="onRequestSearch($event)"
                                         (keydown)="onRequestSearchKeydown($event)" placeholder="Search request"
                                         class="search panel-search">
@@ -226,8 +238,14 @@
                                         <span *ngIf="requestMatchCount === 0">No results</span>
                                     </span>
                                 </div>
+                                <div class="replay-hint" *ngIf="replayMode">
+                                    Edit the request, then copy as cURL to replay in your terminal or Burp Repeater.
+                                </div>
                             </div>
-                            <div id="request-content" class="content" [class.wrapy]="wrapRequest">
+                            <textarea *ngIf="replayMode" class="content replay-editor" [class.wrapy]="wrapRequest"
+                                [(ngModel)]="replayRequestRaw" (ngModelChange)="persistReplayRequest()"
+                                spellcheck="false" aria-label="Editable HTTP request"></textarea>
+                            <div id="request-content" class="content" [class.wrapy]="wrapRequest" *ngIf="!replayMode">
                                 <div id="req_headers">
                                     <div *ngFor="let row of requestHighlightedHeaders">
                                         <span class="header_key" [innerHTML]="row.key"></span>

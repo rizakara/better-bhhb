@@ -1,8 +1,10 @@
 import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
+import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
@@ -25,10 +27,13 @@ export class MainComponent implements OnInit {
 
   constructor(
     private FileHandleService: FileHandleService,
+    private requestReplayService: RequestReplayService,
+    private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) { }
 
   fileSub!: Subscription
+  beforeSaveSub!: Subscription
   selectedFileContent!: BurpExport | undefined;
   displayedColumns: string[] = ['position', 'host', 'method', 'path', 'status', 'responselength', 'mimetype', 'extension', 'title', 'comment', 'ip', 'time'];
   readonly filterableColumnDefs = [
@@ -79,6 +84,10 @@ export class MainComponent implements OnInit {
   dataTimeMinMs: number | null = null;
   dataTimeMaxMs: number | null = null;
   clickedRow!: any;
+  replayMode = false;
+  replayRequestRaw = '';
+  replayRequestBaseline = '';
+  private originalRequestRaws = new Map<number, string>();
   wrapRequest: boolean = false;
   wrapResponse: boolean = false;
   requestSearch: string = '';
@@ -103,17 +112,21 @@ export class MainComponent implements OnInit {
 
   ngOnInit(): void {
     this.setupFilterPredicate();
+    this.beforeSaveSub = this.FileHandleService.onBeforeSave()
+      .subscribe(() => this.flushCurrentRequestEdit());
     this.fileSub = this.FileHandleService.getselectedFileDataListener()
       .subscribe((selectedFileData: { selectedFileContent: BurpExport | undefined }) => {
         if (!selectedFileData.selectedFileContent) {
           this.dataSource = new MatTableDataSource();
           this.selectedFileContent = selectedFileData.selectedFileContent;
           this.clickedRow = undefined;
+          this.clearRequestEdits();
           this.resetColumnFilters();
           this.resetTreeView();
           this.syncExportFilterState();
           return
         }
+        this.clearRequestEdits();
         this.selectedFileContent = selectedFileData.selectedFileContent
         // console.log(this.selectedFileContent);
         this.elementDataGen(this.selectedFileContent)
@@ -1036,10 +1049,220 @@ export class MainComponent implements OnInit {
       this.responseSearch = '';
       this.resetRequestSearchState();
       this.resetResponseSearchState();
+      this.resetReplayState();
     }
     this.clickedRow = row;
+    this.applyStoredRequestEdit(row);
     this.updateRequestHighlights();
     this.updateResponseHighlights();
+  }
+
+  get replayRequestDirty(): boolean {
+    return this.replayRequestRaw !== this.replayRequestBaseline;
+  }
+
+  get requestIsEdited(): boolean {
+    const position = this.clickedRow?.position;
+    return position ? this.FileHandleService.hasRequestEdit(position) : false;
+  }
+
+  setReplayMode(enabled: boolean): void {
+    if (!enabled && this.replayMode) {
+      if (!this.commitRequestEdits()) {
+        return;
+      }
+    }
+    this.replayMode = enabled;
+    if (enabled) {
+      this.loadReplayRequest();
+    }
+  }
+
+  persistReplayRequest(): void {
+    if (!this.clickedRow || !this.replayMode) {
+      return;
+    }
+    if (this.replayRequestRaw === this.replayRequestBaseline) {
+      this.FileHandleService.setRequestEdit(this.clickedRow.position, null);
+      return;
+    }
+    this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
+  }
+
+  resetReplayRequest(): void {
+    const position = this.clickedRow?.position;
+    if (!position || !this.originalRequestRaws.has(position)) {
+      return;
+    }
+    const original = this.originalRequestRaws.get(position)!;
+    this.replayRequestRaw = original;
+    this.FileHandleService.setRequestEdit(position, null);
+    this.clickedRow.request = this.requestReplayService.rawRequestToParts(original);
+    this.updateRequestHighlights();
+  }
+
+  async copyRequestAsCurl(): Promise<void> {
+    if (!this.clickedRow) {
+      return;
+    }
+
+    if (this.replayMode && !this.commitRequestEdits()) {
+      return;
+    }
+
+    try {
+      const raw = this.getActiveRequestRaw();
+      const curl = this.requestReplayService.rawRequestToCurl(
+        raw,
+        this.clickedRow.host,
+        this.clickedRow.url,
+      );
+      await this.copyTextToClipboard(curl);
+      this.snackBar.open('Copied cURL to clipboard', undefined, { duration: 2200 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to build cURL';
+      this.snackBar.open(message, undefined, { duration: 3200 });
+    }
+  }
+
+  async copyRequestRaw(): Promise<void> {
+    if (!this.clickedRow) {
+      return;
+    }
+
+    if (this.replayMode && !this.commitRequestEdits()) {
+      return;
+    }
+
+    try {
+      const raw = this.getActiveRequestRaw();
+      await this.copyTextToClipboard(raw);
+      this.snackBar.open('Copied raw request to clipboard', undefined, { duration: 2200 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to copy request';
+      this.snackBar.open(message, undefined, { duration: 3200 });
+    }
+  }
+
+  private getActiveRequestRaw(): string {
+    if (this.replayMode) {
+      return this.replayRequestRaw;
+    }
+    const position = this.clickedRow?.position;
+    const editedRaw = position ? this.FileHandleService.getRequestEdit(position) : undefined;
+    if (editedRaw) {
+      return editedRaw;
+    }
+    return this.requestReplayService.requestPartsToRaw(this.clickedRow.request);
+  }
+
+  private loadReplayRequest(): void {
+    if (!this.clickedRow?.request) {
+      this.replayRequestRaw = '';
+      this.replayRequestBaseline = '';
+      return;
+    }
+
+    const position = this.clickedRow.position;
+    if (!this.originalRequestRaws.has(position)) {
+      this.originalRequestRaws.set(
+        position,
+        this.requestReplayService.requestPartsToRaw(this.clickedRow.request),
+      );
+    }
+
+    this.replayRequestBaseline = this.originalRequestRaws.get(position)!;
+    this.replayRequestRaw = this.FileHandleService.getRequestEdit(position) ?? this.replayRequestBaseline;
+  }
+
+  private commitRequestEdits(): boolean {
+    if (!this.clickedRow) {
+      return true;
+    }
+
+    if (!this.replayRequestDirty) {
+      this.FileHandleService.setRequestEdit(this.clickedRow.position, null);
+      if (this.originalRequestRaws.has(this.clickedRow.position)) {
+        this.clickedRow.request = this.requestReplayService.rawRequestToParts(
+          this.originalRequestRaws.get(this.clickedRow.position)!,
+        );
+        this.updateRequestHighlights();
+      }
+      return true;
+    }
+
+    try {
+      this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
+      this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
+      this.updateRequestHighlights();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid HTTP request';
+      this.snackBar.open(message, undefined, { duration: 3200 });
+      return false;
+    }
+  }
+
+  private applyStoredRequestEdit(row: any): void {
+    const editedRaw = this.FileHandleService.getRequestEdit(row.position);
+    if (!editedRaw) {
+      return;
+    }
+    try {
+      row.request = this.requestReplayService.rawRequestToParts(editedRaw);
+    } catch (error) {
+      console.warn('Stored request edit could not be applied', error);
+    }
+  }
+
+  private clearRequestEdits(): void {
+    this.FileHandleService.clearRequestEdits();
+    this.originalRequestRaws.clear();
+    this.replayRequestRaw = '';
+    this.replayRequestBaseline = '';
+    this.replayMode = false;
+  }
+
+  private flushCurrentRequestEdit(): void {
+    if (!this.clickedRow || !this.replayMode) {
+      return;
+    }
+    if (this.replayRequestRaw === this.replayRequestBaseline) {
+      this.FileHandleService.setRequestEdit(this.clickedRow.position, null);
+      return;
+    }
+    this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
+    try {
+      this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
+    } catch (error) {
+      console.warn('Pending request edit could not be applied before export', error);
+    }
+  }
+
+  private resetReplayState(): void {
+    this.replayMode = false;
+    this.replayRequestRaw = '';
+    this.replayRequestBaseline = '';
+  }
+
+  private async copyTextToClipboard(text: string): Promise<void> {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!copied) {
+      throw new Error('Clipboard is unavailable in this browser.');
+    }
   }
 
   onRequestSearch(event: Event) {

@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTreeModule } from '@angular/material/tree';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 
 @NgModule({
@@ -36,6 +37,7 @@ import { MatTreeModule } from '@angular/material/tree';
     MatCheckboxModule,
     MatDividerModule,
     MatTreeModule,
+    MatSnackBarModule,
   ]
 })
 export class AngularMaterialModule { }
