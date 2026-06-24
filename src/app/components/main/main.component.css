@@ -27,6 +27,11 @@ tr.mat-header-row {
   min-width: 0;
 }
 
+:host ::ng-deep .mat-sort-header:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
+  opacity: 0.54 !important;
+  transform: translateY(0) !important;
+}
+
 .column-filter-button {
   width: 28px;
   height: 28px;
