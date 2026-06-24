@@ -44,6 +44,7 @@ export class FileHandleService {
   private exportFilterState = new BehaviorSubject<ExportFilterState>(this.createEmptyExportFilterState());
   private beforeSave = new Subject<void>();
   private requestEdits = new Map<number, string>();
+  private commentEdits = new Map<number, string>();
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
@@ -81,6 +82,31 @@ export class FileHandleService {
     this.requestEdits.clear();
   }
 
+  setCommentEdit(position: number, comment: string | null): void {
+    if (comment === null) {
+      this.commentEdits.delete(position);
+      return;
+    }
+    this.commentEdits.set(position, comment);
+  }
+
+  hasCommentEdit(position: number): boolean {
+    return this.commentEdits.has(position);
+  }
+
+  getCommentEdit(position: number): string | undefined {
+    return this.commentEdits.get(position);
+  }
+
+  clearCommentEdits(): void {
+    this.commentEdits.clear();
+  }
+
+  clearEdits(): void {
+    this.clearRequestEdits();
+    this.clearCommentEdits();
+  }
+
   async importFiles(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const files = target.files ? Array.from(target.files) : [];
@@ -91,7 +117,7 @@ export class FileHandleService {
     if (files.length === 1) {
       const content = await this.parseFile(files[0]);
       this.selectedFileName = files[0].name;
-      this.clearRequestEdits();
+      this.clearEdits();
       this.selectedFileContent = this.normalizeExport(content);
       this.emitSelectedFileData();
       this.resetFileInput(target);
@@ -109,7 +135,7 @@ export class FileHandleService {
       : files.map((file) => file.name);
 
     this.selectedFileName = this.formatMergedFileName(names);
-    this.clearRequestEdits();
+    this.clearEdits();
     this.selectedFileContent = this.mergeExports(exportsToMerge);
     this.emitSelectedFileData();
     this.resetFileInput(target);
@@ -118,7 +144,7 @@ export class FileHandleService {
   async fileClear(): Promise<void> {
     this.selectedFileName = undefined;
     this.selectedFileContent = undefined;
-    this.clearRequestEdits();
+    this.clearEdits();
     this.exportFilterState.next(this.createEmptyExportFilterState());
     this.emitSelectedFileData();
   }
@@ -130,6 +156,7 @@ export class FileHandleService {
 
     this.beforeSave.next();
     this.applyRequestEditsToContent();
+    this.applyCommentEditsToContent();
 
     const filterState = this.exportFilterState.value;
     let exportContent = this.selectedFileContent;
@@ -241,11 +268,34 @@ export class FileHandleService {
     this.selectedFileContent.items.item = items;
   }
 
+  private applyCommentEditsToContent(): void {
+    if (!this.selectedFileContent || !this.commentEdits.size) {
+      return;
+    }
+
+    const items = this.normalizeItems(this.selectedFileContent.items.item);
+    this.commentEdits.forEach((comment, position) => {
+      const item = items[position - 1];
+      if (item) {
+        this.writeCommentToItem(item, comment);
+      }
+    });
+    this.selectedFileContent.items.item = items;
+  }
+
   private normalizeItems(items: object[] | object | undefined): object[] {
     if (!items) {
       return [];
     }
     return Array.isArray(items) ? items : [items];
+  }
+
+  private writeCommentToItem(item: any, comment: string): void {
+    if (Array.isArray(item.comment)) {
+      item.comment = [comment];
+      return;
+    }
+    item.comment = comment;
   }
 
   private writeRequestToItem(item: any, rawRequest: string): void {

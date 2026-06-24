@@ -69,21 +69,57 @@
                             </td>
                         </ng-container>
 
-                        <ng-container *ngFor="let col of filterableColumnDefs" [matColumnDef]="col.key">
+                        <ng-container *ngFor="let col of filterableColumnDefs">
+                            <ng-container *ngIf="col.key !== 'comment'" [matColumnDef]="col.key">
+                                <th mat-header-cell *matHeaderCellDef cdkDrag>
+                                    <div class="column-header">
+                                        <span mat-sort-header>{{ col.label }}</span>
+                                        <button type="button" mat-icon-button class="column-filter-button"
+                                            [class.filter-active]="isColumnFilterActive(col.key)"
+                                            [matMenuTriggerFor]="columnFilterMenu"
+                                            (menuOpened)="setActiveFilterColumn(col.key)"
+                                            (click)="$event.stopPropagation()"
+                                            [attr.aria-label]="'Filter ' + col.label">
+                                            <mat-icon aria-hidden="true">filter_list</mat-icon>
+                                        </button>
+                                    </div>
+                                </th>
+                                <td mat-cell *matCellDef="let element" [attr.title]="element[col.key]">{{ element[col.key] }}
+                                </td>
+                            </ng-container>
+                        </ng-container>
+
+                        <ng-container matColumnDef="comment">
                             <th mat-header-cell *matHeaderCellDef cdkDrag>
                                 <div class="column-header">
-                                    <span mat-sort-header>{{ col.label }}</span>
+                                    <span mat-sort-header>Comment</span>
                                     <button type="button" mat-icon-button class="column-filter-button"
-                                        [class.filter-active]="isColumnFilterActive(col.key)"
+                                        [class.filter-active]="isColumnFilterActive('comment')"
                                         [matMenuTriggerFor]="columnFilterMenu"
-                                        (menuOpened)="setActiveFilterColumn(col.key)"
+                                        (menuOpened)="setActiveFilterColumn('comment')"
                                         (click)="$event.stopPropagation()"
-                                        [attr.aria-label]="'Filter ' + col.label">
+                                        aria-label="Filter Comment">
                                         <mat-icon aria-hidden="true">filter_list</mat-icon>
                                     </button>
                                 </div>
                             </th>
-                            <td mat-cell *matCellDef="let element" [attr.title]="element[col.key]">{{ element[col.key] }}
+                            <td mat-cell *matCellDef="let element" class="comment-cell"
+                                (click)="startCommentEdit($event, element)">
+                                <input *ngIf="isCommentEditing(element)" [id]="'comment-input-' + element.position"
+                                    type="text" class="comment-cell-input" [(ngModel)]="element.comment"
+                                    (ngModelChange)="persistCommentEdit(element)" (click)="$event.stopPropagation()"
+                                    (blur)="stopCommentEdit(element)" placeholder="Note or tags (comma-separated)"
+                                    [attr.aria-label]="'Comment for row ' + element.position">
+                                <ng-container *ngIf="!isCommentEditing(element)">
+                                    <ng-container *ngIf="parseNoteTags(element.comment).length; else plainComment">
+                                        <span class="comment-tag" *ngFor="let tag of parseNoteTags(element.comment)">{{ tag }}</span>
+                                    </ng-container>
+                                    <ng-template #plainComment>
+                                        <span class="comment-text" [class.comment-filled]="element.comment">{{ element.comment }}</span>
+                                    </ng-template>
+                                    <span class="comment-edited-marker" *ngIf="commentIsEdited(element)"
+                                        title="Edited">*</span>
+                                </ng-container>
                             </td>
                         </ng-container>
 

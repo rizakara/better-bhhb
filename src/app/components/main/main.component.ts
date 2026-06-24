@@ -87,7 +87,9 @@ export class MainComponent implements OnInit {
   replayMode = false;
   replayRequestRaw = '';
   replayRequestBaseline = '';
+  editingCommentPosition: number | null = null;
   private originalRequestRaws = new Map<number, string>();
+  private originalComments = new Map<number, string>();
   wrapRequest: boolean = false;
   wrapResponse: boolean = false;
   requestSearch: string = '';
@@ -113,7 +115,10 @@ export class MainComponent implements OnInit {
   ngOnInit(): void {
     this.setupFilterPredicate();
     this.beforeSaveSub = this.FileHandleService.onBeforeSave()
-      .subscribe(() => this.flushCurrentRequestEdit());
+      .subscribe(() => {
+        this.flushCurrentRequestEdit();
+        this.flushAllCommentEdits();
+      });
     this.fileSub = this.FileHandleService.getselectedFileDataListener()
       .subscribe((selectedFileData: { selectedFileContent: BurpExport | undefined }) => {
         if (!selectedFileData.selectedFileContent) {
@@ -147,6 +152,8 @@ export class MainComponent implements OnInit {
     const items = content?.items?.item;
     const itemList = Array.isArray(items) ? items : items ? [items] : [];
     itemList.forEach((element: any) => {
+      const comment = this.normalizeXmlValue(element.comment);
+      this.originalComments.set(position, comment);
       this.ELEMENT_DATA.push(
         {
           position: position,
@@ -158,7 +165,7 @@ export class MainComponent implements OnInit {
           status: element.status,
           path: this.normalizeXmlValue(element.path),
           responselength: element.responselength,
-          comment: element.comment,
+          comment,
           url: element.url,
           time: this.normalizeXmlValue(element.time),
           timeMs: this.parseBurpTime(element.time),
@@ -1044,6 +1051,13 @@ export class MainComponent implements OnInit {
   }
 
   selectRow(row: any) {
+    if (this.editingCommentPosition !== null && row.position !== this.editingCommentPosition) {
+      const editingRow = this.findRowByPosition(this.editingCommentPosition);
+      if (editingRow) {
+        this.stopCommentEdit(editingRow);
+      }
+    }
+
     if (this.clickedRow !== row) {
       this.requestSearch = '';
       this.responseSearch = '';
@@ -1053,8 +1067,53 @@ export class MainComponent implements OnInit {
     }
     this.clickedRow = row;
     this.applyStoredRequestEdit(row);
+    this.applyStoredCommentEdit(row);
     this.updateRequestHighlights();
     this.updateResponseHighlights();
+  }
+
+  parseNoteTags(note: string): string[] {
+    if (!note) {
+      return [];
+    }
+    return note
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  isCommentEditing(element: any): boolean {
+    return this.editingCommentPosition === element.position;
+  }
+
+  commentIsEdited(element: any): boolean {
+    return this.FileHandleService.hasCommentEdit(element.position);
+  }
+
+  startCommentEdit(event: Event, element: any): void {
+    event.stopPropagation();
+    if (this.clickedRow !== element) {
+      this.selectRow(element);
+    }
+    this.editingCommentPosition = element.position;
+    this.cdr.detectChanges();
+    requestAnimationFrame(() => {
+      const input = document.getElementById(`comment-input-${element.position}`) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  }
+
+  persistCommentEdit(element: any): void {
+    this.flushCommentEdit(element);
+  }
+
+  stopCommentEdit(element: any): void {
+    if (this.editingCommentPosition !== element.position) {
+      return;
+    }
+    this.flushCommentEdit(element);
+    this.editingCommentPosition = null;
   }
 
   get replayRequestDirty(): boolean {
@@ -1215,9 +1274,45 @@ export class MainComponent implements OnInit {
     }
   }
 
+  private applyStoredCommentEdit(row: any): void {
+    const editedComment = this.FileHandleService.getCommentEdit(row.position);
+    if (editedComment === undefined) {
+      return;
+    }
+    row.comment = editedComment;
+  }
+
+  private flushCommentEdit(row: any): void {
+    const position = row.position;
+    const baseline = this.originalComments.get(position) ?? '';
+    const current = row.comment ?? '';
+    if (current === baseline) {
+      this.FileHandleService.setCommentEdit(position, null);
+      return;
+    }
+    this.FileHandleService.setCommentEdit(position, current);
+  }
+
+  private flushAllCommentEdits(): void {
+    if (this.editingCommentPosition !== null) {
+      const editingRow = this.findRowByPosition(this.editingCommentPosition);
+      if (editingRow) {
+        this.flushCommentEdit(editingRow);
+      }
+      this.editingCommentPosition = null;
+    }
+    this.ELEMENT_DATA.forEach((row: any) => this.flushCommentEdit(row));
+  }
+
+  private findRowByPosition(position: number): any | undefined {
+    return this.ELEMENT_DATA.find((row: any) => row.position === position);
+  }
+
   private clearRequestEdits(): void {
-    this.FileHandleService.clearRequestEdits();
+    this.FileHandleService.clearEdits();
     this.originalRequestRaws.clear();
+    this.originalComments.clear();
+    this.editingCommentPosition = null;
     this.replayRequestRaw = '';
     this.replayRequestBaseline = '';
     this.replayMode = false;

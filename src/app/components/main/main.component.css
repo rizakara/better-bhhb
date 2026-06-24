@@ -353,6 +353,58 @@ as-split>as-split-area .panel-header button {
   white-space: nowrap;
 }
 
+.comment-cell {
+  cursor: text;
+  vertical-align: middle;
+}
+
+.comment-cell-input {
+  display: block;
+  width: 100%;
+  min-width: 8rem;
+  box-sizing: border-box;
+  border: 1px solid rgba(29, 30, 32, 0.35);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.95);
+  color: inherit;
+}
+
+.comment-cell-input:focus {
+  outline: none;
+  border-color: rgba(29, 30, 32, 0.6);
+}
+
+.comment-edited-marker {
+  margin-left: 4px;
+  color: rgba(29, 30, 32, 0.55);
+  font-weight: 700;
+}
+
+.comment-tag {
+  display: inline-block;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: rgba(29, 30, 32, 0.08);
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.comment-text.comment-filled {
+  font-style: italic;
+}
+
+.mat-column-comment {
+  max-width: 14rem;
+}
+
 .toolbar-spacer {
   flex: 1 1 auto;
 }
@@ -532,6 +584,25 @@ as-split>as-split-area .panel-header button {
 
   .edit-status {
     color: rgba(255, 255, 255, 0.6);
+  }
+
+  .comment-cell-input {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.87);
+  }
+
+  .comment-cell-input:focus {
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .comment-edited-marker {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .comment-tag {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.82);
   }
 
   .search-status {
