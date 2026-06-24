@@ -1,5 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { FileHandleService } from "../../services/file-handle/file-handle.service"
+import { ExportFilterState, FileHandleService } from "../../services/file-handle/file-handle.service"
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -15,7 +15,14 @@ export class HeaderComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   fileSub!: Subscription
+  exportFilterSub!: Subscription
   selectedFileName!: string;
+  exportFilterState: ExportFilterState = {
+    visibleCount: 0,
+    totalCount: 0,
+    positions: [],
+    isSubset: false,
+  };
   isLoading: boolean = false;
 
   ngOnInit(): void {
@@ -26,6 +33,10 @@ export class HeaderComponent implements OnInit {
       .subscribe((selectedFileData: { selectedFileName: string }) => {
         this.selectedFileName = selectedFileData.selectedFileName
         this.isLoading = false
+      })
+    this.exportFilterSub = this.FileHandleService.getExportFilterStateListener()
+      .subscribe((state) => {
+        this.exportFilterState = state;
       })
   }
 
@@ -44,9 +55,9 @@ export class HeaderComponent implements OnInit {
       })
   }
 
-  saveCurrentFile(): void {
+  saveCurrentFile(scope: 'all' | 'filtered' = 'all'): void {
     try {
-      this.FileHandleService.saveAs();
+      this.FileHandleService.saveAs(scope);
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to save file.');

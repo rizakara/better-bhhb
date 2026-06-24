@@ -27,7 +27,17 @@
                 <span>Import files…</span>
             </button>
             <mat-divider></mat-divider>
-            <button mat-menu-item (click)="saveCurrentFile()" [disabled]="!selectedFileName">
+            <button mat-menu-item (click)="saveCurrentFile('all')" [disabled]="!selectedFileName"
+                *ngIf="exportFilterState.isSubset">
+                <span>Save all…</span>
+            </button>
+            <button mat-menu-item (click)="saveCurrentFile('filtered')"
+                [disabled]="!selectedFileName || !exportFilterState.isSubset"
+                *ngIf="exportFilterState.isSubset">
+                <span>Save filtered ({{ exportFilterState.visibleCount }})…</span>
+            </button>
+            <button mat-menu-item (click)="saveCurrentFile('all')" [disabled]="!selectedFileName"
+                *ngIf="!exportFilterState.isSubset">
                 <span>Save as…</span>
             </button>
         </mat-menu>

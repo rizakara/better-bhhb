@@ -111,6 +111,7 @@ export class MainComponent implements OnInit {
           this.clickedRow = undefined;
           this.resetColumnFilters();
           this.resetTreeView();
+          this.syncExportFilterState();
           return
         }
         this.selectedFileContent = selectedFileData.selectedFileContent
@@ -866,6 +867,21 @@ export class MainComponent implements OnInit {
 
   private refreshTableFilter() {
     this.dataSource.filter = `${this.globalSearchTerm}\u0000${performance.now()}`;
+    this.syncExportFilterState();
+  }
+
+  private syncExportFilterState(): void {
+    const totalCount = this.ELEMENT_DATA.length;
+    const filteredRows = (this.dataSource.filteredData ?? []) as Array<{ position: number }>;
+    const visibleCount = filteredRows.length;
+    const positions = filteredRows.map((row) => row.position);
+
+    this.FileHandleService.setExportFilterState({
+      totalCount,
+      visibleCount,
+      positions,
+      isSubset: totalCount > 0 && visibleCount < totalCount,
+    });
   }
 
   private resetTreeView() {

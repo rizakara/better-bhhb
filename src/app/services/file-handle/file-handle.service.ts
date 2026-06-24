@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
+
+export interface ExportFilterState {
+  visibleCount: number;
+  totalCount: number;
+  positions: number[];
+  isSubset: boolean;
+}
 
 export interface BurpExport {
   'items': {
@@ -23,9 +30,18 @@ export class FileHandleService {
   private selectedFileContent!: BurpExport | undefined;
 
   private selectedFileData = new Subject<{ selectedFileName: string, selectedFileContent: BurpExport | undefined }>();
+  private exportFilterState = new BehaviorSubject<ExportFilterState>(this.createEmptyExportFilterState());
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
+  }
+
+  getExportFilterStateListener() {
+    return this.exportFilterState.asObservable();
+  }
+
+  setExportFilterState(state: ExportFilterState): void {
+    this.exportFilterState.next(state);
   }
 
   async importFiles(event: Event): Promise<void> {
@@ -63,24 +79,37 @@ export class FileHandleService {
   async fileClear(): Promise<void> {
     this.selectedFileName = undefined;
     this.selectedFileContent = undefined;
+    this.exportFilterState.next(this.createEmptyExportFilterState());
     this.emitSelectedFileData();
   }
 
-  saveAs(): void {
+  saveAs(scope: 'all' | 'filtered' = 'all'): void {
     if (!this.selectedFileContent) {
       throw new Error('No data to save. Open or merge a file first.');
+    }
+
+    const filterState = this.exportFilterState.value;
+    let exportContent = this.selectedFileContent;
+    let downloadName = this.suggestSaveFileName();
+
+    if (scope === 'filtered') {
+      if (!filterState.isSubset || !filterState.positions.length) {
+        throw new Error('No filtered items to save.');
+      }
+      exportContent = this.buildSubsetExport(filterState.positions);
+      downloadName = this.suggestFilteredSaveFileName(filterState.visibleCount);
     }
 
     const builder = new xml2js.Builder({
       xmldec: { version: '1.0', encoding: 'UTF-8' },
       renderOpts: { pretty: true, indent: '  ' },
     });
-    const xml = builder.buildObject({ items: this.selectedFileContent.items });
+    const xml = builder.buildObject({ items: exportContent.items });
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = this.suggestSaveFileName();
+    anchor.download = downloadName;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -154,9 +183,44 @@ export class FileHandleService {
     target.value = '';
   }
 
+  private buildSubsetExport(positions: number[]): BurpExport {
+    const allItems = this.selectedFileContent?.items?.item ?? [];
+    const positionSet = new Set(positions);
+    const filteredItems = allItems.filter((_item, index) => positionSet.has(index + 1));
+    const metadata = this.selectedFileContent?.items?.$ ?? {
+      burpVersion: 'unknown',
+      exportTime: new Date().toISOString(),
+    };
+
+    return {
+      items: {
+        '$': {
+          ...metadata,
+          exportTime: new Date().toISOString(),
+        },
+        item: filteredItems,
+      },
+    };
+  }
+
+  private createEmptyExportFilterState(): ExportFilterState {
+    return {
+      visibleCount: 0,
+      totalCount: 0,
+      positions: [],
+      isSubset: false,
+    };
+  }
+
   private suggestSaveFileName(): string {
     const rawName = (this.selectedFileName ?? 'burp-export').trim();
     const withoutExtension = rawName.replace(/\.xml$/i, '');
     return `${withoutExtension}.xml`;
+  }
+
+  private suggestFilteredSaveFileName(visibleCount: number): string {
+    const rawName = (this.selectedFileName ?? 'burp-export').trim();
+    const withoutExtension = rawName.replace(/\.xml$/i, '');
+    return `${withoutExtension}-filtered-${visibleCount}.xml`;
   }
 }
