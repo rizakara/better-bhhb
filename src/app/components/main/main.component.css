@@ -1,3 +1,210 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.main-layout {
+  position: relative;
+  height: 100%;
+}
+
+.main-split {
+  height: 100%;
+}
+
+.treeview-open-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 10px 4px;
+  font-size: 11px;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+  color: rgb(29, 30, 32);
+  background-color: rgb(235, 235, 235);
+  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+}
+
+.tree-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+}
+
+.tree-panel-header {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.tree-panel-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  color: inherit;
+}
+
+.tree-scroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 2px 0;
+}
+
+.site-map-tree {
+  background: transparent;
+  font-size: 13px;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+:host ::ng-deep .site-map-tree.mat-tree {
+  background: transparent;
+}
+
+:host ::ng-deep .site-map-tree .mat-tree-node,
+:host ::ng-deep .site-map-tree .mat-nested-tree-node {
+  color: inherit;
+  background: transparent;
+  min-height: 0;
+}
+
+:host ::ng-deep .site-map-tree .tree-mat-node {
+  display: block;
+  position: relative;
+}
+
+.tree-entry {
+  position: relative;
+}
+
+.tree-node-row,
+.tree-entry-leaf {
+  display: flex;
+  align-items: center;
+  min-height: 25px;
+}
+
+.tree-children {
+  position: relative;
+  margin-left: 7px;
+  padding-left: 11px;
+  border-left: 1px solid rgba(0, 0, 0, 0.24);
+}
+
+:host ::ng-deep .site-map-tree .tree-children > .tree-mat-node::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 12px;
+  width: 11px;
+  border-top: 1px solid rgba(0, 0, 0, 0.24);
+  pointer-events: none;
+}
+
+.tree-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.tree-toggle:hover {
+  opacity: 1;
+}
+
+.tree-chevron {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.tree-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.tree-leaf-marker {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.54;
+}
+
+.tree-leaf-marker::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 8px;
+  width: 8px;
+  border-top: 1px solid currentColor;
+}
+
+.tree-leaf-marker::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tree-node-label {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 2px;
+}
+
+.tree-node-label:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tree-node-selected {
+  background-color: rgba(0, 0, 0, 0.144);
+  font-weight: 600;
+}
+
+.tree-invisible {
+  display: none;
+}
+
 table {
   width: 100%;
 }
@@ -195,6 +402,37 @@ as-split>as-split-area>div>button {
 
 
 @media (prefers-color-scheme: dark) {
+  .treeview-open-btn {
+    color: rgba(255, 255, 255, 0.87);
+    background-color: rgb(60, 60, 60);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
+  }
+
+  .tree-panel {
+    border-right-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .tree-panel-header {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .tree-node-label:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .tree-node-selected {
+    background-color: rgba(255, 255, 255, 0.144);
+  }
+
+  .tree-children {
+    border-left-color: rgba(255, 255, 255, 0.24);
+  }
+
+  :host ::ng-deep .site-map-tree .tree-children > .tree-mat-node::before {
+    border-top-color: rgba(255, 255, 255, 0.24);
+  }
+
   .mat-table,
   .search {
     background: 0;

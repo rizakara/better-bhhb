@@ -4,7 +4,17 @@ import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { NestedTreeControl } from '@angular/cdk/tree';
+import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { Base64 } from 'js-base64';
+
+interface SiteMapNode {
+  id: string;
+  name: string;
+  host: string;
+  pathPrefix: string;
+  children?: SiteMapNode[];
+}
 
 @Component({
   selector: 'app-main',
@@ -81,6 +91,15 @@ export class MainComponent implements OnInit {
   requestHighlightedBody: string = '';
   responseHighlightedHeaders: { key: string; value: string; hasValue: boolean }[] = [];
   responseHighlightedBody: string = '';
+  treeViewOpen = false;
+  treeFilter: { host: string; pathPrefix: string } | null = null;
+  selectedTreeNodeId: string | null = null;
+  treeControl = new NestedTreeControl<SiteMapNode>((node) => node.children);
+  treeDataSource = new MatTreeNestedDataSource<SiteMapNode>();
+
+  get hasData(): boolean {
+    return this.ELEMENT_DATA.length > 0;
+  }
 
   ngOnInit(): void {
     this.setupFilterPredicate();
@@ -91,11 +110,13 @@ export class MainComponent implements OnInit {
           this.selectedFileContent = selectedFileData.selectedFileContent;
           this.clickedRow = undefined;
           this.resetColumnFilters();
+          this.resetTreeView();
           return
         }
         this.selectedFileContent = selectedFileData.selectedFileContent
         // console.log(this.selectedFileContent);
         this.elementDataGen(this.selectedFileContent)
+        this.buildSiteMapTree();
         this.initializeColumnFilters();
         this.dataSource = new MatTableDataSource(this.ELEMENT_DATA);
         this.dataSource.filterPredicate = this.createFilterPredicate();
@@ -189,6 +210,29 @@ export class MainComponent implements OnInit {
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value ? (event.target as HTMLInputElement).value : "";
     this.globalSearchTerm = filterValue.trim();
+    this.refreshTableFilter();
+  }
+
+  toggleTreeView() {
+    this.treeViewOpen = !this.treeViewOpen;
+    if (!this.treeViewOpen) {
+      this.clearTreeFilter();
+    }
+  }
+
+  hasTreeChild(_index: number, node: SiteMapNode): boolean {
+    return !!node.children && node.children.length > 0;
+  }
+
+  selectTreeNode(node: SiteMapNode) {
+    this.selectedTreeNodeId = node.id;
+    this.treeFilter = { host: node.host, pathPrefix: node.pathPrefix };
+    this.refreshTableFilter();
+  }
+
+  clearTreeFilter() {
+    this.treeFilter = null;
+    this.selectedTreeNodeId = null;
     this.refreshTableFilter();
   }
 
@@ -467,6 +511,10 @@ export class MainComponent implements OnInit {
 
   private createFilterPredicate() {
     return (data: any, _filter: string): boolean => {
+      if (!this.matchesTreeFilter(data)) {
+        return false;
+      }
+
       if (this.globalSearchTerm) {
         const term = this.globalSearchTerm.toLowerCase();
         const rowText = Object.values(data).join(' ').toLowerCase();
@@ -816,6 +864,111 @@ export class MainComponent implements OnInit {
 
   private refreshTableFilter() {
     this.dataSource.filter = `${this.globalSearchTerm}\u0000${performance.now()}`;
+  }
+
+  private resetTreeView() {
+    this.treeViewOpen = false;
+    this.clearTreeFilter();
+    this.treeDataSource.data = [];
+  }
+
+  private buildSiteMapTree() {
+    const hosts = new Map<string, Map<string, any>>();
+
+    this.ELEMENT_DATA.forEach((row: any) => {
+      const host = String(row.host ?? '');
+      if (!host) {
+        return;
+      }
+      if (!hosts.has(host)) {
+        hosts.set(host, new Map());
+      }
+      const pathOnly = this.normalizePathForTree(String(row.path ?? ''));
+      this.insertPathIntoBranch(hosts.get(host) as Map<string, any>, pathOnly);
+    });
+
+    const nodes: SiteMapNode[] = Array.from(hosts.keys())
+      .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+      .map((host) => {
+        const children = this.branchToSiteMapNodes(hosts.get(host) as Map<string, any>, host, '');
+        return {
+          id: `host:${host}`,
+          name: host,
+          host,
+          pathPrefix: '',
+          children: children.length ? children : undefined,
+        };
+      });
+
+    this.treeDataSource.data = nodes;
+    this.treeControl.collapseAll();
+  }
+
+  private normalizePathForTree(path: string): string {
+    const pathOnly = path.split('?')[0].split('#')[0];
+    if (!pathOnly || pathOnly === '/') {
+      return '/';
+    }
+    return pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`;
+  }
+
+  private insertPathIntoBranch(branch: Map<string, any>, path: string): void {
+    if (path === '/') {
+      if (!branch.has('/')) {
+        branch.set('/', new Map());
+      }
+      return;
+    }
+
+    const segments = path.split('/').filter(Boolean);
+    let current: Map<string, any> = branch;
+    segments.forEach((segment) => {
+      if (!current.has(segment)) {
+        current.set(segment, new Map());
+      }
+      current = current.get(segment);
+    });
+  }
+
+  private branchToSiteMapNodes(branch: Map<string, any>, host: string, parentPath: string): SiteMapNode[] {
+    return Array.from(branch.keys())
+      .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+      .map((key) => {
+        const pathPrefix = key === '/' ? '/' : `${parentPath}/${key}`;
+        const childBranch = branch.get(key);
+        const childNodes = childBranch instanceof Map
+          ? this.branchToSiteMapNodes(childBranch, host, key === '/' ? '' : pathPrefix)
+          : [];
+        return {
+          id: `node:${host}:${pathPrefix}`,
+          name: key,
+          host,
+          pathPrefix,
+          children: childNodes.length ? childNodes : undefined,
+        };
+      });
+  }
+
+  private matchesTreeFilter(data: any): boolean {
+    if (!this.treeFilter) {
+      return true;
+    }
+
+    if (data.host !== this.treeFilter.host) {
+      return false;
+    }
+
+    if (!this.treeFilter.pathPrefix) {
+      return true;
+    }
+
+    const pathOnly = this.normalizePathForTree(String(data.path ?? ''));
+    const prefix = this.treeFilter.pathPrefix;
+    if (prefix === '/') {
+      return pathOnly === '/';
+    }
+
+    return pathOnly === prefix || pathOnly.startsWith(`${prefix}/`);
   }
 
   selectRow(row: any) {
