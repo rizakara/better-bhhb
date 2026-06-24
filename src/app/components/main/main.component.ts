@@ -1596,15 +1596,321 @@ export class MainComponent implements OnInit {
     }
   }
 
-  @HostListener('window:keydown.esc', ['$event'])
-  clearclickedRow(event: KeyboardEvent) {
-    event.preventDefault();
+  @HostListener('window:keydown', ['$event'])
+  handleGlobalKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      if (this.handleEscapeKey(event)) {
+        return;
+      }
+    }
+
+    if (this.shouldIgnoreKeyboardShortcut(event)) {
+      return;
+    }
+
+    const focusGlobalSearchShortcut =
+      (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key === '/')
+      || ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'f');
+    if (focusGlobalSearchShortcut) {
+      event.preventDefault();
+      this.focusGlobalSearch();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'f') {
+      event.preventDefault();
+      this.clearAllFilters();
+      this.snackBar.open('Filters cleared', undefined, { duration: 1800 });
+      return;
+    }
+
+    if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (event.key === 't') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (this.treeFilter) {
+            this.clearTreeFilter();
+          }
+        } else if (this.hasData) {
+          this.toggleTreeView();
+        }
+        return;
+      }
+
+      if (event.key === 'r' && this.clickedRow) {
+        event.preventDefault();
+        this.focusRequestSearch();
+        return;
+      }
+
+      if (event.key === 'e' && this.clickedRow) {
+        event.preventDefault();
+        this.focusResponseSearch();
+        return;
+      }
+
+      if (event.key === 'n' && this.clickedRow) {
+        event.preventDefault();
+        this.startCommentEdit(event, this.clickedRow);
+        return;
+      }
+    }
+
+    if (!this.hasData) {
+      return;
+    }
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateRow(1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigateRow(-1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.navigateRow('first');
+        break;
+      case 'End':
+        event.preventDefault();
+        this.navigateRow('last');
+        break;
+      case 'PageDown':
+        event.preventDefault();
+        this.navigateRow(10);
+        break;
+      case 'PageUp':
+        event.preventDefault();
+        this.navigateRow(-10);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (event.shiftKey) {
+          this.openResponsePanel();
+        } else {
+          this.openRequestPanel();
+        }
+        break;
+    }
+  }
+
+  private handleEscapeKey(event: KeyboardEvent): boolean {
+    if (this.editingCommentPosition !== null) {
+      event.preventDefault();
+      const editingRow = this.findRowByPosition(this.editingCommentPosition);
+      if (editingRow) {
+        this.stopCommentEdit(editingRow);
+      }
+      return true;
+    }
+
+    if (this.replayMode) {
+      event.preventDefault();
+      this.setReplayMode(false);
+      return true;
+    }
+
     if (this.clickedRow) {
+      event.preventDefault();
       this.clickedRow = undefined;
       this.clearPanelSearches();
-    } else {
-      (document.getElementById('search') as HTMLInputElement).value = "";
-      this.applyFilter(event)
+      return true;
     }
+
+    const searchInput = document.getElementById('search') as HTMLInputElement | null;
+    if (searchInput?.value) {
+      event.preventDefault();
+      searchInput.value = '';
+      this.applyFilter(event);
+      return true;
+    }
+
+    if (this.hasActiveFilters()) {
+      event.preventDefault();
+      this.clearAllFilters();
+      return true;
+    }
+
+    return false;
+  }
+
+  private shouldIgnoreKeyboardShortcut(event: KeyboardEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    if (target.closest('.mat-dialog-container, .mat-menu-panel, .cdk-overlay-container .mat-datepicker-content')) {
+      return true;
+    }
+
+    const tag = target.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+      return true;
+    }
+
+    if (tag === 'INPUT') {
+      const inputType = (target as HTMLInputElement).type;
+      if (inputType !== 'checkbox' && inputType !== 'radio') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private getNavigableRows(): any[] {
+    const filtered = (this.dataSource.filteredData ?? []) as any[];
+    if (this.sort) {
+      return this.dataSource.sortData(filtered, this.sort);
+    }
+    return filtered;
+  }
+
+  private navigateRow(direction: 1 | -1 | 10 | -10 | 'first' | 'last'): void {
+    const rows = this.getNavigableRows();
+    if (!rows.length) {
+      return;
+    }
+
+    if (this.editingCommentPosition !== null) {
+      const editingRow = this.findRowByPosition(this.editingCommentPosition);
+      if (editingRow) {
+        this.stopCommentEdit(editingRow);
+      }
+    }
+
+    let index = this.clickedRow
+      ? rows.findIndex((row) => row === this.clickedRow || row.position === this.clickedRow.position)
+      : -1;
+
+    if (direction === 'first') {
+      index = 0;
+    } else if (direction === 'last') {
+      index = rows.length - 1;
+    } else if (index === -1) {
+      index = direction > 0 ? 0 : rows.length - 1;
+    } else {
+      index = Math.max(0, Math.min(rows.length - 1, index + direction));
+    }
+
+    this.selectRow(rows[index]);
+    this.scrollRowIntoView(rows[index]);
+  }
+
+  private openRequestPanel(): void {
+    const rows = this.getNavigableRows();
+    if (!this.clickedRow && rows.length) {
+      this.selectRow(rows[0]);
+    }
+    if (!this.clickedRow) {
+      return;
+    }
+
+    if (this.replayMode) {
+      this.setReplayMode(false);
+    }
+
+    this.focusRequestSearch();
+  }
+
+  private openResponsePanel(): void {
+    const rows = this.getNavigableRows();
+    if (!this.clickedRow && rows.length) {
+      this.selectRow(rows[0]);
+    }
+    if (!this.clickedRow) {
+      return;
+    }
+
+    if (this.replayMode) {
+      this.setReplayMode(false);
+    }
+
+    this.focusResponseSearch();
+  }
+
+  private focusGlobalSearch(): void {
+    const searchInput = document.getElementById('search') as HTMLInputElement | null;
+    searchInput?.focus();
+    searchInput?.select();
+  }
+
+  private focusRequestSearch(): void {
+    requestAnimationFrame(() => {
+      const input = document.getElementById('request-search') as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  }
+
+  private focusResponseSearch(): void {
+    requestAnimationFrame(() => {
+      const input = document.getElementById('response-search') as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  }
+
+  private clearAllFilters(): void {
+    this.globalSearchTerm = '';
+    const searchInput = document.getElementById('search') as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    if (this.hasData) {
+      this.initializeColumnFilters();
+    } else {
+      this.resetColumnFilters();
+    }
+
+    if (this.treeFilter) {
+      this.clearTreeFilter();
+    } else {
+      this.refreshTableFilter();
+    }
+  }
+
+  private hasActiveFilters(): boolean {
+    if (this.globalSearchTerm.trim()) {
+      return true;
+    }
+    if (this.treeFilter) {
+      return true;
+    }
+    if (this.timeFilterMode !== 'none') {
+      return true;
+    }
+    if (this.ipFilterMode !== 'values') {
+      return true;
+    }
+
+    for (const column of this.filterableColumns) {
+      if (column === 'time' || column === 'ip') {
+        continue;
+      }
+      if (this.isTextFilterColumn(column) && this.getColumnTextFilterMode(column) === 'text') {
+        if (this.getColumnTextFilter(column).trim() || this.columnTextFilterBlocked[column]) {
+          return true;
+        }
+      }
+      const selected = this.columnFilters[column];
+      if (selected !== null && selected !== undefined) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private scrollRowIntoView(row: any): void {
+    this.cdr.detectChanges();
+    requestAnimationFrame(() => {
+      const rowElement = document.querySelector(`tr.mat-row[data-row-position="${row.position}"]`);
+      rowElement?.scrollIntoView({ block: 'nearest' });
+    });
   }
 }

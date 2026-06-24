@@ -58,8 +58,8 @@
         <as-split-area [order]="2" [size]="treeViewOpen ? 80 : 100">
             <as-split direction="vertical" [gutterSize]=7>
                 <as-split-area [size]="60">
-                    <input matInput type="search" (input)="applyFilter($event)" placeholder="Search" id="search"
-                        class="search">
+                    <input matInput type="search" (input)="applyFilter($event)" placeholder="Search  ( / )" id="search"
+                        class="search" aria-keyshortcuts="/ Control+F">
                     <table mat-table [dataSource]="dataSource" matSort cdkDropList cdkDropListOrientation="horizontal"
                         (cdkDropListDropped)="drop($event)">
 
@@ -125,6 +125,7 @@
 
                         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                         <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row)"
+                            [attr.data-row-position]="row.position"
                             [class.row-is-clicked]="clickedRow == row"></tr>
                     </table>
 
