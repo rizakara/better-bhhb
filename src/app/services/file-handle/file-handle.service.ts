@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
 import { Base64 } from 'js-base64';
+import { FileSessionStorageService } from './file-session-storage.service';
 
 export interface StatusBreakdown {
   success: number;
@@ -52,7 +53,7 @@ interface FileSystemFileHandle {
 })
 export class FileHandleService {
 
-  constructor() { }
+  constructor(private fileSessionStorage: FileSessionStorageService) { }
 
   private selectedFileName!: string | undefined;
   private selectedFileContent!: BurpExport | undefined;
@@ -124,6 +125,19 @@ export class FileHandleService {
     this.clearCommentEdits();
   }
 
+  async restoreLastSession(): Promise<boolean> {
+    const session = await this.fileSessionStorage.load();
+    if (!session) {
+      return false;
+    }
+
+    this.selectedFileName = session.fileName;
+    this.selectedFileContent = session.content;
+    this.clearEdits();
+    this.emitSelectedFileData();
+    return true;
+  }
+
   async importFiles(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const files = target.files ? Array.from(target.files) : [];
@@ -137,6 +151,7 @@ export class FileHandleService {
       this.clearEdits();
       this.selectedFileContent = this.normalizeExport(content);
       this.emitSelectedFileData();
+      await this.persistCurrentSession();
       this.resetFileInput(target);
       return;
     }
@@ -155,6 +170,7 @@ export class FileHandleService {
     this.clearEdits();
     this.selectedFileContent = this.mergeExports(exportsToMerge);
     this.emitSelectedFileData();
+    await this.persistCurrentSession();
     this.resetFileInput(target);
   }
 
@@ -163,6 +179,7 @@ export class FileHandleService {
     this.selectedFileContent = undefined;
     this.clearEdits();
     this.exportFilterState.next(this.createEmptyExportFilterState());
+    await this.fileSessionStorage.clear();
     this.emitSelectedFileData();
   }
 
@@ -263,6 +280,21 @@ export class FileHandleService {
       selectedFileName: this.selectedFileName!,
       selectedFileContent: this.selectedFileContent,
     });
+  }
+
+  private async persistCurrentSession(): Promise<void> {
+    if (!this.selectedFileName || !this.selectedFileContent) {
+      return;
+    }
+
+    try {
+      await this.fileSessionStorage.save({
+        fileName: this.selectedFileName,
+        content: this.selectedFileContent,
+      });
+    } catch (error) {
+      console.warn('Failed to persist last opened file.', error);
+    }
   }
 
   private resetFileInput(target: HTMLInputElement): void {

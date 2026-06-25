@@ -1,12 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 
 import { FileHandleService } from './file-handle.service';
+import { FileSessionStorageService } from './file-session-storage.service';
 
 describe('FileHandleService', () => {
   let service: FileHandleService;
+  let storage: jasmine.SpyObj<FileSessionStorageService>;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    storage = jasmine.createSpyObj('FileSessionStorageService', ['save', 'load', 'clear']);
+    storage.load.and.resolveTo(null);
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FileSessionStorageService, useValue: storage },
+      ],
+    });
     service = TestBed.inject(FileHandleService);
   });
 
@@ -36,5 +45,27 @@ describe('FileHandleService', () => {
     service.clearEdits();
     expect(service.hasRequestEdit(1)).toBeFalse();
     expect(service.hasCommentEdit(1)).toBeFalse();
+  });
+
+  it('restores the last opened file session', async () => {
+    const session = {
+      fileName: 'history.xml',
+      content: {
+        items: {
+          '$': { burpVersion: '2024.1', exportTime: '2024-01-01T00:00:00Z' },
+          item: [],
+        },
+      },
+    };
+    storage.load.and.resolveTo(session);
+
+    const restored = await service.restoreLastSession();
+
+    expect(restored).toBeTrue();
+  });
+
+  it('clears persisted session when file is cleared', async () => {
+    await service.fileClear();
+    expect(storage.clear).toHaveBeenCalled();
   });
 });

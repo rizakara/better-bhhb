@@ -51,6 +51,16 @@ export class HeaderComponent implements OnInit {
       .subscribe((state) => {
         this.exportFilterState = state;
       })
+    this.isLoading = true
+    void this.FileHandleService.restoreLastSession()
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (!this.selectedFileName) {
+          this.isLoading = false
+        }
+      })
   }
 
   openFilePicker(): void {
