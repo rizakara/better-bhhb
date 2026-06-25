@@ -18,6 +18,28 @@ interface SiteMapNode {
   children?: SiteMapNode[];
 }
 
+const COLUMN_LAYOUT_STORAGE_KEY = 'bhhb-table-column-layout';
+
+const DEFAULT_COLUMN_ORDER = [
+  'position',
+  'host',
+  'method',
+  'path',
+  'status',
+  'responselength',
+  'mimetype',
+  'extension',
+  'title',
+  'comment',
+  'ip',
+  'time',
+];
+
+interface StoredColumnLayout {
+  order?: string[];
+  hidden?: string[];
+}
+
 @Component({
   selector: 'app-main',
   templateUrl: './main.component.html',
@@ -35,7 +57,9 @@ export class MainComponent implements OnInit {
   fileSub!: Subscription
   beforeSaveSub!: Subscription
   selectedFileContent!: BurpExport | undefined;
-  displayedColumns: string[] = ['position', 'host', 'method', 'path', 'status', 'responselength', 'mimetype', 'extension', 'title', 'comment', 'ip', 'time'];
+  private static readonly VALID_COLUMN_KEYS = new Set(DEFAULT_COLUMN_ORDER);
+  columnOrder: string[] = [...DEFAULT_COLUMN_ORDER];
+  hiddenColumns = new Set<string>();
   readonly filterableColumnDefs = [
     { key: 'host', label: 'Host' },
     { key: 'method', label: 'Method' },
@@ -48,6 +72,10 @@ export class MainComponent implements OnInit {
     { key: 'comment', label: 'Comment' },
     { key: 'ip', label: 'IP' },
     { key: 'time', label: 'Time' },
+  ];
+  readonly columnVisibilityDefs = [
+    { key: 'position', label: '#' },
+    ...this.filterableColumnDefs,
   ];
   readonly filterableColumns = this.filterableColumnDefs.map((column) => column.key);
   dataSource = new MatTableDataSource();
@@ -112,7 +140,16 @@ export class MainComponent implements OnInit {
     return this.ELEMENT_DATA.length > 0;
   }
 
+  get displayedColumns(): string[] {
+    return this.columnOrder.filter((key) => !this.hiddenColumns.has(key));
+  }
+
+  get hiddenColumnCount(): number {
+    return this.hiddenColumns.size;
+  }
+
   ngOnInit(): void {
+    this.loadColumnLayout();
     this.setupFilterPredicate();
     this.beforeSaveSub = this.FileHandleService.onBeforeSave()
       .subscribe(() => {
@@ -181,7 +218,43 @@ export class MainComponent implements OnInit {
   }
 
   drop(event: CdkDragDrop<string[]>) {
-    moveItemInArray(this.displayedColumns, event.previousIndex, event.currentIndex);
+    const visible = [...this.displayedColumns];
+    moveItemInArray(visible, event.previousIndex, event.currentIndex);
+    let visibleIndex = 0;
+    this.columnOrder = this.columnOrder.map((key) => {
+      if (this.hiddenColumns.has(key)) {
+        return key;
+      }
+      return visible[visibleIndex++];
+    });
+    this.persistColumnLayout();
+  }
+
+  isColumnVisible(key: string): boolean {
+    return !this.hiddenColumns.has(key);
+  }
+
+  toggleColumnVisibility(key: string, visible: boolean): void {
+    if (visible) {
+      this.hiddenColumns.delete(key);
+    } else if (this.displayedColumns.length <= 1) {
+      this.snackBar.open('At least one column must remain visible', undefined, { duration: 2200 });
+      return;
+    } else {
+      this.hiddenColumns.add(key);
+    }
+    this.persistColumnLayout();
+  }
+
+  showAllColumns(): void {
+    this.hiddenColumns.clear();
+    this.persistColumnLayout();
+  }
+
+  resetColumnLayout(): void {
+    this.columnOrder = [...DEFAULT_COLUMN_ORDER];
+    this.hiddenColumns.clear();
+    this.persistColumnLayout();
   }
 
   private splitHeaderBody(text: any): any {
@@ -1912,5 +1985,43 @@ export class MainComponent implements OnInit {
       const rowElement = document.querySelector(`tr.mat-row[data-row-position="${row.position}"]`);
       rowElement?.scrollIntoView({ block: 'nearest' });
     });
+  }
+
+  private loadColumnLayout(): void {
+    try {
+      const raw = localStorage.getItem(COLUMN_LAYOUT_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const stored = JSON.parse(raw) as StoredColumnLayout;
+      const validKeys = MainComponent.VALID_COLUMN_KEYS;
+
+      if (Array.isArray(stored.order)) {
+        const order = stored.order.filter((key) => validKeys.has(key));
+        const missing = DEFAULT_COLUMN_ORDER.filter((key) => !order.includes(key));
+        this.columnOrder = [...order, ...missing];
+      }
+
+      if (Array.isArray(stored.hidden)) {
+        this.hiddenColumns = new Set(stored.hidden.filter((key) => validKeys.has(key)));
+        if (this.columnOrder.every((key) => this.hiddenColumns.has(key))) {
+          this.hiddenColumns.delete('position');
+        }
+      }
+    } catch {
+      // Ignore corrupt storage and keep defaults.
+    }
+  }
+
+  private persistColumnLayout(): void {
+    try {
+      localStorage.setItem(COLUMN_LAYOUT_STORAGE_KEY, JSON.stringify({
+        order: this.columnOrder,
+        hidden: Array.from(this.hiddenColumns),
+      }));
+    } catch {
+      // Ignore quota errors.
+    }
   }
 }

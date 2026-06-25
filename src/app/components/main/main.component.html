@@ -58,8 +58,16 @@
         <as-split-area [order]="2" [size]="treeViewOpen ? 80 : 100">
             <as-split direction="vertical" [gutterSize]=7>
                 <as-split-area [size]="60">
-                    <input matInput type="search" (input)="applyFilter($event)" placeholder="Search  ( / )" id="search"
-                        class="search" aria-keyshortcuts="/ Control+F">
+                    <div class="table-toolbar">
+                        <input matInput type="search" (input)="applyFilter($event)" placeholder="Search  ( / )" id="search"
+                            class="search" aria-keyshortcuts="/ Control+F">
+                        <button type="button" mat-icon-button class="column-visibility-button"
+                            [class.column-visibility-active]="hiddenColumnCount > 0"
+                            [matMenuTriggerFor]="columnVisibilityMenu" matTooltip="Choose columns"
+                            aria-label="Choose columns">
+                            <mat-icon aria-hidden="true">view_column</mat-icon>
+                        </button>
+                    </div>
                     <table mat-table [dataSource]="dataSource" matSort cdkDropList cdkDropListOrientation="horizontal"
                         (cdkDropListDropped)="drop($event)">
 
@@ -128,6 +136,23 @@
                             [attr.data-row-position]="row.position"
                             [class.row-is-clicked]="clickedRow == row"></tr>
                     </table>
+
+                    <mat-menu #columnVisibilityMenu="matMenu" class="column-filter-menu-panel">
+                        <div class="column-filter-toolbar" (click)="$event.stopPropagation()">
+                            <span class="column-filter-title">Columns</span>
+                            <button type="button" mat-button (click)="showAllColumns()">All</button>
+                            <button type="button" mat-button (click)="resetColumnLayout()">Reset</button>
+                        </div>
+                        <mat-divider></mat-divider>
+                        <div class="column-filter-options" (click)="$event.stopPropagation()">
+                            <div class="column-filter-option" *ngFor="let column of columnVisibilityDefs">
+                                <mat-checkbox [checked]="isColumnVisible(column.key)"
+                                    (change)="toggleColumnVisibility(column.key, $event.checked)">
+                                    <span [title]="column.label">{{ column.label }}</span>
+                                </mat-checkbox>
+                            </div>
+                        </div>
+                    </mat-menu>
 
                     <mat-menu #columnFilterMenu="matMenu" class="column-filter-menu-panel">
                         <div class="column-filter-toolbar" (click)="$event.stopPropagation()">
