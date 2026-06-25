@@ -1,25 +1,17 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { ThemeService } from './services/theme/theme.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit {
   title = 'burp-http-history-browser';
-  private themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  private readonly themeListener = () => this.applyThemeClass();
+
+  constructor(private themeService: ThemeService) {}
 
   ngOnInit(): void {
-    this.applyThemeClass();
-    this.themeMediaQuery.addEventListener('change', this.themeListener);
-  }
-
-  ngOnDestroy(): void {
-    this.themeMediaQuery.removeEventListener('change', this.themeListener);
-  }
-
-  private applyThemeClass(): void {
-    document.body.classList.toggle('dark-theme', this.themeMediaQuery.matches);
+    this.themeService.initialize();
   }
 }

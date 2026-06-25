@@ -26,12 +26,12 @@
   line-height: 1.2;
   letter-spacing: 0.02em;
   cursor: pointer;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-color);
   border-left: 0;
   border-radius: 0 4px 4px 0;
-  color: rgb(29, 30, 32);
-  background-color: rgb(235, 235, 235);
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-light);
 }
 
 .tree-panel {
@@ -40,7 +40,7 @@
   height: 100%;
   min-width: 0;
   overflow: hidden;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-right: 1px solid var(--border-color);
   background: transparent;
 }
 
@@ -48,7 +48,7 @@
   flex-shrink: 0;
   font-size: 13px;
   font-weight: 600;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .tree-panel-close {
@@ -105,7 +105,7 @@
   position: relative;
   margin-left: 7px;
   padding-left: 11px;
-  border-left: 1px solid rgba(0, 0, 0, 0.24);
+  border-left: 1px solid var(--border-color-strong);
 }
 
 :host ::ng-deep .site-map-tree .tree-children > .tree-mat-node::before {
@@ -114,7 +114,7 @@
   left: -11px;
   top: 12px;
   width: 11px;
-  border-top: 1px solid rgba(0, 0, 0, 0.24);
+  border-top: 1px solid var(--border-color-strong);
   pointer-events: none;
 }
 
@@ -193,11 +193,11 @@
 }
 
 .tree-node-label:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--hover-bg);
 }
 
 .tree-node-selected {
-  background-color: rgba(0, 0, 0, 0.144);
+  background-color: var(--selected-bg);
   font-weight: 600;
 }
 
@@ -210,7 +210,7 @@ table {
 }
 
 .mat-row:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--hover-bg);
 }
 
 tr.mat-row,
@@ -222,37 +222,98 @@ tr.mat-header-row {
   height: 36px;
 }
 
+/* Base table theming using CSS variables so all color themes are followed */
+.mat-table,
+table[mat-table],
+.mdc-data-table,
+table.mat-mdc-table {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary);
+}
+
+.mat-header-row,
+tr.mat-header-row,
+.mdc-data-table__header-row {
+  background: var(--bg-primary);
+}
+
+.mat-row,
+.mat-footer-row,
+tr.mat-row,
+tr.mat-footer-row,
+.mdc-data-table__row {
+  background: var(--bg-primary);
+}
+
+.mat-header-cell,
+th.mat-header-cell,
+.mdc-data-table__header-cell,
+.mat-mdc-header-cell {
+  color: var(--text-muted) !important;
+  background: var(--bg-primary) !important;
+}
+
+.mat-cell,
+.mat-footer-cell,
+td.mat-cell,
+td.mat-footer-cell,
+.mdc-data-table__cell,
+.mat-mdc-cell {
+  color: var(--text-primary) !important;
+}
+
 .column-header {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   width: 100%;
 }
 
-.column-header .mat-sort-header-container {
-  flex: 1;
+.column-header > span[mat-sort-header] {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.column-header .mat-sort-header-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
 }
 
 :host ::ng-deep .mat-sort-header:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
   opacity: 0.54 !important;
   transform: translateY(0) !important;
+  vertical-align: middle;
+}
+
+/* When sorted, keep the arrow visible and aligned */
+:host ::ng-deep .mat-sort-header.mat-sort-header-sorted .mat-sort-header-arrow {
+  vertical-align: middle;
 }
 
 .column-filter-button {
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  padding: 0;
   flex-shrink: 0;
   color: inherit;
   opacity: 0.54;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .column-filter-button mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-  line-height: 18px;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  vertical-align: middle;
 }
 
 .column-filter-button.filter-active {
@@ -261,12 +322,19 @@ tr.mat-header-row {
 
 .mat-table .mat-cell,
 .mat-table .mat-header-cell {
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-right: 1px solid var(--border-color);
+}
+
+/* Table row separators (horizontal lines) - base uses theme var for light */
+.mat-table tr,
+.mat-table td,
+.mat-table th {
+  border-bottom: 1px solid var(--border-color);
 }
 
 .row-is-clicked,
 .row-is-clicked:hover {
-  background-color: rgba(0, 0, 0, 0.144);
+  background-color: var(--selected-bg);
 }
 
 as-split>as-split-area {
@@ -287,10 +355,12 @@ as-split>as-split-area .content {
   min-height: 0;
   font-family: monospace;
   white-space: pre;
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 as-split>as-split-area .label {
-  background-color: rgba(195, 195, 195, 1);
+  background-color: var(--label-bg);
   padding: 10px;
   display: flex;
   max-height: 18px;
@@ -305,9 +375,9 @@ as-split>as-split-area .content.wrapy {
   padding: 6px 10px;
   font-size: 11px;
   line-height: 1.35;
-  color: rgba(0, 0, 0, 0.6);
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+  background: var(--hover-bg);
 }
 
 .replay-editor {
@@ -327,19 +397,19 @@ as-split>as-split-area .content.wrapy {
 
 as-split>as-split-area div.label button.active {
   font-weight: bold;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: rgb(29, 30, 32);
+  color: var(--bg-primary);
+  background-color: var(--text-primary);
 }
 
 as-split>as-split-area .panel-header button {
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+  box-shadow: var(--shadow-light);
   user-select: none;
   cursor: pointer;
   border: none;
   -webkit-tap-highlight-color: transparent;
   border-radius: 4px;
-  color: rgb(29, 30, 32);
-  background-color: rgb(235, 235, 235);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
 }
 
 .request-toolbar {
@@ -349,7 +419,7 @@ as-split>as-split-area .panel-header button {
 
 .edit-status {
   font-size: 11px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -363,23 +433,23 @@ as-split>as-split-area .panel-header button {
   width: 100%;
   min-width: 8rem;
   box-sizing: border-box;
-  border: 1px solid rgba(29, 30, 32, 0.35);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   padding: 2px 6px;
   font-size: 12px;
   font-family: inherit;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--input-bg);
   color: inherit;
 }
 
 .comment-cell-input:focus {
   outline: none;
-  border-color: rgba(29, 30, 32, 0.6);
+  border-color: var(--text-primary);
 }
 
 .comment-edited-marker {
   margin-left: 4px;
-  color: rgba(29, 30, 32, 0.55);
+  color: var(--text-muted);
   font-weight: 700;
 }
 
@@ -393,8 +463,8 @@ as-split>as-split-area .panel-header button {
   border-radius: 10px;
   font-size: 11px;
   line-height: 1.4;
-  background: rgba(29, 30, 32, 0.08);
-  color: rgba(0, 0, 0, 0.75);
+  background: var(--hover-bg);
+  color: var(--text-primary);
 }
 
 .comment-text.comment-filled {
@@ -425,7 +495,7 @@ as-split>as-split-area .panel-header button {
 }
 
 :host ::ng-deep .as-split-gutter {
-  background-color: rgba(0, 0, 0, 0.12) !important;
+  background-color: var(--split-gutter) !important;
 }
 
 .mat-table .mat-cell:not(:nth-child(1)),
@@ -439,13 +509,14 @@ as-split>as-split-area .panel-header button {
 }
 
 .header_key {
-  color: darkblue;
+  color: #1565c0;
 }
 
 .table-toolbar {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .column-visibility-button {
@@ -478,16 +549,23 @@ as-split>as-split-area .panel-header button {
   font-size: 15px;
   flex: 1;
   min-width: 0;
+  background: transparent;
+  color: var(--text-primary) !important;
 }
 
 .search:focus {
   outline-offset: -2px;
 }
 
+.search::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
 .panel-search-row {
   display: flex;
   align-items: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  border-top: 1px solid var(--border-color);
 }
 
 .panel-search {
@@ -501,7 +579,7 @@ as-split>as-split-area .panel-header button {
   padding: 0 10px;
   font-size: 13px;
   font-family: sans-serif;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -517,135 +595,112 @@ as-split>as-split-area .panel-header button {
 }
 
 
-@media (prefers-color-scheme: dark) {
-  .treeview-open-btn {
-    color: rgba(255, 255, 255, 0.87);
-    background-color: rgb(60, 60, 60);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
-  }
+/* Dark theme variants (all dark themes share .theme-is-dark) */
+body.theme-is-dark .treeview-open-btn {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-dark);
+}
 
-  .tree-panel {
-    border-right-color: rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark .tree-panel {
+  border-right-color: var(--border-color);
+}
 
-  .tree-panel-header {
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark .tree-panel-header {
+  border-bottom-color: var(--border-color);
+}
 
-  .tree-node-label:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
+body.theme-is-dark .tree-node-label:hover {
+  background-color: var(--hover-bg);
+}
 
-  .tree-node-selected {
-    background-color: rgba(255, 255, 255, 0.144);
-  }
+body.theme-is-dark .tree-node-selected {
+  background-color: var(--selected-bg);
+}
 
-  .tree-children {
-    border-left-color: rgba(255, 255, 255, 0.24);
-  }
+body.theme-is-dark .tree-children {
+  border-left-color: var(--border-color-strong);
+}
 
-  :host ::ng-deep .site-map-tree .tree-children > .tree-mat-node::before {
-    border-top-color: rgba(255, 255, 255, 0.24);
-  }
+body.theme-is-dark :host ::ng-deep .site-map-tree .tree-children > .tree-mat-node::before {
+  border-top-color: var(--border-color-strong);
+}
 
-  .mat-table,
-  .search {
-    background: 0;
-  }
+/* Table and search now use CSS vars at base level for all themes.
+   No need to force transparent here; vars provide correct bg per theme. */
 
-  .mat-cell,
-  .mat-footer-cell {
-    color: rgba(255, 255, 255, 0.87);
-  }
+body.theme-is-dark .mat-table .mat-cell,
+body.theme-is-dark .mat-table .mat-header-cell {
+  border-right: 1px solid var(--border-color);
+}
 
-  mat-row {
-    border-bottom-color: #e0e0e0;
-  }
+/* Use default dark theme separator color (rgba white 0.12) for table row lines in all dark themes */
+body.theme-is-dark .mat-table tr,
+body.theme-is-dark .mat-table td,
+body.theme-is-dark .mat-table th {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
 
-  mat-row,
-  mat-header-row,
-  mat-footer-row,
-  th.mat-header-cell,
-  td.mat-cell,
-  td.mat-footer-cell {
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark :host ::ng-deep .as-split-gutter {
+  background-color: var(--split-gutter) !important;
+}
 
-  .mat-header-cell {
-    color: rgba(255, 255, 255, 0.54);
-  }
+body.theme-is-dark as-split>as-split-area .label {
+  background-color: var(--label-bg);
+}
 
-  .mat-row:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
+body.theme-is-dark .header_key {
+  color: #7ec1ff;
+}
 
-  .mat-table .mat-cell,
-  .mat-table .mat-header-cell {
-    border-right: 1px solid rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark .table-toolbar {
+  border-bottom: 1px solid var(--border-color);
+}
 
-  :host ::ng-deep .as-split-gutter {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-  }
+body.theme-is-dark .panel-search-row {
+  border-top: 1px solid var(--border-color);
+}
 
-  as-split>as-split-area .label {
-    background-color: rgba(60, 60, 60, 1);
-  }
+body.theme-is-dark .replay-hint {
+  color: var(--text-secondary);
+  border-top-color: var(--border-color);
+  /* background driven by --hover-bg var for theme consistency */
+}
 
-  .header_key {
-    color: lightblue;
-  }
+body.theme-is-dark .edit-status {
+  color: var(--text-secondary);
+}
 
-  .table-toolbar {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark .comment-cell-input {
+  border-color: var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
 
-  .panel-search-row {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-  }
+body.theme-is-dark .comment-cell-input:focus {
+  border-color: var(--border-color-strong);
+}
 
-  .replay-hint {
-    color: rgba(255, 255, 255, 0.62);
-    border-top-color: rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-  }
+body.theme-is-dark .comment-edited-marker {
+  color: var(--text-muted);
+}
 
-  .edit-status {
-    color: rgba(255, 255, 255, 0.6);
-  }
+body.theme-is-dark .comment-tag {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
 
-  .comment-cell-input {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.87);
-  }
+body.theme-is-dark .search-status {
+  color: var(--text-secondary);
+}
 
-  .comment-cell-input:focus {
-    border-color: rgba(255, 255, 255, 0.5);
-  }
+body.theme-is-dark :host ::ng-deep .search-highlight {
+  background-color: #f9a825;
+  color: #000;
+}
 
-  .comment-edited-marker {
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .comment-tag {
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.82);
-  }
-
-  .search-status {
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  :host ::ng-deep .search-highlight {
-    background-color: #f9a825;
-    color: #000;
-  }
-
-  :host ::ng-deep .search-highlight-active {
-    background-color: #ff6f00;
-    outline-color: #ffab40;
-  }
-
+body.theme-is-dark :host ::ng-deep .search-highlight-active {
+  background-color: #ff6f00;
+  outline-color: #ffab40;
 }

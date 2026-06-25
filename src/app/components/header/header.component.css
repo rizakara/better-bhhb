@@ -11,7 +11,7 @@
 
 mat-toolbar {
   height: 40px;
-  background: rgb(255, 255, 255);
+  background: var(--bg-primary);
   color: inherit;
 }
 
@@ -36,20 +36,35 @@ svg {
 
 ::ng-deep .mat-progress-bar-background,
 ::ng-deep .mat-progress-bar-buffer {
-  background-color: rgb(226, 225, 223);
+  background-color: var(--progress-buffer);
 }
 
-@media (prefers-color-scheme: dark) {
-  mat-toolbar {
-    background: rgb(29, 30, 32);
-  }
+.theme-menu-section {
+  padding: 4px 0;
+}
 
-  ::ng-deep .mat-progress-bar-fill::after {
-    background-color: currentColor
-  }
+.theme-menu-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 16px 4px;
+  opacity: 0.6;
+  pointer-events: none;
+}
 
-  ::ng-deep .mat-progress-bar-background,
-  ::ng-deep .mat-progress-bar-buffer {
-    background-color: rgb(29, 30, 32);
-  }
+.theme-selected {
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-is-dark .theme-selected {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.theme-is-dark mat-toolbar {
+  background: var(--bg-primary);
+}
+
+body.theme-is-dark ::ng-deep .mat-progress-bar-background,
+body.theme-is-dark ::ng-deep .mat-progress-bar-buffer {
+  background-color: var(--progress-buffer);
 }

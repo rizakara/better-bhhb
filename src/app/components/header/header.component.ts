@@ -1,5 +1,6 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ExportFilterState, FileHandleService } from "../../services/file-handle/file-handle.service"
+import { Theme, ThemeService } from "../../services/theme/theme.service";
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -10,7 +11,11 @@ import { MatDialog } from '@angular/material/dialog';
 })
 export class HeaderComponent implements OnInit {
 
-  constructor(private FileHandleService: FileHandleService, public dialog: MatDialog) { }
+  constructor(
+    private FileHandleService: FileHandleService,
+    public dialog: MatDialog,
+    public themeService: ThemeService
+  ) { }
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 

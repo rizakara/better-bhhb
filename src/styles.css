@@ -9,14 +9,213 @@ body {
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
-  body {
-    color: rgb(255, 255, 255);
-    background-color: rgb(29, 30, 32);
-  }
+/* ============================================
+   Theme color variables (default = existing Light)
+   ============================================ */
+:root {
+  --bg-primary: rgb(255, 255, 255);
+  --bg-secondary: rgb(235, 235, 235);
+  --text-primary: rgb(29, 30, 32);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-muted: rgba(0, 0, 0, 0.54);
+  --border-color: rgba(0, 0, 0, 0.12);
+  --border-color-strong: rgba(0, 0, 0, 0.24);
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --selected-bg: rgba(0, 0, 0, 0.144);
+  --menu-bg: rgb(255, 255, 255);
+  --menu-text: rgb(29, 30, 32);
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --label-bg: rgba(195, 195, 195, 1);
+  --progress-buffer: rgb(226, 225, 223);
+  --split-gutter: rgba(0, 0, 0, 0.12);
+  --shadow-light: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+  --shadow-dark: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
+  color-scheme: light;
+}
+
+/* Existing dark theme is default dark (applied via body.theme-dark) */
+body.theme-dark,
+body.dark-theme {
+  --bg-primary: rgb(29, 30, 32);
+  --bg-secondary: rgb(60, 60, 60);
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.62);
+  --text-muted: rgba(255, 255, 255, 0.54);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-color-strong: rgba(255, 255, 255, 0.24);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --selected-bg: rgba(255, 255, 255, 0.144);
+  --menu-bg: rgb(29, 30, 32);
+  --menu-text: rgba(255, 255, 255, 0.87);
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --label-bg: rgba(60, 60, 60, 1);
+  --progress-buffer: rgb(29, 30, 32);
+  --split-gutter: rgba(255, 255, 255, 0.12);
+  color-scheme: dark;
+}
+
+/* Popular dark themes */
+body.theme-dracula {
+  --bg-primary: #282a36;
+  --bg-secondary: #44475a;
+  --text-primary: #f8f8f2;
+  --text-secondary: #6272a4;
+  --text-muted: #6272a4;
+  --border-color: #6272a4;
+  --border-color-strong: #bd93f9;
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --selected-bg: rgba(189, 147, 249, 0.25);
+  --menu-bg: #282a36;
+  --menu-text: #f8f8f2;
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --label-bg: #44475a;
+  --progress-buffer: #282a36;
+  --split-gutter: #6272a4;
+  color-scheme: dark;
+}
+
+body.theme-nord {
+  --bg-primary: #2e3440;
+  --bg-secondary: #3b4252;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-muted: #81a1c1;
+  --border-color: #4c566a;
+  --border-color-strong: #5e81ac;
+  --hover-bg: rgba(236, 239, 244, 0.08);
+  --selected-bg: rgba(94, 129, 172, 0.35);
+  --menu-bg: #2e3440;
+  --menu-text: #eceff4;
+  --input-bg: rgba(236, 239, 244, 0.06);
+  --label-bg: #3b4252;
+  --progress-buffer: #2e3440;
+  --split-gutter: #4c566a;
+  color-scheme: dark;
+}
+
+body.theme-solarized-dark {
+  --bg-primary: #002b36;
+  --bg-secondary: #073642;
+  --text-primary: #839496;
+  --text-secondary: #586e75;
+  --text-muted: #657b83;
+  --border-color: #586e75;
+  --border-color-strong: #93a1a1;
+  --hover-bg: rgba(131, 148, 150, 0.08);
+  --selected-bg: rgba(38, 139, 210, 0.25);
+  --menu-bg: #002b36;
+  --menu-text: #839496;
+  --input-bg: rgba(131, 148, 150, 0.08);
+  --label-bg: #073642;
+  --progress-buffer: #002b36;
+  --split-gutter: #586e75;
+  color-scheme: dark;
+}
+
+body.theme-github-dark {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #8b949e;
+  --border-color: #30363d;
+  --border-color-strong: #484f58;
+  --hover-bg: rgba(201, 209, 217, 0.08);
+  --selected-bg: rgba(88, 166, 255, 0.2);
+  --menu-bg: #161b22;
+  --menu-text: #c9d1d9;
+  --input-bg: rgba(201, 209, 217, 0.06);
+  --label-bg: #161b22;
+  --progress-buffer: #0d1117;
+  --split-gutter: #30363d;
+  color-scheme: dark;
+}
+
+body.theme-one-dark {
+  --bg-primary: #282c34;
+  --bg-secondary: #21252b;
+  --text-primary: #abb2bf;
+  --text-secondary: #5c6370;
+  --text-muted: #5c6370;
+  --border-color: #3e4451;
+  --border-color-strong: #4b5263;
+  --hover-bg: rgba(171, 178, 191, 0.08);
+  --selected-bg: rgba(97, 175, 239, 0.25);
+  --menu-bg: #282c34;
+  --menu-text: #abb2bf;
+  --input-bg: rgba(171, 178, 191, 0.06);
+  --label-bg: #21252b;
+  --progress-buffer: #282c34;
+  --split-gutter: #3e4451;
+  color-scheme: dark;
+}
+
+/* Popular light themes (existing Light preserved as theme-light) */
+body.theme-light {
+  /* inherits default light vars */
+}
+
+body.theme-solarized-light {
+  --bg-primary: #fdf6e3;
+  --bg-secondary: #eee8d5;
+  --text-primary: #657b83;
+  --text-secondary: #586e75;
+  --text-muted: #839496;
+  --border-color: #93a1a1;
+  --border-color-strong: #839496;
+  --hover-bg: rgba(101, 123, 131, 0.08);
+  --selected-bg: rgba(38, 139, 210, 0.18);
+  --menu-bg: #fdf6e3;
+  --menu-text: #657b83;
+  --input-bg: rgba(253, 246, 227, 0.95);
+  --label-bg: #eee8d5;
+  --progress-buffer: #eee8d5;
+  --split-gutter: #93a1a1;
+  color-scheme: light;
+}
+
+body.theme-github-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #6e7781;
+  --border-color: #d0d7de;
+  --border-color-strong: #afb8c1;
+  --hover-bg: rgba(36, 41, 47, 0.06);
+  --selected-bg: rgba(9, 105, 218, 0.15);
+  --menu-bg: #ffffff;
+  --menu-text: #24292f;
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --label-bg: #f6f8fa;
+  --progress-buffer: #f6f8fa;
+  --split-gutter: #d0d7de;
+  color-scheme: light;
+}
+
+body.theme-one-light {
+  --bg-primary: #fafafa;
+  --bg-secondary: #f0f0f0;
+  --text-primary: #383a42;
+  --text-secondary: #696c77;
+  --text-muted: #a0a1a7;
+  --border-color: #e5e5e6;
+  --border-color-strong: #d1d1d2;
+  --hover-bg: rgba(56, 58, 66, 0.06);
+  --selected-bg: rgba(1, 132, 188, 0.12);
+  --menu-bg: #fafafa;
+  --menu-text: #383a42;
+  --input-bg: rgba(250, 250, 250, 0.95);
+  --label-bg: #f0f0f0;
+  --progress-buffer: #f0f0f0;
+  --split-gutter: #e5e5e6;
+  color-scheme: light;
+}
+
+/* Apply body-level background/text from variables */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 app-root {
   display: flex;
@@ -26,10 +225,10 @@ app-root {
 
 .mat-menu-panel.import-menu-panel {
   min-width: 180px !important;
-  background: rgb(255, 255, 255) !important;
-  color: rgb(29, 30, 32) !important;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+  background: var(--menu-bg) !important;
+  color: var(--menu-text) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
 }
 
 .mat-menu-panel.import-menu-panel .mat-menu-content {
@@ -45,43 +244,25 @@ app-root {
 }
 
 .mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]) {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  background-color: var(--hover-bg) !important;
 }
 
 .mat-menu-panel.import-menu-panel .mat-divider {
-  border-top-color: rgba(0, 0, 0, 0.12);
+  border-top-color: var(--border-color);
 }
 
-body.dark-theme .mat-menu-panel.import-menu-panel {
-  background: rgb(29, 30, 32) !important;
-  color: rgba(255, 255, 255, 0.87) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
-}
-
-body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item {
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
-body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-body.dark-theme .mat-menu-panel.import-menu-panel .mat-menu-item[disabled] {
-  color: rgba(255, 255, 255, 0.38) !important;
-}
-
-body.dark-theme .mat-menu-panel.import-menu-panel .mat-divider {
-  border-top-color: rgba(255, 255, 255, 0.12);
+/* Darker shadow for dark themes */
+body.theme-is-dark .mat-menu-panel.import-menu-panel {
+  box-shadow: var(--shadow-dark);
 }
 
 .mat-menu-panel.column-filter-menu-panel {
   min-width: 220px !important;
   max-width: 360px !important;
-  background: rgb(255, 255, 255) !important;
-  color: rgb(29, 30, 32) !important;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 20%), 0px 2px 2px 0px rgb(0 0 0 / 14%), 0px 1px 5px 0px rgb(0 0 0 / 12%);
+  background: var(--menu-bg) !important;
+  color: var(--menu-text) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-menu-content {
@@ -111,7 +292,7 @@ body.dark-theme .mat-menu-panel.import-menu-panel .mat-divider {
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-divider {
-  border-top-color: rgba(0, 0, 0, 0.12);
+  border-top-color: var(--border-color);
 }
 
 .mat-menu-panel.column-filter-menu-panel .column-filter-options {
@@ -138,52 +319,36 @@ body.dark-theme .mat-menu-panel.import-menu-panel .mat-divider {
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
-  border-color: rgba(0, 0, 0, 0.54) !important;
+  border-color: var(--text-muted) !important;
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background {
-  background-color: rgb(29, 30, 32) !important;
+  background-color: var(--text-primary) !important;
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
-  stroke: rgb(255, 255, 255) !important;
+  stroke: var(--bg-primary) !important;
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
-  background-color: rgba(0, 0, 0, 0.12);
+  background-color: var(--hover-bg);
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel {
-  background: rgb(29, 30, 32) !important;
-  color: rgba(255, 255, 255, 0.87) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0px 3px 1px -2px rgb(0 0 0 / 40%), 0px 2px 2px 0px rgb(0 0 0 / 28%), 0px 1px 5px 0px rgb(0 0 0 / 24%);
+/* Dark theme checkbox adjustments */
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background {
+  background-color: #e0e0e0 !important;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-divider {
-  border-top-color: rgba(255, 255, 255, 0.12);
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
+  stroke: #1d1e20 !important;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .column-filter-title,
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .column-filter-toolbar .mat-button {
-  color: rgba(255, 255, 255, 0.87) !important;
-}
-
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
   border-color: rgba(255, 255, 255, 0.54) !important;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background {
-  background-color: rgb(235, 235, 235) !important;
-}
-
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
-  stroke: rgb(29, 30, 32) !important;
-}
-
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
@@ -232,7 +397,7 @@ body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-
   min-width: 0;
   height: 28px;
   padding: 0 8px;
-  border: 1px solid rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--border-color-strong);
   border-radius: 4px;
   background: transparent;
   color: inherit;
@@ -264,16 +429,14 @@ body.dark-theme .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-
   margin-bottom: 4px;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-input {
-  border-color: rgba(255, 255, 255, 0.24);
-}
+/* ip filter input border already uses var for all themes */
 
 .mat-menu-panel.column-filter-menu-panel .path-filter-advanced {
   padding: 8px 12px 4px;
   font-family: sans-serif;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
   color: #ef9a9a;
 }
 
@@ -305,7 +468,7 @@ body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
 .mat-menu-panel.column-filter-menu-panel .time-filter-input {
   height: 30px;
   padding: 0 8px;
-  border: 1px solid rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--border-color-strong);
   border-radius: 4px;
   background: transparent;
   color: inherit;
@@ -331,10 +494,6 @@ body.dark-theme .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
   margin-bottom: 4px;
 }
 
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .time-filter-input {
-  border-color: rgba(255, 255, 255, 0.24);
-}
-
-body.dark-theme .mat-menu-panel.column-filter-menu-panel .time-filter-error {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .time-filter-error {
   color: #ef9a9a;
 }

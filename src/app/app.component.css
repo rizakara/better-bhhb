@@ -21,11 +21,25 @@ app-footer {
   border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-@media (prefers-color-scheme: dark) {
-  app-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  }
-  app-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-  }
+/* Theme-aware header/footer borders */
+body.theme-is-dark app-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.theme-is-dark app-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+body.theme-light app-header,
+body.theme-solarized-light app-header,
+body.theme-github-light app-header,
+body.theme-one-light app-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.theme-light app-footer,
+body.theme-solarized-light app-footer,
+body.theme-github-light app-footer,
+body.theme-one-light app-footer {
+  border-top: 1px solid var(--border-color);
 }

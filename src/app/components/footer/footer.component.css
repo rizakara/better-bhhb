@@ -6,7 +6,7 @@
   width: 100%;
   min-height: 20px;
   padding: 2px 16px;
-  background: rgb(255, 255, 255);
+  background: var(--bg-primary);
   color: inherit;
   box-sizing: border-box;
 }
@@ -83,37 +83,36 @@
   flex: 1 1 auto;
 }
 
-@media (prefers-color-scheme: dark) {
-  .navbar-footer {
-    background: rgb(29, 30, 32);
-  }
+/* Dark status chips for dark themes */
+body.theme-is-dark .navbar-footer {
+  background: var(--bg-primary);
+}
 
-  .stat-separator {
-    color: rgba(255, 255, 255, 0.38);
-  }
+body.theme-is-dark .stat-separator {
+  color: rgba(255, 255, 255, 0.38);
+}
 
-  .status-2xx {
-    background: rgba(102, 187, 106, 0.2);
-    color: rgb(165, 214, 167);
-  }
+body.theme-is-dark .status-2xx {
+  background: rgba(102, 187, 106, 0.2);
+  color: rgb(165, 214, 167);
+}
 
-  .status-3xx {
-    background: rgba(66, 165, 245, 0.2);
-    color: rgb(144, 202, 249);
-  }
+body.theme-is-dark .status-3xx {
+  background: rgba(66, 165, 245, 0.2);
+  color: rgb(144, 202, 249);
+}
 
-  .status-4xx {
-    background: rgba(255, 167, 38, 0.2);
-    color: rgb(255, 204, 128);
-  }
+body.theme-is-dark .status-4xx {
+  background: rgba(255, 167, 38, 0.2);
+  color: rgb(255, 204, 128);
+}
 
-  .status-5xx {
-    background: rgba(239, 83, 80, 0.2);
-    color: rgb(239, 154, 154);
-  }
+body.theme-is-dark .status-5xx {
+  background: rgba(239, 83, 80, 0.2);
+  color: rgb(239, 154, 154);
+}
 
-  .status-other {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.7);
-  }
+body.theme-is-dark .status-other {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
 }
