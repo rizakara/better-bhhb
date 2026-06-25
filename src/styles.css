@@ -21,7 +21,7 @@ body {
   --border-color: rgba(0, 0, 0, 0.12);
   --border-color-strong: rgba(0, 0, 0, 0.24);
   --hover-bg: rgba(0, 0, 0, 0.05);
-  --selected-bg: rgba(0, 0, 0, 0.144);
+  --selected-bg: rgba(0, 0, 0, 0.22);
   --menu-bg: rgb(255, 255, 255);
   --menu-text: rgb(29, 30, 32);
   --input-bg: rgba(255, 255, 255, 0.95);
@@ -44,7 +44,7 @@ body.dark-theme {
   --border-color: rgba(255, 255, 255, 0.12);
   --border-color-strong: rgba(255, 255, 255, 0.24);
   --hover-bg: rgba(255, 255, 255, 0.05);
-  --selected-bg: rgba(255, 255, 255, 0.144);
+  --selected-bg: rgba(255, 255, 255, 0.22);
   --menu-bg: rgb(29, 30, 32);
   --menu-text: rgba(255, 255, 255, 0.87);
   --input-bg: rgba(255, 255, 255, 0.08);

@@ -332,9 +332,26 @@ td.mat-footer-cell,
   border-bottom: 1px solid var(--border-color);
 }
 
-.row-is-clicked,
-.row-is-clicked:hover {
-  background-color: var(--selected-bg);
+/* Selected row highlight - strong enough to see during arrow key navigation */
+tr.row-is-clicked,
+.mat-row.row-is-clicked,
+tr.row-is-clicked:hover,
+.mat-row.row-is-clicked:hover {
+  background-color: var(--selected-bg) !important;
+}
+
+/* Apply highlight directly to cells too (Material tables often paint bg on td) */
+.row-is-clicked td,
+.row-is-clicked .mat-cell,
+.row-is-clicked .mat-footer-cell,
+.row-is-clicked th {
+  background-color: var(--selected-bg) !important;
+}
+
+/* Left accent indicator for the active/selected row */
+.row-is-clicked td:first-child,
+.row-is-clicked .mat-cell:first-child {
+  box-shadow: inset 4px 0 0 var(--text-muted);
 }
 
 as-split>as-split-area {
