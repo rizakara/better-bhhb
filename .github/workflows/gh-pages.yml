@@ -22,4 +22,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm install
-          npm run ng -- deploy --base-href=/bhhb/ --name="adityatelange" --email="adityatelange@users.noreply.github.com" --no-silent
+          npm run ng -- deploy --base-href=/better-bhhb --name="Rıza Kara" --email="rizakara@users.noreply.github.com" --no-silent

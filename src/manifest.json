@@ -1,6 +1,6 @@
 {
   "name": "Burp HTTP history browser",
-  "short_name": "bhhb",
+  "short_name": "better-bhhb",
   "description": "A tool to view HTTP history exported from Burp Suite Community Edition",
   "theme_color": "#0a0a0a",
   "background_color": "#fafafa",

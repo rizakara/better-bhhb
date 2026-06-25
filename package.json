@@ -1,5 +1,5 @@
 {
-  "name": "burp-http-history-browser",
+  "name": "better-bhhb",
   "version": "1.2.0",
   "description": "A tool to browse/view exported HTTP history from Burp",
   "scripts": {
@@ -10,14 +10,14 @@
     "test": "ng test"
   },
   "private": true,
-  "homepage": "https://github.com/adityatelange/bhhb#readme",
+  "homepage": "https://github.com/rizakara/better-bhhb#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/adityatelange/bhhb"
+    "url": "https://github.com/rizakara/better-bhhb"
   },
-  "bugs": "https://github.com/adityatelange/bhhb/issues",
+  "bugs": "https://github.com/rizakara/better-bhhb/issues",
   "license": "MIT",
-  "author": "Aditya Telange",
+  "author": "Rıza Kara",
   "dependencies": {
     "@angular/animations": "~14.1.2",
     "@angular/cdk": "^14.1.2",
