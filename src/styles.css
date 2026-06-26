@@ -501,3 +501,48 @@ body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
 body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .time-filter-error {
   color: #ef9a9a;
 }
+
+/* ============================================
+   File drop overlay + empty state
+   ============================================ */
+.file-drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.file-drop-card {
+  pointer-events: auto;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 3px dashed #177fc5;
+  border-radius: 12px;
+  padding: 32px 48px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  max-width: 320px;
+}
+
+.file-drop-icon {
+  font-size: 42px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.file-drop-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.file-drop-subtitle {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+

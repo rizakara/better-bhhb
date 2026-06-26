@@ -136,6 +136,8 @@ export class MainComponent implements OnInit {
   treeControl = new NestedTreeControl<SiteMapNode>((node) => node.children);
   treeDataSource = new MatTreeNestedDataSource<SiteMapNode>();
 
+  isDraggingFile = false;
+
   get hasData(): boolean {
     return this.ELEMENT_DATA.length > 0;
   }
@@ -2152,5 +2154,65 @@ export class MainComponent implements OnInit {
     } catch {
       // Ignore quota errors.
     }
+  }
+
+  // --- File drop support (for receiving exports from Burp extension etc.) ---
+  private dragCounter = 0;
+
+  @HostListener('document:dragenter', ['$event'])
+  onDragEnter(event: DragEvent): void {
+    if (this.hasFileDataTransfer(event)) {
+      event.preventDefault();
+      this.dragCounter++;
+      this.isDraggingFile = true;
+    }
+  }
+
+  @HostListener('document:dragover', ['$event'])
+  onDragOver(event: DragEvent): void {
+    if (this.hasFileDataTransfer(event)) {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+    }
+  }
+
+  @HostListener('document:dragleave', ['$event'])
+  onDragLeave(event: DragEvent): void {
+    if (this.hasFileDataTransfer(event)) {
+      this.dragCounter--;
+      if (this.dragCounter <= 0) {
+        this.dragCounter = 0;
+        this.isDraggingFile = false;
+      }
+    }
+  }
+
+  @HostListener('document:drop', ['$event'])
+  async onDrop(event: DragEvent): Promise<void> {
+    if (!this.hasFileDataTransfer(event)) {
+      return;
+    }
+    event.preventDefault();
+    this.dragCounter = 0;
+    this.isDraggingFile = false;
+
+    const dt = event.dataTransfer;
+    const files: File[] = dt ? Array.from(dt.files) : [];
+    if (!files.length) {
+      return;
+    }
+
+    try {
+      await this.FileHandleService.importFileList(files);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load dropped file(s).';
+      this.snackBar.open(message, 'Dismiss', { duration: 4500 });
+    }
+  }
+
+  private hasFileDataTransfer(event: DragEvent): boolean {
+    return !!(event.dataTransfer && event.dataTransfer.types && Array.from(event.dataTransfer.types).includes('Files'));
   }
 }

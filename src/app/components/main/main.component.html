@@ -1,4 +1,12 @@
 <div class="main-layout">
+    <div class="file-drop-overlay" *ngIf="isDraggingFile">
+        <div class="file-drop-card">
+            <div class="file-drop-icon">⬇︎</div>
+            <div class="file-drop-title">Drop Burp XML export</div>
+            <div class="file-drop-subtitle">Open or merge into current view</div>
+        </div>
+    </div>
+
     <button type="button" class="treeview-open-btn" *ngIf="hasData && !treeViewOpen" (click)="toggleTreeView()">
         Open Treeview
     </button>

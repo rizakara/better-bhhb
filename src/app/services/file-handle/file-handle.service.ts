@@ -63,6 +63,7 @@ export class FileHandleService {
   private beforeSave = new Subject<void>();
   private requestEdits = new Map<number, string>();
   private commentEdits = new Map<number, string>();
+  private importing = new BehaviorSubject<boolean>(false);
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
@@ -70,6 +71,10 @@ export class FileHandleService {
 
   getExportFilterStateListener() {
     return this.exportFilterState.asObservable();
+  }
+
+  getImportingListener() {
+    return this.importing.asObservable();
   }
 
   setExportFilterState(state: ExportFilterState): void {
@@ -141,37 +146,45 @@ export class FileHandleService {
   async importFiles(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const files = target.files ? Array.from(target.files) : [];
+    await this.importFileList(files);
+    this.resetFileInput(target);
+  }
+
+  async importFileList(files: File[]): Promise<void> {
     if (!files.length) {
       return;
     }
 
-    if (files.length === 1) {
-      const content = await this.parseFile(files[0]);
-      this.selectedFileName = files[0].name;
+    this.importing.next(true);
+    try {
+      if (files.length === 1) {
+        const content = await this.parseFile(files[0]);
+        this.selectedFileName = files[0].name;
+        this.clearEdits();
+        this.selectedFileContent = this.normalizeExport(content);
+        this.emitSelectedFileData();
+        await this.persistCurrentSession();
+        return;
+      }
+
+      const parsedExports = await Promise.all(files.map((file) => this.parseFile(file)));
+      const normalizedExports = parsedExports.map((content) => this.normalizeExport(content));
+      const exportsToMerge = this.selectedFileContent
+        ? [this.selectedFileContent, ...normalizedExports]
+        : normalizedExports;
+
+      const names = this.selectedFileName
+        ? [this.selectedFileName, ...files.map((file) => file.name)]
+        : files.map((file) => file.name);
+
+      this.selectedFileName = this.formatMergedFileName(names);
       this.clearEdits();
-      this.selectedFileContent = this.normalizeExport(content);
+      this.selectedFileContent = this.mergeExports(exportsToMerge);
       this.emitSelectedFileData();
       await this.persistCurrentSession();
-      this.resetFileInput(target);
-      return;
+    } finally {
+      this.importing.next(false);
     }
-
-    const parsedExports = await Promise.all(files.map((file) => this.parseFile(file)));
-    const normalizedExports = parsedExports.map((content) => this.normalizeExport(content));
-    const exportsToMerge = this.selectedFileContent
-      ? [this.selectedFileContent, ...normalizedExports]
-      : normalizedExports;
-
-    const names = this.selectedFileName
-      ? [this.selectedFileName, ...files.map((file) => file.name)]
-      : files.map((file) => file.name);
-
-    this.selectedFileName = this.formatMergedFileName(names);
-    this.clearEdits();
-    this.selectedFileContent = this.mergeExports(exportsToMerge);
-    this.emitSelectedFileData();
-    await this.persistCurrentSession();
-    this.resetFileInput(target);
   }
 
   async fileClear(): Promise<void> {

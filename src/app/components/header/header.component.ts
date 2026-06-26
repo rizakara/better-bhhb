@@ -21,6 +21,7 @@ export class HeaderComponent implements OnInit {
 
   fileSub!: Subscription
   exportFilterSub!: Subscription
+  importSub!: Subscription
   selectedFileName!: string;
   exportFilterState: ExportFilterState = {
     visibleCount: 0,
@@ -51,6 +52,19 @@ export class HeaderComponent implements OnInit {
       .subscribe((state) => {
         this.exportFilterState = state;
       })
+
+    this.importSub = this.FileHandleService.getImportingListener()
+      .subscribe((importing) => {
+        if (importing) {
+          this.isLoading = true;
+        } else {
+          // Turn off only if we had a file (restore path manages its own)
+          if (this.selectedFileName) {
+            this.isLoading = false;
+          }
+        }
+      });
+
     this.isLoading = true
     void this.FileHandleService.restoreLastSession()
       .catch((err) => {
