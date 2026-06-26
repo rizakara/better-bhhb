@@ -482,15 +482,16 @@ export class MainComponent implements OnInit {
     this.columnTextFilterBlocked[column] = false;
     if (mode === 'values') {
       this.columnTextFilters[column] = '';
+    } else {
+      // Entering text mode: discard previous values checkbox selection for this column
+      this.columnFilters[column] = null;
     }
     this.refreshTableFilter();
   }
 
   onColumnTextInput(column: string, event: Event) {
     this.columnTextFilters[column] = (event.target as HTMLInputElement).value;
-    this.columnTextFilterBlocked[column] = false;
-    this.columnTextFilterModes[column] = 'text';
-    this.refreshTableFilter();
+    this.setColumnTextFilterMode(column, 'text');
   }
 
   clearColumnTextFilter(column: string) {
@@ -537,6 +538,16 @@ export class MainComponent implements OnInit {
   setIpFilterMode(mode: 'values' | 'range' | 'subnet') {
     this.ipFilterMode = mode;
     this.ipFilterError = '';
+
+    if (mode !== 'values') {
+      // Entering advanced mode: discard any previous values checkbox selection
+      this.columnFilters['ip'] = null;
+    } else {
+      // Switching back to values: clear advanced draft values
+      this.ipRangeStart = '';
+      this.ipRangeEnd = '';
+      this.ipSubnet = '';
+    }
     this.refreshTableFilter();
   }
 
@@ -564,9 +575,8 @@ export class MainComponent implements OnInit {
       this.ipFilterError = 'Enter valid IPv4 addresses.';
       return;
     }
-    this.ipFilterMode = 'range';
+    this.setIpFilterMode('range');
     this.ipFilterError = '';
-    this.refreshTableFilter();
   }
 
   applyIpSubnetFilter() {
@@ -579,9 +589,8 @@ export class MainComponent implements OnInit {
       this.ipFilterError = 'Enter a valid CIDR, e.g. 192.168.1.0/24';
       return;
     }
-    this.ipFilterMode = 'subnet';
+    this.setIpFilterMode('subnet');
     this.ipFilterError = '';
-    this.refreshTableFilter();
   }
 
   clearIpAdvancedFilter() {
@@ -1179,6 +1188,7 @@ export class MainComponent implements OnInit {
 
   persistCommentEdit(element: any): void {
     this.flushCommentEdit(element);
+    this.refreshTableFilter();
   }
 
   stopCommentEdit(element: any): void {
@@ -1957,7 +1967,8 @@ export class MainComponent implements OnInit {
     if (this.timeFilterMode !== 'none') {
       return true;
     }
-    if (this.ipFilterMode !== 'values') {
+    if (this.ipFilterMode !== 'values' ||
+        (this.columnFilters['ip'] !== null && this.columnFilters['ip'] !== undefined)) {
       return true;
     }
 
