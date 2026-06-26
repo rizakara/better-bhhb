@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 
 import { FileHandleService } from './file-handle.service';
 import { FileSessionStorageService } from './file-session-storage.service';
@@ -11,9 +12,12 @@ describe('FileHandleService', () => {
     storage = jasmine.createSpyObj('FileSessionStorageService', ['save', 'load', 'clear']);
     storage.load.and.resolveTo(null);
 
+    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+
     TestBed.configureTestingModule({
       providers: [
         { provide: FileSessionStorageService, useValue: storage },
+        { provide: MatDialog, useValue: dialogSpy },
       ],
     });
     service = TestBed.inject(FileHandleService);

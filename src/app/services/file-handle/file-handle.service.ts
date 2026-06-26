@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
 import { Base64 } from 'js-base64';
+import { MatDialog } from '@angular/material/dialog';
 import { FileSessionStorageService } from './file-session-storage.service';
+import { ImportModeDialogComponent, ImportModeDialogData } from '../../components/header/import-mode-dialog.component';
 
 export interface StatusBreakdown {
   success: number;
@@ -53,7 +55,10 @@ interface FileSystemFileHandle {
 })
 export class FileHandleService {
 
-  constructor(private fileSessionStorage: FileSessionStorageService) { }
+  constructor(
+    private fileSessionStorage: FileSessionStorageService,
+    private dialog: MatDialog
+  ) { }
 
   private selectedFileName!: string | undefined;
   private selectedFileContent!: BurpExport | undefined;
@@ -155,36 +160,66 @@ export class FileHandleService {
       return;
     }
 
-    this.importing.next(true);
-    try {
-      if (files.length === 1) {
-        const content = await this.parseFile(files[0]);
-        this.selectedFileName = files[0].name;
-        this.clearEdits();
-        this.selectedFileContent = this.normalizeExport(content);
-        this.emitSelectedFileData();
-        await this.persistCurrentSession();
+    const hasExisting = !!this.selectedFileContent;
+
+    let mode: 'merge' | 'replace' = 'replace';
+
+    if (hasExisting) {
+      this.importing.next(true);
+      const choice = await this.promptForImportMode(files.length);
+      if (!choice) {
+        this.importing.next(false);
         return;
       }
+      mode = choice;
+    } else {
+      this.importing.next(true);
+    }
 
+    try {
       const parsedExports = await Promise.all(files.map((file) => this.parseFile(file)));
       const normalizedExports = parsedExports.map((content) => this.normalizeExport(content));
-      const exportsToMerge = this.selectedFileContent
-        ? [this.selectedFileContent, ...normalizedExports]
-        : normalizedExports;
 
-      const names = this.selectedFileName
-        ? [this.selectedFileName, ...files.map((file) => file.name)]
-        : files.map((file) => file.name);
+      if (mode === 'replace' || !this.selectedFileContent) {
+        // Replace: use only the newly provided file(s)
+        if (files.length === 1) {
+          this.selectedFileName = files[0].name;
+          this.selectedFileContent = normalizedExports[0];
+        } else {
+          const names = files.map((file) => file.name);
+          this.selectedFileName = this.formatMergedFileName(names);
+          this.selectedFileContent = this.mergeExports(normalizedExports);
+        }
+      } else {
+        // Merge with existing
+        const exportsToMerge = [this.selectedFileContent, ...normalizedExports];
+        const names = [this.selectedFileName!, ...files.map((file) => file.name)];
+        this.selectedFileName = this.formatMergedFileName(names);
+        this.selectedFileContent = this.mergeExports(exportsToMerge);
+      }
 
-      this.selectedFileName = this.formatMergedFileName(names);
       this.clearEdits();
-      this.selectedFileContent = this.mergeExports(exportsToMerge);
       this.emitSelectedFileData();
       await this.persistCurrentSession();
     } finally {
       this.importing.next(false);
     }
+  }
+
+  private async promptForImportMode(newFileCount: number): Promise<'merge' | 'replace' | null> {
+    const dialogRef = this.dialog.open(ImportModeDialogComponent, {
+      width: '420px',
+      data: {
+        existingName: this.selectedFileName || 'current file',
+        newFileCount,
+      } as ImportModeDialogData,
+    });
+
+    return new Promise((resolve) => {
+      dialogRef.afterClosed().subscribe((result: 'merge' | 'replace' | undefined) => {
+        resolve(result ?? null);
+      });
+    });
   }
 
   async fileClear(): Promise<void> {
