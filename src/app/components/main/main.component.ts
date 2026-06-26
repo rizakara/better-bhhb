@@ -1937,12 +1937,21 @@ export class MainComponent implements OnInit {
     });
   }
 
-  private clearAllFilters(): void {
+  clearGlobalSearch(): void {
+    this.resetGlobalSearchTerm();
+    this.refreshTableFilter();
+  }
+
+  private resetGlobalSearchTerm(): void {
     this.globalSearchTerm = '';
     const searchInput = document.getElementById('search') as HTMLInputElement | null;
     if (searchInput) {
       searchInput.value = '';
     }
+  }
+
+  clearAllFilters(): void {
+    this.resetGlobalSearchTerm();
 
     if (this.hasData) {
       this.initializeColumnFilters();
@@ -1957,37 +1966,146 @@ export class MainComponent implements OnInit {
     }
   }
 
-  private hasActiveFilters(): boolean {
-    if (this.globalSearchTerm.trim()) {
-      return true;
-    }
-    if (this.treeFilter) {
-      return true;
-    }
-    if (this.timeFilterMode !== 'none') {
-      return true;
-    }
-    if (this.ipFilterMode !== 'values' ||
-        (this.columnFilters['ip'] !== null && this.columnFilters['ip'] !== undefined)) {
-      return true;
+  get activeFilterChips(): Array<{ id: string; label: string; clear: () => void }> {
+    const chips: Array<{ id: string; label: string; clear: () => void }> = [];
+
+    // Global search
+    const term = this.globalSearchTerm.trim();
+    if (term) {
+      const short = term.length > 18 ? term.slice(0, 15) + '…' : term;
+      chips.push({
+        id: 'search',
+        label: `Search: "${short}"`,
+        clear: () => this.clearGlobalSearch()
+      });
     }
 
+    // Tree / site map filter
+    if (this.treeFilter) {
+      let desc = this.treeFilter.host.replace(/^https?:\/\//, '');
+      if (this.treeFilter.pathPrefix && this.treeFilter.pathPrefix !== '/') {
+        desc += this.treeFilter.pathPrefix;
+      }
+      chips.push({
+        id: 'tree',
+        label: `Tree: ${desc}`,
+        clear: () => this.clearTreeFilter()
+      });
+    }
+
+    // Time filter
+    if (this.timeFilterMode === 'absolute') {
+      const start = this.formatTimeForChip(this.timeAbsoluteStart);
+      const end = this.formatTimeForChip(this.timeAbsoluteEnd);
+      chips.push({
+        id: 'time',
+        label: `Time: ${start} — ${end}`,
+        clear: () => this.clearTimeFilter()
+      });
+    } else if (this.timeFilterMode === 'blocked') {
+      chips.push({
+        id: 'time',
+        label: `Time: none`,
+        clear: () => this.clearTimeFilter()
+      });
+    }
+
+    // IP filter
+    if (this.ipFilterMode === 'range' && this.ipRangeStart.trim() && this.ipRangeEnd.trim()) {
+      chips.push({
+        id: 'ip',
+        label: `IP: ${this.ipRangeStart.trim()}–${this.ipRangeEnd.trim()}`,
+        clear: () => this.clearIpAdvancedFilter()
+      });
+    } else if (this.ipFilterMode === 'subnet' && this.ipSubnet.trim()) {
+      chips.push({
+        id: 'ip',
+        label: `IP: ${this.ipSubnet.trim()}`,
+        clear: () => this.clearIpAdvancedFilter()
+      });
+    } else {
+      const ipSel = this.columnFilters['ip'];
+      if (ipSel !== null && ipSel !== undefined) {
+        const count = ipSel.size;
+        chips.push({
+          id: 'ip',
+          label: `IP: ${count} selected`,
+          clear: () => { this.columnFilters['ip'] = null; this.refreshTableFilter(); }
+        });
+      }
+    }
+
+    // Column filters (value sets and text advanced)
     for (const column of this.filterableColumns) {
-      if (column === 'time' || column === 'ip') {
+      if (column === 'ip' || column === 'time') {
         continue;
       }
+      const colLabel = this.getColumnDisplayLabel(column);
+
       if (this.isTextFilterColumn(column) && this.getColumnTextFilterMode(column) === 'text') {
-        if (this.getColumnTextFilter(column).trim() || this.columnTextFilterBlocked[column]) {
-          return true;
+        if (this.columnTextFilterBlocked[column]) {
+          chips.push({
+            id: `col:${column}`,
+            label: `${colLabel}: (none)`,
+            clear: () => this.selectAllColumnFilter(column)
+          });
+        } else {
+          const q = this.getColumnTextFilter(column).trim();
+          if (q) {
+            const short = q.length > 16 ? q.slice(0, 13) + '…' : q;
+            chips.push({
+              id: `col:${column}`,
+              label: `${colLabel} contains "${short}"`,
+              clear: () => this.selectAllColumnFilter(column)
+            });
+          }
         }
-      }
-      const selected = this.columnFilters[column];
-      if (selected !== null && selected !== undefined) {
-        return true;
+      } else {
+        const sel = this.columnFilters[column];
+        if (sel !== null && sel !== undefined) {
+          const values = Array.from(sel);
+          let valDisplay: string;
+          if (values.length === 0) {
+            valDisplay = '(none)';
+          } else if (values.length <= 2) {
+            valDisplay = values.map(v => this.formatChipValue(v)).join(', ');
+          } else {
+            valDisplay = `${this.formatChipValue(values[0])}, ${this.formatChipValue(values[1])} +${values.length - 2}`;
+          }
+          chips.push({
+            id: `col:${column}`,
+            label: `${colLabel}: ${valDisplay}`,
+            clear: () => this.selectAllColumnFilter(column)
+          });
+        }
       }
     }
 
-    return false;
+    return chips;
+  }
+
+  private getColumnDisplayLabel(key: string): string {
+    const def = this.filterableColumnDefs.find((d) => d.key === key);
+    return def ? def.label : key;
+  }
+
+  private formatTimeForChip(value: string): string {
+    if (!value) return '';
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[2]}-${match[3]} ${match[4]}:${match[5]}`;
+    }
+    const parts = value.split('T');
+    return parts[0] || value;
+  }
+
+  private formatChipValue(value: string): string {
+    if (!value) return '(empty)';
+    return value.length > 12 ? value.slice(0, 9) + '…' : value;
+  }
+
+  private hasActiveFilters(): boolean {
+    return this.activeFilterChips.length > 0;
   }
 
   private scrollRowIntoView(row: any): void {

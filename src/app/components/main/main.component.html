@@ -68,6 +68,28 @@
                             <mat-icon aria-hidden="true">view_column</mat-icon>
                         </button>
                     </div>
+
+                    <div class="active-filters" *ngIf="activeFilterChips.length > 0">
+                        <div class="filter-chips">
+                            <span class="filter-chip" *ngFor="let chip of activeFilterChips" [title]="chip.label">
+                                <span class="chip-label">{{ chip.label }}</span>
+                                <button type="button"
+                                        class="chip-clear"
+                                        (click)="chip.clear()"
+                                        [attr.aria-label]="'Clear ' + chip.label + ' filter'">
+                                    ×
+                                </button>
+                            </span>
+                        </div>
+                        <button type="button"
+                                class="clear-all-filters-btn"
+                                mat-button
+                                (click)="clearAllFilters()"
+                                matTooltip="Clear all filters (Ctrl+Shift+F)">
+                            Clear all
+                        </button>
+                    </div>
+
                     <table mat-table [dataSource]="dataSource" matSort cdkDropList cdkDropListOrientation="horizontal"
                         (cdkDropListDropped)="drop($event)">
 
