@@ -3,6 +3,9 @@ import { ExportFilterState, FileHandleService } from "../../services/file-handle
 import { Theme, ThemeService } from "../../services/theme/theme.service";
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { BurpImportService } from '../../services/burp-import/burp-import.service';
+import { SessionHistoryDialogComponent } from './session-history-dialog.component';
 
 @Component({
   selector: 'app-header',
@@ -13,8 +16,10 @@ export class HeaderComponent implements OnInit {
 
   constructor(
     private FileHandleService: FileHandleService,
+    private burpImportService: BurpImportService,
     public dialog: MatDialog,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private snackBar: MatSnackBar,
   ) { }
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -38,6 +43,9 @@ export class HeaderComponent implements OnInit {
     },
   };
   isLoading: boolean = false;
+  burpImportMessage = '';
+  burpImportStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  private lastBurpImportNotice = '';
 
   ngOnInit(): void {
     if (localStorage.getItem("gotIt") != "true") {
@@ -65,11 +73,36 @@ export class HeaderComponent implements OnInit {
         }
       });
 
+    this.burpImportService.getStateListener()
+      .subscribe((state) => {
+        this.burpImportStatus = state.status;
+        this.burpImportMessage = state.message;
+        if (state.status === 'loading') {
+          this.isLoading = true;
+          return;
+        }
+
+        const noticeKey = `${state.status}:${state.message}:${state.itemCount ?? ''}`;
+        if (noticeKey === this.lastBurpImportNotice) {
+          return;
+        }
+
+        if (state.status === 'success' && state.message) {
+          const suffix = state.itemCount ? ` (${state.itemCount} items)` : '';
+          this.snackBar.open(`${state.message}${suffix}`, 'Dismiss', { duration: 5000 });
+          this.lastBurpImportNotice = noticeKey;
+          this.burpImportService.resetState();
+          return;
+        }
+
+        if (state.status === 'error' && state.message) {
+          this.snackBar.open(state.message, 'Dismiss', { duration: 7000 });
+          this.lastBurpImportNotice = noticeKey;
+        }
+      });
+
     this.isLoading = true
-    void this.FileHandleService.restoreLastSession()
-      .catch((err) => {
-        console.error(err);
-      })
+    void this.FileHandleService.ensureSessionRestored()
       .finally(() => {
         if (!this.selectedFileName) {
           this.isLoading = false
@@ -117,6 +150,18 @@ export class HeaderComponent implements OnInit {
         width: '900px',
       });
     }
+  }
+
+  openSessionHistory(): void {
+    this.dialog.open(SessionHistoryDialogComponent, {
+      width: '720px',
+      maxHeight: '80vh',
+    });
+  }
+
+  retryBurpImport(): void {
+    this.lastBurpImportNotice = '';
+    void this.burpImportService.importFromLocalhost().catch(() => undefined);
   }
 }
 

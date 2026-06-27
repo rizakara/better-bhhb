@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Imported sessions</h2>
+
+<mat-dialog-content>
+  <p class="session-history-intro">
+    Previously imported Burp exports are stored locally in IndexedDB on this device.
+  </p>
+
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <p class="session-history-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="session-history-empty" *ngIf="!loading && !entries.length">
+    No saved sessions yet. Import from Burp or open an XML export to get started.
+  </div>
+
+  <div class="session-history-list" *ngIf="!loading && entries.length">
+    <button
+      type="button"
+      class="session-history-item"
+      *ngFor="let entry of entries"
+      (click)="openEntry(entry)">
+      <div class="session-history-item-main">
+        <div class="session-history-item-title">{{ entry.fileName }}</div>
+        <div class="session-history-item-meta">
+          <span>{{ entry.itemCount | number }} items</span>
+          <span class="session-history-separator">|</span>
+          <span>{{ formatImportedAt(entry.importedAt) }}</span>
+          <span class="session-history-separator">|</span>
+          <span>{{ entry.source === 'burp-extension' ? 'Burp extension' : 'XML file' }}</span>
+        </div>
+      </div>
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Delete session"
+        (click)="deleteEntry(entry, $event)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </button>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="dialogRef.close(false)">Close</button>
+</mat-dialog-actions>

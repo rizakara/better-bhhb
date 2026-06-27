@@ -7,6 +7,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AngularMaterialModule } from './modules/angular-material/angular-material.module';
 import { HeaderComponent, InfoDialogComponent } from './components/header/header.component';
 import { ImportModeDialogComponent } from './components/header/import-mode-dialog.component';
+import { SessionHistoryDialogComponent } from './components/header/session-history-dialog.component';
 import { MainComponent } from './components/main/main.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
@@ -18,6 +19,7 @@ import { environment } from '../environments/environment';
     HeaderComponent,
     InfoDialogComponent,
     ImportModeDialogComponent,
+    SessionHistoryDialogComponent,
     MainComponent,
     FooterComponent
   ],

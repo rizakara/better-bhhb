@@ -9,7 +9,14 @@ describe('FileHandleService', () => {
   let storage: jasmine.SpyObj<FileSessionStorageService>;
 
   beforeEach(() => {
-    storage = jasmine.createSpyObj('FileSessionStorageService', ['save', 'load', 'clear']);
+    storage = jasmine.createSpyObj('FileSessionStorageService', [
+      'save',
+      'load',
+      'clear',
+      'listHistory',
+      'loadHistoryEntry',
+      'deleteHistoryEntry',
+    ]);
     storage.load.and.resolveTo(null);
 
     const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
@@ -71,5 +78,12 @@ describe('FileHandleService', () => {
   it('clears persisted session when file is cleared', async () => {
     await service.fileClear();
     expect(storage.clear).toHaveBeenCalled();
+  });
+
+  it('imports Burp XML text from the extension bridge', async () => {
+    storage.save.and.resolveTo('session-id');
+    const itemCount = await service.importBurpXml('<items burpVersion="2024.1" exportTime="2024-01-01"><item></item></items>');
+    expect(itemCount).toBe(1);
+    expect(storage.save).toHaveBeenCalled();
   });
 });

@@ -40,6 +40,15 @@ describe('FileSessionStorageService', () => {
     await service.clear();
   });
 
+  it('stores imported sessions in history', async () => {
+    await service.save(sampleSession, { source: 'burp-extension' });
+    const history = await service.listHistory();
+    expect(history.length).toBeGreaterThan(0);
+    expect(history[0].source).toBe('burp-extension');
+    await service.deleteHistoryEntry(history[0].id);
+    await service.clear();
+  });
+
   it('clears the stored session', async () => {
     await service.save(sampleSession);
     await service.clear();

@@ -3,7 +3,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
 import { Base64 } from 'js-base64';
 import { MatDialog } from '@angular/material/dialog';
-import { FileSessionStorageService } from './file-session-storage.service';
+import { FileSessionStorageService, StoredHistoryEntry } from './file-session-storage.service';
 import { ImportModeDialogComponent, ImportModeDialogData } from '../../components/header/import-mode-dialog.component';
 
 export interface StatusBreakdown {
@@ -69,6 +69,7 @@ export class FileHandleService {
   private requestEdits = new Map<number, string>();
   private commentEdits = new Map<number, string>();
   private importing = new BehaviorSubject<boolean>(false);
+  private sessionReadyPromise: Promise<void> | null = null;
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
@@ -133,6 +134,92 @@ export class FileHandleService {
   clearEdits(): void {
     this.clearRequestEdits();
     this.clearCommentEdits();
+  }
+
+  ensureSessionRestored(): Promise<void> {
+    if (!this.sessionReadyPromise) {
+      this.sessionReadyPromise = this.restoreLastSession()
+        .then(() => undefined)
+        .catch((error) => {
+          console.warn('Failed to restore last session.', error);
+          return undefined;
+        });
+    }
+    return this.sessionReadyPromise;
+  }
+
+  async importBurpXml(
+    xml: string,
+    options?: { source?: StoredHistoryEntry['source']; rawXml?: string; fileName?: string }
+  ): Promise<number | null> {
+    await this.ensureSessionRestored();
+
+    const parsed = await this.parseXmlText(xml);
+    const normalized = this.normalizeExport(parsed);
+    const itemCount = normalized.items.item.length;
+    const fileName = options?.fileName ?? this.suggestBurpImportFileName(itemCount);
+    const hasExisting = !!this.selectedFileContent;
+
+    let mode: 'merge' | 'replace' = 'replace';
+
+    if (hasExisting) {
+      this.importing.next(true);
+      const choice = await this.promptForImportMode(1);
+      if (!choice) {
+        this.importing.next(false);
+        return null;
+      }
+      mode = choice;
+    } else {
+      this.importing.next(true);
+    }
+
+    try {
+      if (mode === 'replace' || !this.selectedFileContent) {
+        this.selectedFileName = fileName;
+        this.selectedFileContent = normalized;
+      } else {
+        const exportsToMerge = [this.selectedFileContent, normalized];
+        const names = [this.selectedFileName!, fileName];
+        this.selectedFileName = this.formatMergedFileName(names);
+        this.selectedFileContent = this.mergeExports(exportsToMerge);
+      }
+
+      this.clearEdits();
+      this.emitSelectedFileData();
+      await this.persistCurrentSession({
+        source: options?.source ?? 'burp-extension',
+        rawXml: options?.rawXml ?? xml,
+      });
+
+      return itemCount;
+    } finally {
+      this.importing.next(false);
+    }
+  }
+
+  async listImportHistory(): Promise<StoredHistoryEntry[]> {
+    return this.fileSessionStorage.listHistory();
+  }
+
+  async openHistoryEntry(id: string): Promise<void> {
+    const entry = await this.fileSessionStorage.loadHistoryEntry(id);
+    if (!entry) {
+      throw new Error('Saved session not found.');
+    }
+
+    this.selectedFileName = entry.fileName;
+    this.selectedFileContent = entry.content;
+    this.clearEdits();
+    this.emitSelectedFileData();
+    await this.persistCurrentSession({
+      source: entry.source,
+      rawXml: entry.rawXml,
+    });
+  }
+
+  async deleteHistoryEntry(id: string): Promise<void> {
+    await this.fileSessionStorage.deleteHistoryEntry(id);
   }
 
   async restoreLastSession(): Promise<boolean> {
@@ -267,11 +354,15 @@ export class FileHandleService {
 
   private async parseFile(file: File): Promise<any> {
     const text = await file.text();
+    return this.parseXmlText(text, file.name);
+  }
+
+  private async parseXmlText(text: string, fileName = 'Burp export'): Promise<any> {
     try {
       return await xml2js.parseStringPromise(text);
     } catch (error) {
-      console.error(`Failed to parse ${file.name}`, error);
-      throw new Error(`Could not parse ${file.name}. Make sure it is a Burp XML export.`);
+      console.error(`Failed to parse ${fileName}`, error);
+      throw new Error(`Could not parse ${fileName}. Make sure it is a Burp XML export.`);
     }
   }
 
@@ -330,7 +421,10 @@ export class FileHandleService {
     });
   }
 
-  private async persistCurrentSession(): Promise<void> {
+  private async persistCurrentSession(options?: {
+    source?: StoredHistoryEntry['source'];
+    rawXml?: string;
+  }): Promise<void> {
     if (!this.selectedFileName || !this.selectedFileContent) {
       return;
     }
@@ -339,10 +433,15 @@ export class FileHandleService {
       await this.fileSessionStorage.save({
         fileName: this.selectedFileName,
         content: this.selectedFileContent,
-      });
+      }, options);
     } catch (error) {
       console.warn('Failed to persist last opened file.', error);
     }
+  }
+
+  private suggestBurpImportFileName(itemCount: number): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `burp-proxy-history-${itemCount}-items-${timestamp}.xml`;
   }
 
   private resetFileInput(target: HTMLInputElement): void {

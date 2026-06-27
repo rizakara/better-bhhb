@@ -46,6 +46,12 @@
             <button mat-menu-item (click)="openFilePicker()">
                 <span>Import files…</span>
             </button>
+            <button mat-menu-item (click)="openSessionHistory()">
+                <span>Imported sessions…</span>
+            </button>
+            <button mat-menu-item (click)="retryBurpImport()" *ngIf="burpImportStatus === 'error'">
+                <span>Retry Burp import…</span>
+            </button>
             <mat-divider></mat-divider>
             <button mat-menu-item (pointerdown)="saveCurrentFile('all')"
                 [disabled]="!selectedFileName" *ngIf="exportFilterState.isSubset">
@@ -73,4 +79,4 @@
         </button>
     </nav>
 </mat-toolbar>
-<mat-progress-bar *ngIf="isLoading" mode="indeterminate"></mat-progress-bar>
+<mat-progress-bar *ngIf="isLoading || burpImportStatus === 'loading'" mode="indeterminate"></mat-progress-bar>
