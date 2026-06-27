@@ -148,6 +148,7 @@ export class HeaderComponent implements OnInit {
     if (this.dialog.openDialogs.length == 0) {
       this.dialog.open(InfoDialogComponent, {
         width: '900px',
+        panelClass: 'bhhb-dialog',
       });
     }
   }
@@ -156,6 +157,7 @@ export class HeaderComponent implements OnInit {
     this.dialog.open(SessionHistoryDialogComponent, {
       width: '720px',
       maxHeight: '80vh',
+      panelClass: 'bhhb-dialog',
     });
   }
 

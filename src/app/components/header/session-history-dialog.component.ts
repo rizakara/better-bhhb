@@ -11,7 +11,9 @@ import { FileHandleService } from '../../services/file-handle/file-handle.servic
 export class SessionHistoryDialogComponent implements OnInit {
   entries: StoredHistoryEntry[] = [];
   loading = true;
+  opening = false;
   errorMessage = '';
+  selectedIds = new Set<string>();
 
   constructor(
     private fileHandleService: FileHandleService,
@@ -22,11 +24,24 @@ export class SessionHistoryDialogComponent implements OnInit {
     void this.refresh();
   }
 
+  get selectedCount(): number {
+    return this.selectedIds.size;
+  }
+
+  get allSelected(): boolean {
+    return this.entries.length > 0 && this.selectedIds.size === this.entries.length;
+  }
+
+  get someSelected(): boolean {
+    return this.selectedIds.size > 0 && !this.allSelected;
+  }
+
   async refresh(): Promise<void> {
     this.loading = true;
     this.errorMessage = '';
     try {
       this.entries = await this.fileHandleService.listImportHistory();
+      this.selectedIds.clear();
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Failed to load import history.';
     } finally {
@@ -34,12 +49,42 @@ export class SessionHistoryDialogComponent implements OnInit {
     }
   }
 
-  async openEntry(entry: StoredHistoryEntry): Promise<void> {
+  isSelected(entry: StoredHistoryEntry): boolean {
+    return this.selectedIds.has(entry.id);
+  }
+
+  toggleEntry(entry: StoredHistoryEntry, checked: boolean): void {
+    if (checked) {
+      this.selectedIds.add(entry.id);
+      return;
+    }
+    this.selectedIds.delete(entry.id);
+  }
+
+  toggleSelectAll(checked: boolean): void {
+    if (checked) {
+      this.selectedIds = new Set(this.entries.map((entry) => entry.id));
+      return;
+    }
+    this.selectedIds.clear();
+  }
+
+  async openSelected(): Promise<void> {
+    if (!this.selectedCount || this.opening) {
+      return;
+    }
+
+    this.opening = true;
+    this.errorMessage = '';
     try {
-      await this.fileHandleService.openHistoryEntry(entry.id);
-      this.dialogRef.close(true);
+      const opened = await this.fileHandleService.openHistoryEntries([...this.selectedIds]);
+      if (opened) {
+        this.dialogRef.close(true);
+      }
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Failed to open the selected session.';
+      this.errorMessage = error instanceof Error ? error.message : 'Failed to open the selected session(s).';
+    } finally {
+      this.opening = false;
     }
   }
 
@@ -48,6 +93,7 @@ export class SessionHistoryDialogComponent implements OnInit {
     try {
       await this.fileHandleService.deleteHistoryEntry(entry.id);
       this.entries = this.entries.filter((candidate) => candidate.id !== entry.id);
+      this.selectedIds.delete(entry.id);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Failed to delete the selected session.';
     }

@@ -1,6 +1,20 @@
+::ng-deep .mat-dialog-container {
+  box-shadow: unset;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary) !important;
+  color: inherit;
+}
+
+:host {
+  display: block;
+  color: var(--text-primary);
+}
+
 .session-history-intro {
   margin: 0 0 12px;
   color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .session-history-error {
@@ -10,6 +24,22 @@
 
 .session-history-empty {
   padding: 16px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.session-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.session-history-selection-count {
+  font-size: 12px;
   color: var(--text-muted);
 }
 
@@ -22,25 +52,35 @@
 .session-history-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  padding: 12px 12px 12px 14px;
+  padding: 10px 12px 10px 8px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
   color: inherit;
-  text-align: left;
-  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .session-history-item:hover {
   background: var(--hover-bg);
+  border-color: var(--border-color-strong);
+}
+
+.session-history-checkbox {
+  flex: 0 0 auto;
+}
+
+.session-history-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .session-history-item-title {
   font-weight: 600;
   margin-bottom: 4px;
+  color: var(--text-primary);
+  word-break: break-word;
 }
 
 .session-history-item-meta {
@@ -50,4 +90,13 @@
 
 .session-history-separator {
   margin: 0 6px;
+}
+
+.session-history-item .mat-icon-button {
+  color: var(--text-muted);
+}
+
+.session-history-item .mat-icon-button:hover {
+  color: #c62828;
+  background: var(--hover-bg);
 }

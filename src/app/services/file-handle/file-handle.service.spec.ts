@@ -86,4 +86,83 @@ describe('FileHandleService', () => {
     expect(itemCount).toBe(1);
     expect(storage.save).toHaveBeenCalled();
   });
+
+  it('reopens a history entry without recording a duplicate import', async () => {
+    const entry = {
+      id: 'session-1',
+      fileName: 'history.xml',
+      importedAt: '2024-01-01T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-01T00:00:00Z',
+      source: 'burp-extension' as const,
+      content: {
+        items: {
+          '$': { burpVersion: '2024.1', exportTime: '2024-01-01T00:00:00Z' },
+          item: [{}],
+        },
+      },
+    };
+    storage.loadHistoryEntry.and.resolveTo(entry);
+    storage.save.and.resolveTo(null);
+
+    const opened = await service.openHistoryEntry('session-1');
+
+    expect(opened).toBeTrue();
+    expect(storage.save).toHaveBeenCalledWith(
+      { fileName: 'history.xml', content: entry.content },
+      { source: undefined, rawXml: undefined, recordHistory: false }
+    );
+  });
+
+  it('merges multiple selected history entries into one open session', async () => {
+    const first = {
+      id: 'session-1',
+      fileName: 'first.xml',
+      importedAt: '2024-01-01T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-01T00:00:00Z',
+      source: 'file' as const,
+      content: {
+        items: {
+          '$': { burpVersion: '2024.1', exportTime: '2024-01-01T00:00:00Z' },
+          item: [{ id: 'a' }],
+        },
+      },
+    };
+    const second = {
+      id: 'session-2',
+      fileName: 'second.xml',
+      importedAt: '2024-01-02T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-02T00:00:00Z',
+      source: 'file' as const,
+      content: {
+        items: {
+          '$': { burpVersion: '2024.1', exportTime: '2024-01-02T00:00:00Z' },
+          item: [{ id: 'b' }],
+        },
+      },
+    };
+    storage.loadHistoryEntry.and.callFake(async (id: string) => {
+      if (id === 'session-1') {
+        return first;
+      }
+      if (id === 'session-2') {
+        return second;
+      }
+      return null;
+    });
+    storage.save.and.resolveTo(null);
+
+    const opened = await service.openHistoryEntries(['session-1', 'session-2']);
+
+    expect(opened).toBeTrue();
+    expect(storage.save).toHaveBeenCalled();
+    const savedSession = storage.save.calls.mostRecent().args[0];
+    expect(savedSession.fileName).toBe('first.xml + second.xml');
+    expect(savedSession.content.items.item.length).toBe(2);
+  });
 });

@@ -2,10 +2,11 @@
 
 <mat-dialog-content>
   <p class="session-history-intro">
-    Previously imported Burp exports are stored locally in IndexedDB on this device.
+    Select one or more saved exports, then open them together. If something is already loaded,
+    you can merge or replace it like a normal file import.
   </p>
 
-  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar *ngIf="loading || opening" mode="indeterminate"></mat-progress-bar>
 
   <p class="session-history-error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
@@ -13,12 +14,25 @@
     No saved sessions yet. Import from Burp or open an XML export to get started.
   </div>
 
+  <div class="session-history-toolbar" *ngIf="!loading && entries.length">
+    <mat-checkbox
+      [checked]="allSelected"
+      [indeterminate]="someSelected"
+      (change)="toggleSelectAll($event.checked)">
+      Select all
+    </mat-checkbox>
+    <span class="session-history-selection-count">{{ selectedCount }} selected</span>
+  </div>
+
   <div class="session-history-list" *ngIf="!loading && entries.length">
-    <button
-      type="button"
-      class="session-history-item"
-      *ngFor="let entry of entries"
-      (click)="openEntry(entry)">
+    <div class="session-history-item" *ngFor="let entry of entries">
+      <mat-checkbox
+        class="session-history-checkbox"
+        [checked]="isSelected(entry)"
+        (change)="toggleEntry(entry, $event.checked)"
+        (click)="$event.stopPropagation()">
+      </mat-checkbox>
+
       <div class="session-history-item-main">
         <div class="session-history-item-title">{{ entry.fileName }}</div>
         <div class="session-history-item-meta">
@@ -29,6 +43,7 @@
           <span>{{ entry.source === 'burp-extension' ? 'Burp extension' : 'XML file' }}</span>
         </div>
       </div>
+
       <button
         mat-icon-button
         type="button"
@@ -36,10 +51,18 @@
         (click)="deleteEntry(entry, $event)">
         <mat-icon>delete</mat-icon>
       </button>
-    </button>
+    </div>
   </div>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="dialogRef.close(false)">Close</button>
+  <button
+    mat-button
+    color="primary"
+    type="button"
+    [disabled]="!selectedCount || opening"
+    (click)="openSelected()">
+    Open selected{{ selectedCount ? ' (' + selectedCount + ')' : '' }}
+  </button>
 </mat-dialog-actions>

@@ -202,20 +202,72 @@ export class FileHandleService {
     return this.fileSessionStorage.listHistory();
   }
 
-  async openHistoryEntry(id: string): Promise<void> {
-    const entry = await this.fileSessionStorage.loadHistoryEntry(id);
-    if (!entry) {
+  async openHistoryEntry(id: string): Promise<boolean> {
+    return this.openHistoryEntries([id]);
+  }
+
+  async openHistoryEntries(ids: string[]): Promise<boolean> {
+    const uniqueIds = [...new Set(ids.filter((id) => !!id))];
+    if (!uniqueIds.length) {
+      return false;
+    }
+
+    const entries = await Promise.all(uniqueIds.map((id) => this.fileSessionStorage.loadHistoryEntry(id)));
+    const validEntries = entries.filter((entry): entry is StoredHistoryEntry => entry != null);
+    if (!validEntries.length) {
       throw new Error('Saved session not found.');
     }
 
-    this.selectedFileName = entry.fileName;
-    this.selectedFileContent = entry.content;
-    this.clearEdits();
-    this.emitSelectedFileData();
-    await this.persistCurrentSession({
-      source: entry.source,
-      rawXml: entry.rawXml,
-    });
+    const openedSession = validEntries.length === 1
+      ? {
+          fileName: validEntries[0].fileName,
+          content: validEntries[0].content,
+        }
+      : {
+          fileName: this.formatMergedFileName(validEntries.map((entry) => entry.fileName)),
+          content: this.mergeExports(validEntries.map((entry) => entry.content)),
+        };
+
+    return this.applyOpenedSession(openedSession, validEntries.length);
+  }
+
+  private async applyOpenedSession(
+    openedSession: { fileName: string; content: BurpExport },
+    openedCount: number
+  ): Promise<boolean> {
+    const hasExisting = !!this.selectedFileContent;
+    let mode: 'merge' | 'replace' = 'replace';
+
+    if (hasExisting) {
+      this.importing.next(true);
+      const choice = await this.promptForImportMode(openedCount);
+      if (!choice) {
+        this.importing.next(false);
+        return false;
+      }
+      mode = choice;
+    } else {
+      this.importing.next(true);
+    }
+
+    try {
+      if (mode === 'replace' || !this.selectedFileContent) {
+        this.selectedFileName = openedSession.fileName;
+        this.selectedFileContent = openedSession.content;
+      } else {
+        const exportsToMerge = [this.selectedFileContent, openedSession.content];
+        const names = [this.selectedFileName!, openedSession.fileName];
+        this.selectedFileName = this.formatMergedFileName(names);
+        this.selectedFileContent = this.mergeExports(exportsToMerge);
+      }
+
+      this.clearEdits();
+      this.emitSelectedFileData();
+      await this.persistCurrentSession({ recordHistory: false });
+      return true;
+    } finally {
+      this.importing.next(false);
+    }
   }
 
   async deleteHistoryEntry(id: string): Promise<void> {
@@ -296,6 +348,7 @@ export class FileHandleService {
   private async promptForImportMode(newFileCount: number): Promise<'merge' | 'replace' | null> {
     const dialogRef = this.dialog.open(ImportModeDialogComponent, {
       width: '420px',
+      panelClass: 'bhhb-dialog',
       data: {
         existingName: this.selectedFileName || 'current file',
         newFileCount,
@@ -424,6 +477,7 @@ export class FileHandleService {
   private async persistCurrentSession(options?: {
     source?: StoredHistoryEntry['source'];
     rawXml?: string;
+    recordHistory?: boolean;
   }): Promise<void> {
     if (!this.selectedFileName || !this.selectedFileContent) {
       return;
@@ -433,7 +487,11 @@ export class FileHandleService {
       await this.fileSessionStorage.save({
         fileName: this.selectedFileName,
         content: this.selectedFileContent,
-      }, options);
+      }, {
+        source: options?.source,
+        rawXml: options?.rawXml,
+        recordHistory: options?.recordHistory,
+      });
     } catch (error) {
       console.warn('Failed to persist last opened file.', error);
     }

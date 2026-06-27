@@ -55,4 +55,17 @@ describe('FileSessionStorageService', () => {
     const loaded = await service.load();
     expect(loaded).toBeNull();
   });
+
+  it('does not add a history entry when recordHistory is false', async () => {
+    await service.save(sampleSession, { source: 'file' });
+    const before = await service.listHistory();
+    expect(before.length).toBe(1);
+
+    await service.save(sampleSession, { source: 'file', recordHistory: false });
+    const after = await service.listHistory();
+    expect(after.length).toBe(1);
+
+    await service.deleteHistoryEntry(before[0].id);
+    await service.clear();
+  });
 });

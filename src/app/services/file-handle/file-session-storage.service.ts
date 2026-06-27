@@ -31,12 +31,24 @@ export class FileSessionStorageService {
 
   private dbPromise: Promise<IDBDatabase> | null = null;
 
-  async save(session: StoredFileSession, options?: { source?: StoredHistoryEntry['source']; rawXml?: string }): Promise<string> {
-    const entry = this.toHistoryEntry(session, options);
+  async save(
+    session: StoredFileSession,
+    options?: {
+      source?: StoredHistoryEntry['source'];
+      rawXml?: string;
+      recordHistory?: boolean;
+    }
+  ): Promise<string | null> {
     const db = await this.openDb();
     await this.runTransaction(db, SESSIONS_STORE, 'readwrite', (store) => {
       store.put(session, SESSION_KEY);
     });
+
+    if (options?.recordHistory === false) {
+      return null;
+    }
+
+    const entry = this.toHistoryEntry(session, options);
     await this.runTransaction(db, HISTORY_STORE, 'readwrite', (store) => {
       store.put(entry);
     });

@@ -40,6 +40,22 @@
 </head>
 
 <body>
+  <script>
+    (function () {
+      var darkThemes = { dark: 1, dracula: 1, nord: 1, 'solarized-dark': 1, 'github-dark': 1, 'one-dark': 1 };
+      var themeId = localStorage.getItem('bhhb-theme') || 'dark';
+      if (!darkThemes[themeId] && themeId !== 'light' && themeId !== 'solarized-light' && themeId !== 'github-light' && themeId !== 'one-light') {
+        themeId = 'dark';
+      }
+      document.body.classList.add('theme-' + themeId);
+      if (darkThemes[themeId]) {
+        document.body.classList.add('theme-is-dark');
+      }
+      if (themeId === 'dark') {
+        document.body.classList.add('dark-theme');
+      }
+    })();
+  </script>
   <app-root></app-root>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
