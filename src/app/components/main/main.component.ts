@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
 import { RequestReplayService } from '../../services/request-replay/request-replay.service';
+import { DiffLine, HttpDiffService, SideBySideRow } from '../../services/http-diff/http-diff.service';
 import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
@@ -50,6 +51,7 @@ export class MainComponent implements OnInit {
   constructor(
     private FileHandleService: FileHandleService,
     private requestReplayService: RequestReplayService,
+    private httpDiffService: HttpDiffService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) { }
@@ -112,6 +114,13 @@ export class MainComponent implements OnInit {
   dataTimeMinMs: number | null = null;
   dataTimeMaxMs: number | null = null;
   clickedRow!: any;
+  compareRow: any | undefined;
+  diffMode = false;
+  diffLayout: 'unified' | 'side-by-side' = 'unified';
+  requestDiffLines: DiffLine[] = [];
+  responseDiffLines: DiffLine[] = [];
+  requestSideBySideRows: SideBySideRow[] = [];
+  responseSideBySideRows: SideBySideRow[] = [];
   replayMode = false;
   replayRequestRaw = '';
   replayRequestBaseline = '';
@@ -1134,7 +1143,18 @@ export class MainComponent implements OnInit {
     return pathOnly === prefix || pathOnly.startsWith(`${prefix}/`);
   }
 
-  selectRow(row: any) {
+  selectRow(row: any, event?: MouseEvent) {
+    if (event?.shiftKey && this.clickedRow && this.clickedRow !== row) {
+      this.compareRow = row;
+      this.diffMode = true;
+      if (this.replayMode) {
+        this.setReplayMode(false);
+      }
+      this.updateDiffView();
+      this.snackBar.open(`Comparing #${this.clickedRow.position} with #${row.position}`, undefined, { duration: 2200 });
+      return;
+    }
+
     if (this.editingCommentPosition !== null && row.position !== this.editingCommentPosition) {
       const editingRow = this.findRowByPosition(this.editingCommentPosition);
       if (editingRow) {
@@ -1148,12 +1168,97 @@ export class MainComponent implements OnInit {
       this.resetRequestSearchState();
       this.resetResponseSearchState();
       this.resetReplayState();
+      if (this.compareRow && this.compareRow !== row) {
+        this.clearCompare();
+      }
     }
     this.clickedRow = row;
     this.applyStoredRequestEdit(row);
     this.applyStoredCommentEdit(row);
     this.updateRequestHighlights();
     this.updateResponseHighlights();
+    this.updateDiffView();
+  }
+
+  toggleDiffMode(): void {
+    if (!this.compareRow) {
+      this.snackBar.open('Shift+click another row to compare', undefined, { duration: 2600 });
+      return;
+    }
+    this.diffMode = !this.diffMode;
+    if (this.diffMode && this.replayMode) {
+      this.setReplayMode(false);
+    }
+    this.updateDiffView();
+  }
+
+  clearCompare(): void {
+    this.compareRow = undefined;
+    this.diffMode = false;
+    this.requestDiffLines = [];
+    this.responseDiffLines = [];
+    this.requestSideBySideRows = [];
+    this.responseSideBySideRows = [];
+  }
+
+  setDiffLayout(layout: 'unified' | 'side-by-side'): void {
+    this.diffLayout = layout;
+  }
+
+  get compareSummaryLabel(): string {
+    if (!this.compareRow || !this.clickedRow) {
+      return '';
+    }
+    return `#${this.clickedRow.position} vs #${this.compareRow.position}`;
+  }
+
+  get requestDiffStats(): string {
+    return this.formatDiffStats(this.requestDiffLines);
+  }
+
+  get responseDiffStats(): string {
+    return this.formatDiffStats(this.responseDiffLines);
+  }
+
+  private updateDiffView(): void {
+    if (!this.diffMode || !this.clickedRow || !this.compareRow) {
+      this.requestDiffLines = [];
+      this.responseDiffLines = [];
+      this.requestSideBySideRows = [];
+      this.responseSideBySideRows = [];
+      return;
+    }
+
+    const leftRequest = this.getRowRequestRaw(this.clickedRow);
+    const rightRequest = this.getRowRequestRaw(this.compareRow);
+    const leftResponse = this.getRowResponseRaw(this.clickedRow);
+    const rightResponse = this.getRowResponseRaw(this.compareRow);
+
+    this.requestDiffLines = this.httpDiffService.diffLines(leftRequest, rightRequest);
+    this.responseDiffLines = this.httpDiffService.diffLines(leftResponse, rightResponse);
+    this.requestSideBySideRows = this.httpDiffService.toSideBySide(this.requestDiffLines);
+    this.responseSideBySideRows = this.httpDiffService.toSideBySide(this.responseDiffLines);
+  }
+
+  private getRowRequestRaw(row: any): string {
+    const editedRaw = this.FileHandleService.getRequestEdit(row.position);
+    if (editedRaw) {
+      return editedRaw;
+    }
+    return this.httpDiffService.partsToRaw(row.request);
+  }
+
+  private getRowResponseRaw(row: any): string {
+    return this.httpDiffService.partsToRaw(row.response);
+  }
+
+  private formatDiffStats(lines: DiffLine[]): string {
+    const inserts = lines.filter((line) => line.type === 'insert').length;
+    const deletes = lines.filter((line) => line.type === 'delete').length;
+    if (!inserts && !deletes) {
+      return 'No differences';
+    }
+    return `+${inserts} / -${deletes}`;
   }
 
   parseNoteTags(note: string): string[] {
@@ -1218,8 +1323,18 @@ export class MainComponent implements OnInit {
     }
     this.replayMode = enabled;
     if (enabled) {
+      this.diffMode = false;
       this.loadReplayRequest();
     }
+  }
+
+  showRequestView(): void {
+    if (this.replayMode) {
+      this.setReplayMode(false);
+      return;
+    }
+    this.diffMode = false;
+    this.updateDiffView();
   }
 
   persistReplayRequest(): void {
@@ -1401,6 +1516,7 @@ export class MainComponent implements OnInit {
     this.replayRequestRaw = '';
     this.replayRequestBaseline = '';
     this.replayMode = false;
+    this.clearCompare();
   }
 
   private flushCurrentRequestEdit(): void {
@@ -1794,6 +1910,12 @@ export class MainComponent implements OnInit {
     if (this.replayMode) {
       event.preventDefault();
       this.setReplayMode(false);
+      return true;
+    }
+
+    if (this.diffMode || this.compareRow) {
+      event.preventDefault();
+      this.clearCompare();
       return true;
     }
 

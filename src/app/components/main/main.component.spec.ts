@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { MainComponent } from './main.component';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
 import { RequestReplayService } from '../../services/request-replay/request-replay.service';
+import { HttpDiffService } from '../../services/http-diff/http-diff.service';
 
 describe('MainComponent', () => {
   let component: MainComponent;
@@ -42,6 +43,7 @@ describe('MainComponent', () => {
           },
         },
         { provide: MatSnackBar, useValue: snackBar },
+        HttpDiffService,
       ],
     }).compileComponents();
   });
@@ -142,5 +144,46 @@ describe('MainComponent', () => {
       'ip',
       'time',
     ]);
+  });
+
+  it('enters diff mode when shift-clicking another row', () => {
+    const rowA = {
+      position: 1,
+      request: [[['GET /a HTTP/1.1', '']], ''],
+      response: [[['HTTP/1.1 200', '']], 'ok'],
+      comment: '',
+    };
+    const rowB = {
+      position: 2,
+      request: [[['GET /b HTTP/1.1', '']], ''],
+      response: [[['HTTP/1.1 404', '']], 'missing'],
+      comment: '',
+    };
+
+    component.selectRow(rowA);
+    component.selectRow(rowB, { shiftKey: true } as MouseEvent);
+
+    expect(component.compareRow).toBe(rowB);
+    expect(component.diffMode).toBeTrue();
+    expect(component.requestDiffLines.some((line) => line.type === 'delete')).toBeTrue();
+    expect(component.requestDiffLines.some((line) => line.type === 'insert')).toBeTrue();
+    expect(component.requestSideBySideRows.length).toBeGreaterThan(0);
+  });
+
+  it('switches diff layout', () => {
+    component.setDiffLayout('side-by-side');
+    expect(component.diffLayout).toBe('side-by-side');
+  });
+
+  it('clears compare state', () => {
+    component.compareRow = { position: 2 };
+    component.diffMode = true;
+    component.requestDiffLines = [{ type: 'equal', text: 'x', oldLineNumber: 1, newLineNumber: 1 }];
+
+    component.clearCompare();
+
+    expect(component.compareRow).toBeUndefined();
+    expect(component.diffMode).toBeFalse();
+    expect(component.requestDiffLines.length).toBe(0);
   });
 });

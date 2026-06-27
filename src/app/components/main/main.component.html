@@ -162,9 +162,10 @@
                         </ng-container>
 
                         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                        <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row)"
+                        <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row, $event)"
                             [attr.data-row-position]="row.position"
-                            [class.row-is-clicked]="clickedRow == row"></tr>
+                            [class.row-is-clicked]="clickedRow == row"
+                            [class.row-is-compare]="compareRow == row"></tr>
                     </table>
 
                     <mat-menu #columnVisibilityMenu="matMenu" class="column-filter-menu-panel">
@@ -305,10 +306,14 @@
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Request #{{clickedRow.position}}</span>
+                                    <span class="diff-compare-label" *ngIf="compareRow">{{ compareSummaryLabel }}</span>
                                     <span class="toolbar-spacer"></span>
-                                    <button type="button" [class.active]="!replayMode" (click)="setReplayMode(false)">View</button>
+                                    <button type="button" [class.active]="!replayMode && !diffMode" (click)="showRequestView()">View</button>
                                     <button type="button" [class.active]="replayMode" (click)="setReplayMode(true)"
                                         matTooltip="Edit request and copy as cURL">Edit</button>
+                                    <button type="button" [class.active]="diffMode" (click)="toggleDiffMode()"
+                                        matTooltip="Shift+click another row to compare">Diff</button>
+                                    <button type="button" *ngIf="compareRow" (click)="clearCompare()">Clear</button>
                                     <button type="button" [class.active]="wrapRequest"
                                         (click)="wrapRequest = !wrapRequest">Wrap</button>
                                 </div>
@@ -320,7 +325,7 @@
                                     <span class="toolbar-spacer"></span>
                                     <span class="edit-status" *ngIf="requestIsEdited">Edited</span>
                                 </div>
-                                <div class="panel-search-row" *ngIf="!replayMode">
+                                <div class="panel-search-row" *ngIf="!replayMode && !diffMode">
                                     <input matInput type="search" id="request-search" (input)="onRequestSearch($event)"
                                         (keydown)="onRequestSearchKeydown($event)" placeholder="Search request"
                                         class="search panel-search">
@@ -330,6 +335,14 @@
                                         <span *ngIf="requestMatchCount === 0">No results</span>
                                     </span>
                                 </div>
+                                <div class="panel-search-row diff-stats-row" *ngIf="diffMode">
+                                    <span class="diff-stats">{{ requestDiffStats }}</span>
+                                    <span class="toolbar-spacer"></span>
+                                    <button type="button" [class.active]="diffLayout === 'unified'"
+                                        (click)="setDiffLayout('unified')">Unified</button>
+                                    <button type="button" [class.active]="diffLayout === 'side-by-side'"
+                                        (click)="setDiffLayout('side-by-side')">Split</button>
+                                </div>
                                 <div class="replay-hint" *ngIf="replayMode">
                                     Edit the request, then copy as cURL to replay in your terminal or Burp Repeater.
                                 </div>
@@ -337,7 +350,39 @@
                             <textarea *ngIf="replayMode" class="content replay-editor" [class.wrapy]="wrapRequest"
                                 [(ngModel)]="replayRequestRaw" (ngModelChange)="persistReplayRequest()"
                                 spellcheck="false" aria-label="Editable HTTP request"></textarea>
-                            <div id="request-content" class="content" [class.wrapy]="wrapRequest" *ngIf="!replayMode">
+                            <div id="request-content" class="content diff-content" [class.wrapy]="wrapRequest"
+                                *ngIf="!replayMode && diffMode && diffLayout === 'unified'">
+                                <div class="diff-line" *ngFor="let line of requestDiffLines"
+                                    [class.diff-line-delete]="line.type === 'delete'"
+                                    [class.diff-line-insert]="line.type === 'insert'">
+                                    <span class="diff-gutter">{{ line.type === 'delete' ? '-' : line.type === 'insert' ? '+' : ' ' }}</span>
+                                    <span class="diff-line-number" *ngIf="line.oldLineNumber">{{ line.oldLineNumber }}</span>
+                                    <span class="diff-line-number" *ngIf="!line.oldLineNumber">&nbsp;</span>
+                                    <span class="diff-line-number" *ngIf="line.newLineNumber">{{ line.newLineNumber }}</span>
+                                    <span class="diff-line-number" *ngIf="!line.newLineNumber">&nbsp;</span>
+                                    <span class="diff-line-text">{{ line.text }}</span>
+                                </div>
+                            </div>
+                            <div id="request-content" class="content diff-sbs" [class.wrapy]="wrapRequest"
+                                *ngIf="!replayMode && diffMode && diffLayout === 'side-by-side'">
+                                <div class="diff-sbs-row diff-sbs-header-row">
+                                    <div class="diff-sbs-cell">#{{ clickedRow.position }}</div>
+                                    <div class="diff-sbs-cell">#{{ compareRow.position }}</div>
+                                </div>
+                                <div class="diff-sbs-row" *ngFor="let row of requestSideBySideRows">
+                                    <div class="diff-sbs-cell" [class.diff-line-delete]="row.left.type === 'delete'"
+                                        >
+                                        <span class="diff-line-number">{{ row.left.lineNumber || '' }}</span>
+                                        <span class="diff-line-text">{{ row.left.text }}</span>
+                                    </div>
+                                    <div class="diff-sbs-cell" [class.diff-line-insert]="row.right.type === 'insert'"
+                                        >
+                                        <span class="diff-line-number">{{ row.right.lineNumber || '' }}</span>
+                                        <span class="diff-line-text">{{ row.right.text }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="request-content" class="content" [class.wrapy]="wrapRequest" *ngIf="!replayMode && !diffMode">
                                 <div id="req_headers">
                                     <div *ngFor="let row of requestHighlightedHeaders">
                                         <span class="header_key" [innerHTML]="row.key"></span>
@@ -353,11 +398,15 @@
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Response</span>
+                                    <span class="diff-compare-label" *ngIf="compareRow">{{ compareSummaryLabel }}</span>
                                     <span class="toolbar-spacer"></span>
+                                    <button type="button" [class.active]="diffMode" (click)="toggleDiffMode()"
+                                        matTooltip="Shift+click another row to compare">Diff</button>
+                                    <button type="button" *ngIf="compareRow" (click)="clearCompare()">Clear</button>
                                     <button [class.active]="wrapResponse"
                                         (click)="wrapResponse = !wrapResponse">Wrap</button>
                                 </div>
-                                <div class="panel-search-row">
+                                <div class="panel-search-row" *ngIf="!diffMode">
                                     <input matInput type="search" id="response-search"
                                         (input)="onResponseSearch($event)"
                                         (keydown)="onResponseSearchKeydown($event)" placeholder="Search response"
@@ -368,8 +417,48 @@
                                         <span *ngIf="responseMatchCount === 0">No results</span>
                                     </span>
                                 </div>
+                                <div class="panel-search-row diff-stats-row" *ngIf="diffMode">
+                                    <span class="diff-stats">{{ responseDiffStats }}</span>
+                                    <span class="toolbar-spacer"></span>
+                                    <button type="button" [class.active]="diffLayout === 'unified'"
+                                        (click)="setDiffLayout('unified')">Unified</button>
+                                    <button type="button" [class.active]="diffLayout === 'side-by-side'"
+                                        (click)="setDiffLayout('side-by-side')">Split</button>
+                                </div>
                             </div>
-                            <div id="response-content" class="content" [class.wrapy]="wrapResponse">
+                            <div id="response-content" class="content diff-content" [class.wrapy]="wrapResponse"
+                                *ngIf="diffMode && diffLayout === 'unified'">
+                                <div class="diff-line" *ngFor="let line of responseDiffLines"
+                                    [class.diff-line-delete]="line.type === 'delete'"
+                                    [class.diff-line-insert]="line.type === 'insert'">
+                                    <span class="diff-gutter">{{ line.type === 'delete' ? '-' : line.type === 'insert' ? '+' : ' ' }}</span>
+                                    <span class="diff-line-number" *ngIf="line.oldLineNumber">{{ line.oldLineNumber }}</span>
+                                    <span class="diff-line-number" *ngIf="!line.oldLineNumber">&nbsp;</span>
+                                    <span class="diff-line-number" *ngIf="line.newLineNumber">{{ line.newLineNumber }}</span>
+                                    <span class="diff-line-number" *ngIf="!line.newLineNumber">&nbsp;</span>
+                                    <span class="diff-line-text">{{ line.text }}</span>
+                                </div>
+                            </div>
+                            <div id="response-content" class="content diff-sbs" [class.wrapy]="wrapResponse"
+                                *ngIf="diffMode && diffLayout === 'side-by-side'">
+                                <div class="diff-sbs-row diff-sbs-header-row">
+                                    <div class="diff-sbs-cell">#{{ clickedRow.position }}</div>
+                                    <div class="diff-sbs-cell">#{{ compareRow.position }}</div>
+                                </div>
+                                <div class="diff-sbs-row" *ngFor="let row of responseSideBySideRows">
+                                    <div class="diff-sbs-cell" [class.diff-line-delete]="row.left.type === 'delete'"
+                                        >
+                                        <span class="diff-line-number">{{ row.left.lineNumber || '' }}</span>
+                                        <span class="diff-line-text">{{ row.left.text }}</span>
+                                    </div>
+                                    <div class="diff-sbs-cell" [class.diff-line-insert]="row.right.type === 'insert'"
+                                        >
+                                        <span class="diff-line-number">{{ row.right.lineNumber || '' }}</span>
+                                        <span class="diff-line-text">{{ row.right.text }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="response-content" class="content" [class.wrapy]="wrapResponse" *ngIf="!diffMode">
                                 <div id="res_headers">
                                     <div class="header_inner" *ngFor="let row of responseHighlightedHeaders">
                                         <span class="header_key" [innerHTML]="row.key"></span>
