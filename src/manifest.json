@@ -7,6 +7,16 @@
   "display": "standalone",
   "scope": ".",
   "start_url": ".",
+  "url_handlers": [
+    {
+      "origin": "https://better-bhhb.pages.dev",
+      "paths": ["/*"]
+    },
+    {
+      "origin": "http://localhost:4200",
+      "paths": ["/*"]
+    }
+  ],
   "icons": [
     {
       "src": "favicon.ico",

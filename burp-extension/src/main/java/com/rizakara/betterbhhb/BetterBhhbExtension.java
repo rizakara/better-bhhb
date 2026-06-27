@@ -203,7 +203,7 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
             try {
                 log.debug("Background send started on thread " + Thread.currentThread().getName());
                 coordinator.send(api, items);
-                log.info("Send flow finished successfully. Browser open was requested — check Output for the import URL if needed.");
+                log.info("Send flow finished successfully. Switch to Better-BHHB to complete the import.");
             } catch (Exception exception) {
                 log.error("Send flow failed.", exception);
                 showMessage(

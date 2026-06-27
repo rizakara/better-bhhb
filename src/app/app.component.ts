@@ -17,6 +17,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.themeService.initialize();
+    this.burpImportService.startListening();
     if (this.burpImportService.shouldAutoImportFromUrl()) {
       void this.burpImportService.importFromCurrentUrl().catch(() => undefined);
     }

@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class TemporaryImportServer implements AutoCloseable {
     static final int PREFERRED_PORT = 19876;
+    static final int CANDIDATE_PORT_COUNT = 11;
     private static final AtomicReference<TemporaryImportServer> ACTIVE_SERVER = new AtomicReference<>();
-    private static final int AUTO_SHUTDOWN_SECONDS = 25;
+    private static final int AUTO_SHUTDOWN_SECONDS = 90;
 
     private final ServerSocket serverSocket;
     private final int port;
@@ -115,11 +116,14 @@ final class TemporaryImportServer implements AutoCloseable {
         return "http://127.0.0.1:" + port + "/data";
     }
 
-    private static int[] buildCandidatePorts() {
-        int[] ports = new int[11];
-        ports[0] = PREFERRED_PORT;
-        for (int index = 1; index < ports.length; index++) {
-            ports[index] = 10000 + (int) (Math.random() * 50000);
+    static int autoShutdownSeconds() {
+        return AUTO_SHUTDOWN_SECONDS;
+    }
+
+    static int[] buildCandidatePorts() {
+        int[] ports = new int[CANDIDATE_PORT_COUNT];
+        for (int index = 0; index < ports.length; index++) {
+            ports[index] = PREFERRED_PORT + index;
         }
         return ports;
     }
@@ -242,7 +246,8 @@ final class TemporaryImportServer implements AutoCloseable {
             writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8));
             return;
         }
-        writeResponse(output, 200, "text/plain; charset=utf-8", "ok".getBytes(StandardCharsets.UTF_8));
+        String body = "{\"ready\":true,\"port\":" + port + "}";
+        writeResponse(output, 200, "application/json; charset=utf-8", body.getBytes(StandardCharsets.UTF_8));
     }
 
     private static String extractPath(String target) {

@@ -3,7 +3,8 @@ package com.rizakara.betterbhhb;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.proxy.ProxyHttpRequestResponse;
 
-import java.awt.*;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -29,32 +30,18 @@ final class SendToPwaCoordinator {
         log.info("XML export complete in " + (System.currentTimeMillis() - exportStarted) + "ms, size="
                 + xml.length() + " chars (" + xml.getBytes().length + " bytes).");
 
-        String pwaUrl = settings.getPwaUrl();
-        log.debug("PWA target URL: " + pwaUrl);
-
+        log.debug("PWA target URL: " + settings.getPwaUrl());
         log.debug("Starting temporary localhost import server...");
-        TemporaryImportServer importServer = TemporaryImportServer.start(pwaUrl, xml, log);
-        String importUrl = importServer.importUrl();
-        String dataUrl = importServer.dataUrl();
+        TemporaryImportServer importServer = TemporaryImportServer.start(settings.getPwaUrl(), xml, log);
+        int port = importServer.port();
 
-        log.info("Import server ready on port " + importServer.port() + ".");
-        log.info("Import URL: " + importUrl);
-        log.info("Data URL:  " + dataUrl);
-        log.debug("Server will auto-stop after first /data fetch or in ~25 seconds.");
-        verifyHealth(importServer.port(), log);
+        verifyHealth(port, log);
+        copyPortToClipboard(port, log);
 
-        try {
-            openBrowser(importUrl, log);
-            log.info("Browser open requested. Waiting for PWA to fetch " + dataUrl);
-        } catch (IOException browserError) {
-            log.error("Browser could not be opened automatically.", browserError);
-            throw new IOException(
-                    "Import server is running on port " + importServer.port()
-                            + " but the browser could not be opened.\n"
-                            + "Open this URL manually:\n" + importUrl,
-                    browserError
-            );
-        }
+        log.info("Import server ready on localhost:" + port + ".");
+        log.info("Keep Better-BHHB open — it listens for Burp and imports automatically.");
+        log.info("Server stays up for ~" + TemporaryImportServer.autoShutdownSeconds() + " seconds.");
+        log.info("Data URL: http://127.0.0.1:" + port + "/data");
     }
 
     private void verifyHealth(int port, ExtensionLogger log) throws IOException {
@@ -71,33 +58,13 @@ final class SendToPwaCoordinator {
         log.debug("Health check OK.");
     }
 
-    private void openBrowser(String url, ExtensionLogger log) throws IOException {
-        log.debug("Attempting Desktop.browse() for " + url);
-
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-            try {
-                Desktop.getDesktop().browse(new URI(url));
-                log.debug("Desktop.browse() succeeded.");
-                return;
-            } catch (Exception exception) {
-                log.debug("Desktop.browse() failed: " + exception.getMessage());
-            }
-        } else {
-            log.debug("Desktop.browse() is not supported on this platform.");
+    private void copyPortToClipboard(int port, ExtensionLogger log) {
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new StringSelection(Integer.toString(port)), null);
+            log.debug("Copied import port " + port + " to clipboard.");
+        } catch (Exception exception) {
+            log.debug("Could not copy port to clipboard: " + exception.getMessage());
         }
-
-        String osName = System.getProperty("os.name", "").toLowerCase();
-        ProcessBuilder processBuilder;
-        if (osName.contains("mac")) {
-            processBuilder = new ProcessBuilder("open", url);
-        } else if (osName.contains("win")) {
-            processBuilder = new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url);
-        } else {
-            processBuilder = new ProcessBuilder("xdg-open", url);
-        }
-
-        log.debug("Falling back to process launcher: " + String.join(" ", processBuilder.command()));
-        Process process = processBuilder.start();
-        log.debug("Fallback browser process started, pid=" + process.pid());
     }
 }

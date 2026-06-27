@@ -52,6 +52,9 @@
             <button mat-menu-item (click)="retryBurpImport()" *ngIf="burpImportStatus === 'error'">
                 <span>Retry Burp import…</span>
             </button>
+            <button mat-menu-item (click)="checkForBurpImport()" *ngIf="burpImportStatus === 'listening' || burpImportStatus === 'idle'">
+                <span>Check for Burp export…</span>
+            </button>
             <mat-divider></mat-divider>
             <button mat-menu-item (pointerdown)="saveCurrentFile('all')"
                 [disabled]="!selectedFileName" *ngIf="exportFilterState.isSubset">

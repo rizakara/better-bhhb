@@ -44,7 +44,7 @@ export class HeaderComponent implements OnInit {
   };
   isLoading: boolean = false;
   burpImportMessage = '';
-  burpImportStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  burpImportStatus: 'idle' | 'listening' | 'loading' | 'success' | 'error' = 'idle';
   private lastBurpImportNotice = '';
 
   ngOnInit(): void {
@@ -162,6 +162,10 @@ export class HeaderComponent implements OnInit {
   retryBurpImport(): void {
     this.lastBurpImportNotice = '';
     void this.burpImportService.importFromLocalhost().catch(() => undefined);
+  }
+
+  checkForBurpImport(): void {
+    this.burpImportService.scanNow();
   }
 }
 

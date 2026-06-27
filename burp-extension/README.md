@@ -21,13 +21,15 @@ Use the included Gradle wrapper (`./gradlew`), not the system `gradle` command. 
 
 ## Usage
 
-1. Open **Proxy → HTTP history**
-2. Select one or more items (or none to send the full history)
-3. Right-click the table and choose **Extensions → Send to Better-BHHB PWA**
+1. Keep Better-BHHB open (installed PWA or dev server)
+2. Open **Proxy → HTTP history**
+3. Select items, then right-click → **Extensions → Send selected…** or **Send all…**
 
-You can also use the top menu bar: **Better-BHHB → Send selected/all proxy history to PWA**.
+Burp starts a temporary server on `localhost:19876`–`19886`, exports the XML, and waits for the app to pull it. **Burp does not open any browser.**
 
-Burp starts a temporary server on `http://127.0.0.1:19876` (or another free port), opens your browser, and the PWA fetches the XML from `/data`.
+The PWA polls those ports automatically and imports within a couple of seconds.
+
+You can also use the top menu bar: **Better-BHHB → Send all proxy history to PWA**.
 
 ## Debugging
 
@@ -36,8 +38,7 @@ Open **Extensions → Installed → Better-BHHB → Output** and click the send 
 - menu click received
 - XML export size and duration
 - localhost port binding
-- `/import` and `/data` requests
-- browser launch attempt
+- `/health` and `/data` requests
 - server shutdown
 
 To reduce log noise:

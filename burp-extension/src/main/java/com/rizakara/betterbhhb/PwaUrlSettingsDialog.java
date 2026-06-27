@@ -13,7 +13,7 @@ final class PwaUrlSettingsDialog {
         log.debug("Opening PWA URL input dialog (owner=" + owner + ").");
 
         String message = """
-                Enter the Better-BHHB PWA address.
+                Enter the Better-BHHB address you keep open while testing.
                 For local development use http://localhost:4200/
 
                 Current: %s
