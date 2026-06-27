@@ -4,7 +4,13 @@ import * as xml2js from 'xml2js';
 import { Base64 } from 'js-base64';
 import { MatDialog } from '@angular/material/dialog';
 import { FileSessionStorageService, StoredHistoryEntry } from './file-session-storage.service';
-import { ImportModeDialogComponent, ImportModeDialogData } from '../../components/header/import-mode-dialog.component';
+import {
+  ImportDestinationDialogComponent,
+  ImportDestinationDialogData,
+  ImportDestinationDialogResult,
+} from '../../components/header/import-destination-dialog.component';
+import { WorkspaceService } from '../workspace/workspace.service';
+import { WorkspaceTabData, WorkspaceViewState } from '../workspace/workspace-view-state';
 
 export interface StatusBreakdown {
   success: number;
@@ -57,13 +63,18 @@ export class FileHandleService {
 
   constructor(
     private fileSessionStorage: FileSessionStorageService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private workspaceService: WorkspaceService,
   ) { }
 
   private selectedFileName!: string | undefined;
   private selectedFileContent!: BurpExport | undefined;
 
-  private selectedFileData = new Subject<{ selectedFileName: string, selectedFileContent: BurpExport | undefined }>();
+  private selectedFileData = new Subject<{
+    selectedFileName: string;
+    selectedFileContent: BurpExport | undefined;
+    viewState?: WorkspaceViewState;
+  }>();
   private exportFilterState = new BehaviorSubject<ExportFilterState>(this.createEmptyExportFilterState());
   private beforeSave = new Subject<void>();
   private requestEdits = new Map<number, string>();
@@ -139,13 +150,100 @@ export class FileHandleService {
   ensureSessionRestored(): Promise<void> {
     if (!this.sessionReadyPromise) {
       this.sessionReadyPromise = this.restoreLastSession()
-        .then(() => undefined)
+        .then(() => {
+          this.workspaceService.ensureInitialTab();
+          return undefined;
+        })
         .catch((error) => {
           console.warn('Failed to restore last session.', error);
+          this.workspaceService.ensureInitialTab();
           return undefined;
         });
     }
     return this.sessionReadyPromise;
+  }
+
+  async createWorkspaceTab(label?: string): Promise<void> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+    const newTab = this.workspaceService.createTab(label);
+    const activated = await this.workspaceService.switchTo(newTab.id);
+    if (activated) {
+      await this.applyWorkspaceTab(activated);
+    }
+  }
+
+  async switchWorkspaceTab(tabId: string): Promise<void> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+    const tab = await this.workspaceService.switchTo(tabId);
+    if (!tab) {
+      return;
+    }
+    await this.applyWorkspaceTab(tab);
+  }
+
+  async closeWorkspaceTab(tabId: string): Promise<void> {
+    await this.ensureSessionRestored();
+    if (tabId === this.workspaceService.getActiveTabId()) {
+      this.syncActiveWorkspaceTab();
+    }
+    const nextTab = this.workspaceService.closeTab(tabId);
+    if (!nextTab) {
+      return;
+    }
+    await this.applyWorkspaceTab(nextTab);
+  }
+
+  renameWorkspaceTab(tabId: string, label: string): void {
+    this.workspaceService.renameTab(tabId, label);
+  }
+
+  private syncActiveWorkspaceTab(): void {
+    this.workspaceService.updateActiveTabFromFile(this.selectedFileName, this.selectedFileContent, {
+      requestEdits: this.serializeEdits(this.requestEdits),
+      commentEdits: this.serializeEdits(this.commentEdits),
+    });
+  }
+
+  private async activateWorkspaceTab(tabId: string): Promise<void> {
+    const tab = await this.workspaceService.switchTo(tabId);
+    if (!tab) {
+      return;
+    }
+    await this.applyWorkspaceTab(tab);
+  }
+
+  private async applyWorkspaceTab(tab: WorkspaceTabData): Promise<void> {
+    this.selectedFileName = tab.fileName;
+    this.selectedFileContent = tab.content;
+    this.loadEdits(tab.requestEdits, tab.commentEdits);
+
+    if (!tab.content) {
+      this.exportFilterState.next(this.createEmptyExportFilterState());
+    }
+
+    this.emitSelectedFileData(tab.viewState);
+  }
+
+  private loadEdits(
+    requestEdits: Record<number, string>,
+    commentEdits: Record<number, string>,
+  ): void {
+    this.requestEdits = new Map(
+      Object.entries(requestEdits).map(([position, value]) => [Number(position), value]),
+    );
+    this.commentEdits = new Map(
+      Object.entries(commentEdits).map(([position, value]) => [Number(position), value]),
+    );
+  }
+
+  private serializeEdits(edits: Map<number, string>): Record<number, string> {
+    const serialized: Record<number, string> = {};
+    edits.forEach((value, position) => {
+      serialized[position] = value;
+    });
+    return serialized;
   }
 
   async importBurpXml(
@@ -158,35 +256,15 @@ export class FileHandleService {
     const normalized = this.normalizeExport(parsed);
     const itemCount = normalized.items.item.length;
     const fileName = options?.fileName ?? this.suggestBurpImportFileName(itemCount);
-    const hasExisting = !!this.selectedFileContent;
 
-    let mode: 'merge' | 'replace' = 'replace';
-
-    if (hasExisting) {
-      this.importing.next(true);
-      const choice = await this.promptForImportMode(1);
-      if (!choice) {
-        this.importing.next(false);
+    this.importing.next(true);
+    try {
+      const destination = await this.promptForImportDestination(1);
+      if (!destination || !(await this.prepareImportTarget(destination))) {
         return null;
       }
-      mode = choice;
-    } else {
-      this.importing.next(true);
-    }
 
-    try {
-      if (mode === 'replace' || !this.selectedFileContent) {
-        this.selectedFileName = fileName;
-        this.selectedFileContent = normalized;
-      } else {
-        const exportsToMerge = [this.selectedFileContent, normalized];
-        const names = [this.selectedFileName!, fileName];
-        this.selectedFileName = this.formatMergedFileName(names);
-        this.selectedFileContent = this.mergeExports(exportsToMerge);
-      }
-
-      this.clearEdits();
-      this.emitSelectedFileData();
+      this.applyImportedExports([{ name: fileName, content: normalized }], destination.mode);
       await this.persistCurrentSession({
         source: options?.source ?? 'burp-extension',
         rawXml: options?.rawXml ?? xml,
@@ -235,34 +313,17 @@ export class FileHandleService {
     openedSession: { fileName: string; content: BurpExport },
     openedCount: number
   ): Promise<boolean> {
-    const hasExisting = !!this.selectedFileContent;
-    let mode: 'merge' | 'replace' = 'replace';
-
-    if (hasExisting) {
-      this.importing.next(true);
-      const choice = await this.promptForImportMode(openedCount);
-      if (!choice) {
-        this.importing.next(false);
+    this.importing.next(true);
+    try {
+      const destination = await this.promptForImportDestination(openedCount);
+      if (!destination || !(await this.prepareImportTarget(destination))) {
         return false;
       }
-      mode = choice;
-    } else {
-      this.importing.next(true);
-    }
 
-    try {
-      if (mode === 'replace' || !this.selectedFileContent) {
-        this.selectedFileName = openedSession.fileName;
-        this.selectedFileContent = openedSession.content;
-      } else {
-        const exportsToMerge = [this.selectedFileContent, openedSession.content];
-        const names = [this.selectedFileName!, openedSession.fileName];
-        this.selectedFileName = this.formatMergedFileName(names);
-        this.selectedFileContent = this.mergeExports(exportsToMerge);
-      }
-
-      this.clearEdits();
-      this.emitSelectedFileData();
+      this.applyImportedExports(
+        [{ name: openedSession.fileName, content: openedSession.content }],
+        destination.mode,
+      );
       await this.persistCurrentSession({ recordHistory: false });
       return true;
     } finally {
@@ -280,10 +341,8 @@ export class FileHandleService {
       return false;
     }
 
-    this.selectedFileName = session.fileName;
-    this.selectedFileContent = session.content;
-    this.clearEdits();
-    this.emitSelectedFileData();
+    const tab = this.workspaceService.restoreTab(session.fileName, session.content);
+    await this.applyWorkspaceTab(tab);
     return true;
   }
 
@@ -299,67 +358,105 @@ export class FileHandleService {
       return;
     }
 
-    const hasExisting = !!this.selectedFileContent;
-
-    let mode: 'merge' | 'replace' = 'replace';
-
-    if (hasExisting) {
-      this.importing.next(true);
-      const choice = await this.promptForImportMode(files.length);
-      if (!choice) {
-        this.importing.next(false);
+    this.importing.next(true);
+    try {
+      const destination = await this.promptForImportDestination(files.length);
+      if (!destination || !(await this.prepareImportTarget(destination))) {
         return;
       }
-      mode = choice;
-    } else {
-      this.importing.next(true);
-    }
 
-    try {
       const parsedExports = await Promise.all(files.map((file) => this.parseFile(file)));
-      const normalizedExports = parsedExports.map((content) => this.normalizeExport(content));
-
-      if (mode === 'replace' || !this.selectedFileContent) {
-        // Replace: use only the newly provided file(s)
-        if (files.length === 1) {
-          this.selectedFileName = files[0].name;
-          this.selectedFileContent = normalizedExports[0];
-        } else {
-          const names = files.map((file) => file.name);
-          this.selectedFileName = this.formatMergedFileName(names);
-          this.selectedFileContent = this.mergeExports(normalizedExports);
-        }
-      } else {
-        // Merge with existing
-        const exportsToMerge = [this.selectedFileContent, ...normalizedExports];
-        const names = [this.selectedFileName!, ...files.map((file) => file.name)];
-        this.selectedFileName = this.formatMergedFileName(names);
-        this.selectedFileContent = this.mergeExports(exportsToMerge);
-      }
-
-      this.clearEdits();
-      this.emitSelectedFileData();
+      const imports = files.map((file, index) => ({
+        name: file.name,
+        content: this.normalizeExport(parsedExports[index]),
+      }));
+      this.applyImportedExports(imports, destination.mode);
       await this.persistCurrentSession();
     } finally {
       this.importing.next(false);
     }
   }
 
-  private async promptForImportMode(newFileCount: number): Promise<'merge' | 'replace' | null> {
-    const dialogRef = this.dialog.open(ImportModeDialogComponent, {
-      width: '420px',
+  private async promptForImportDestination(
+    newFileCount: number,
+  ): Promise<ImportDestinationDialogResult | null> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+
+    const activeTabId = this.workspaceService.getActiveTabId();
+    const dialogRef = this.dialog.open(ImportDestinationDialogComponent, {
+      width: '460px',
       panelClass: 'bhhb-dialog',
       data: {
-        existingName: this.selectedFileName || 'current file',
         newFileCount,
-      } as ImportModeDialogData,
+        workspaces: this.workspaceService.getTabs().map((tab) => ({
+          id: tab.id,
+          label: tab.label,
+          fileName: tab.fileName,
+          hasContent: !!tab.content,
+          isActive: tab.id === activeTabId,
+        })),
+      } as ImportDestinationDialogData,
     });
 
     return new Promise((resolve) => {
-      dialogRef.afterClosed().subscribe((result: 'merge' | 'replace' | undefined) => {
+      dialogRef.afterClosed().subscribe((result) => {
         resolve(result ?? null);
       });
     });
+  }
+
+  private async prepareImportTarget(
+    destination: ImportDestinationDialogResult,
+  ): Promise<boolean> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+
+    if (destination.workspaceId === 'new') {
+      const newTab = this.workspaceService.createTab();
+      const activated = await this.workspaceService.switchTo(newTab.id);
+      if (!activated) {
+        return false;
+      }
+      await this.applyWorkspaceTab(activated);
+      return true;
+    }
+
+    if (destination.workspaceId === this.workspaceService.getActiveTabId()) {
+      return true;
+    }
+
+    const activated = await this.workspaceService.switchTo(destination.workspaceId);
+    if (!activated) {
+      return false;
+    }
+    await this.applyWorkspaceTab(activated);
+    return true;
+  }
+
+  private applyImportedExports(
+    imports: Array<{ name: string; content: BurpExport }>,
+    mode: 'merge' | 'replace',
+  ): void {
+    const normalizedExports = imports.map((entry) => entry.content);
+
+    if (mode === 'replace' || !this.selectedFileContent) {
+      if (imports.length === 1) {
+        this.selectedFileName = imports[0].name;
+        this.selectedFileContent = normalizedExports[0];
+      } else {
+        this.selectedFileName = this.formatMergedFileName(imports.map((entry) => entry.name));
+        this.selectedFileContent = this.mergeExports(normalizedExports);
+      }
+    } else {
+      const exportsToMerge = [this.selectedFileContent, ...normalizedExports];
+      const names = [this.selectedFileName!, ...imports.map((entry) => entry.name)];
+      this.selectedFileName = this.formatMergedFileName(names);
+      this.selectedFileContent = this.mergeExports(exportsToMerge);
+    }
+
+    this.clearEdits();
+    this.syncWorkspaceAfterImport();
   }
 
   async fileClear(): Promise<void> {
@@ -368,6 +465,7 @@ export class FileHandleService {
     this.clearEdits();
     this.exportFilterState.next(this.createEmptyExportFilterState());
     await this.fileSessionStorage.clear();
+    this.workspaceService.updateActiveTabFromFile(undefined, undefined, { resetViewState: true });
     this.emitSelectedFileData();
   }
 
@@ -467,10 +565,20 @@ export class FileHandleService {
     return `${names.length} files merged`;
   }
 
-  private emitSelectedFileData(): void {
+  private syncWorkspaceAfterImport(): void {
+    this.workspaceService.updateActiveTabFromFile(this.selectedFileName, this.selectedFileContent, {
+      requestEdits: {},
+      commentEdits: {},
+      resetViewState: true,
+    });
+    this.emitSelectedFileData();
+  }
+
+  private emitSelectedFileData(viewState?: WorkspaceViewState): void {
     this.selectedFileData.next({
       selectedFileName: this.selectedFileName!,
       selectedFileContent: this.selectedFileContent,
+      viewState,
     });
   }
 

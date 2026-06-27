@@ -6,6 +6,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BurpImportService } from '../../services/burp-import/burp-import.service';
 import { SessionHistoryDialogComponent } from './session-history-dialog.component';
+import { WorkspaceService } from '../../services/workspace/workspace.service';
+import { WorkspaceTabData } from '../../services/workspace/workspace-view-state';
 
 @Component({
   selector: 'app-header',
@@ -17,12 +19,14 @@ export class HeaderComponent implements OnInit {
   constructor(
     private FileHandleService: FileHandleService,
     private burpImportService: BurpImportService,
+    private workspaceService: WorkspaceService,
     public dialog: MatDialog,
     public themeService: ThemeService,
     private snackBar: MatSnackBar,
   ) { }
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('workspaceRenameInput') workspaceRenameInput?: ElementRef<HTMLInputElement>;
 
   fileSub!: Subscription
   exportFilterSub!: Subscription
@@ -46,6 +50,10 @@ export class HeaderComponent implements OnInit {
   burpImportMessage = '';
   burpImportStatus: 'idle' | 'listening' | 'loading' | 'success' | 'error' = 'idle';
   private lastBurpImportNotice = '';
+  workspaceTabs: WorkspaceTabData[] = [];
+  activeWorkspaceTabId: string | null = null;
+  renamingTabId: string | null = null;
+  renamingTabLabel = '';
 
   ngOnInit(): void {
     if (localStorage.getItem("gotIt") != "true") {
@@ -99,6 +107,15 @@ export class HeaderComponent implements OnInit {
           this.snackBar.open(state.message, 'Dismiss', { duration: 7000 });
           this.lastBurpImportNotice = noticeKey;
         }
+      });
+
+    this.workspaceService.getTabsListener()
+      .subscribe((tabs) => {
+        this.workspaceTabs = tabs;
+      });
+    this.workspaceService.getActiveTabIdListener()
+      .subscribe((tabId) => {
+        this.activeWorkspaceTabId = tabId;
       });
 
     this.isLoading = true
@@ -168,6 +185,83 @@ export class HeaderComponent implements OnInit {
 
   checkForBurpImport(): void {
     this.burpImportService.scanNow();
+  }
+
+  createWorkspaceTab(): void {
+    void this.FileHandleService.createWorkspaceTab().catch((err) => {
+      console.error(err);
+      this.snackBar.open('Failed to create workspace', undefined, { duration: 3000 });
+    });
+  }
+
+  switchWorkspaceTab(tabId: string): void {
+    if (tabId === this.activeWorkspaceTabId) {
+      return;
+    }
+    void this.FileHandleService.switchWorkspaceTab(tabId).catch((err) => {
+      console.error(err);
+      this.snackBar.open('Failed to switch workspace', undefined, { duration: 3000 });
+    });
+  }
+
+  closeWorkspaceTab(event: Event, tabId: string): void {
+    event.stopPropagation();
+    void this.FileHandleService.closeWorkspaceTab(tabId).catch((err) => {
+      console.error(err);
+      this.snackBar.open('Failed to close workspace', undefined, { duration: 3000 });
+    });
+  }
+
+  get activeWorkspaceLabel(): string {
+    const tab = this.workspaceTabs.find((candidate) => candidate.id === this.activeWorkspaceTabId);
+    return tab?.label ?? 'Workspace';
+  }
+
+  startRenamingActiveTab(): void {
+    const tab = this.workspaceTabs.find((candidate) => candidate.id === this.activeWorkspaceTabId);
+    if (!tab) {
+      return;
+    }
+    this.renamingTabId = tab.id;
+    this.renamingTabLabel = tab.label;
+    setTimeout(() => {
+      const input = this.workspaceRenameInput?.nativeElement;
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
+
+  commitRenamingTab(): void {
+    if (!this.renamingTabId) {
+      return;
+    }
+    this.FileHandleService.renameWorkspaceTab(this.renamingTabId, this.renamingTabLabel);
+    this.renamingTabId = null;
+    this.renamingTabLabel = '';
+  }
+
+  cancelRenamingTab(): void {
+    this.renamingTabId = null;
+    this.renamingTabLabel = '';
+  }
+
+  onRenamingTabKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.commitRenamingTab();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.cancelRenamingTab();
+    }
+  }
+
+  getWorkspaceTabTitle(tab: WorkspaceTabData): string {
+    if (tab.fileName) {
+      return `${tab.label} (${tab.fileName})`;
+    }
+    return tab.label;
   }
 }
 

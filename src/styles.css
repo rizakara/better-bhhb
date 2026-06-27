@@ -260,6 +260,107 @@ body.theme-is-dark .mat-menu-panel.import-menu-panel {
   box-shadow: var(--shadow-dark);
 }
 
+/* Workspace selector menu */
+.mat-menu-panel.workspace-menu-panel {
+  min-width: 260px !important;
+  max-width: 340px;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-header {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 16px 4px;
+  color: var(--text-muted);
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mat-menu-panel.workspace-menu-panel .mat-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  height: auto;
+  min-height: 40px;
+  line-height: 1.35;
+  padding: 8px 12px 8px 10px;
+  white-space: normal;
+}
+
+.mat-menu-panel.workspace-menu-panel .mat-menu-item.workspace-menu-active {
+  background-color: var(--selected-bg) !important;
+  font-weight: 600;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-check {
+  flex: 0 0 16px;
+  width: 16px;
+  font-size: 12px;
+  line-height: 1;
+  color: transparent;
+  text-align: center;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-check.workspace-menu-check-visible {
+  color: var(--text-primary);
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-item-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 1px;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  color: var(--text-primary);
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-meta-empty {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.mat-menu-panel.workspace-menu-panel .workspace-menu-close:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg);
+}
+
+
+
 /* Themed Material dialogs (panelClass is on cdk-overlay-pane, not mat-dialog-container) */
 .cdk-overlay-container .mat-dialog-container {
   background: var(--bg-primary) !important;
@@ -310,6 +411,30 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-dialog-container {
 .bhhb-dialog .mat-dialog-actions .mat-button.mat-primary {
   border-color: #177fc5 !important;
   color: #177fc5 !important;
+}
+
+.bhhb-dialog .import-dialog-actions {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  gap: 12px;
+}
+
+.bhhb-dialog .import-dialog-actions > .mat-button:first-child {
+  margin-right: auto;
+}
+
+.bhhb-dialog .import-dialog-actions-primary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bhhb-dialog .import-dialog-actions-primary .mat-button {
+  margin: 0 !important;
 }
 
 .bhhb-dialog .mat-checkbox-label {

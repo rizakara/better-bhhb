@@ -1,12 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 
 import { FileHandleService } from './file-handle.service';
 import { FileSessionStorageService } from './file-session-storage.service';
+import { WorkspaceService } from '../workspace/workspace.service';
 
 describe('FileHandleService', () => {
   let service: FileHandleService;
   let storage: jasmine.SpyObj<FileSessionStorageService>;
+  let workspaceService: WorkspaceService;
+  let dialogSpy: jasmine.SpyObj<MatDialog>;
 
   beforeEach(() => {
     storage = jasmine.createSpyObj('FileSessionStorageService', [
@@ -18,16 +22,24 @@ describe('FileHandleService', () => {
       'deleteHistoryEntry',
     ]);
     storage.load.and.resolveTo(null);
-
-    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
 
     TestBed.configureTestingModule({
       providers: [
         { provide: FileSessionStorageService, useValue: storage },
         { provide: MatDialog, useValue: dialogSpy },
+        WorkspaceService,
       ],
     });
     service = TestBed.inject(FileHandleService);
+    workspaceService = TestBed.inject(WorkspaceService);
+    workspaceService.ensureInitialTab();
+    dialogSpy.open.and.returnValue({
+      afterClosed: () => of({
+        workspaceId: workspaceService.getActiveTabId()!,
+        mode: 'replace',
+      }),
+    } as ReturnType<MatDialog['open']>);
   });
 
   it('should be created', () => {

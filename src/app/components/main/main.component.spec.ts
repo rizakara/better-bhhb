@@ -7,6 +7,7 @@ import { MainComponent } from './main.component';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
 import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { HttpDiffService } from '../../services/http-diff/http-diff.service';
+import { WorkspaceService } from '../../services/workspace/workspace.service';
 
 describe('MainComponent', () => {
   let component: MainComponent;
@@ -44,6 +45,7 @@ describe('MainComponent', () => {
         },
         { provide: MatSnackBar, useValue: snackBar },
         HttpDiffService,
+        WorkspaceService,
       ],
     }).compileComponents();
   });
@@ -185,5 +187,22 @@ describe('MainComponent', () => {
     expect(component.compareRow).toBeUndefined();
     expect(component.diffMode).toBeFalse();
     expect(component.requestDiffLines.length).toBe(0);
+  });
+
+  it('captures and restores workspace filter state', () => {
+    component.globalSearchTerm = 'token';
+    component.columnFilters['host'] = new Set(['https://example.com']);
+    component.columnFilterOptions['host'] = ['https://example.com'];
+    component.clickedRow = { position: 4, request: [[], ''], response: [[], ''], comment: '' };
+
+    const captured = component.captureViewState();
+
+    component.globalSearchTerm = '';
+    component.columnFilters['host'] = null;
+    component.restoreViewState(captured);
+
+    expect(component.globalSearchTerm).toBe('token');
+    expect(component.columnFilters['host']?.has('https://example.com')).toBeTrue();
+    expect(captured.selectedRowPosition).toBe(4);
   });
 });

@@ -33,8 +33,59 @@
                 </button>
             </div>
         </mat-menu>
+        <div class="workspace-rename-inline workspace-control" *ngIf="renamingTabId; else workspaceSelector">
+            <svg class="workspace-selector-icon" xmlns="http://www.w3.org/2000/svg" height="18px"
+                viewBox="0 -960 960 960" width="18px" fill="currentColor" aria-hidden="true">
+                <path
+                    d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h640v-480H160v480Zm40-120h200v-80H200v80Zm0-160h200v-80H200v80Zm0-160h200v-80H200v80Zm280 320h240v-80H480v80Zm0-160h240v-80H480v80Zm0-160h240v-80H480v80Z" />
+            </svg>
+            <input #workspaceRenameInput class="workspace-rename-input" [(ngModel)]="renamingTabLabel"
+                (keydown)="onRenamingTabKeydown($event)" (blur)="commitRenamingTab()"
+                aria-label="Workspace name" placeholder="Workspace name" />
+            <button type="button" class="workspace-rename-cancel" (mousedown)="$event.preventDefault()"
+                (click)="cancelRenamingTab()" aria-label="Cancel rename">×</button>
+        </div>
+        <ng-template #workspaceSelector>
+            <button type="button" class="workspace-selector workspace-control" [matMenuTriggerFor]="workspaceMenu"
+                matTooltip="Switch workspace" aria-label="Switch workspace">
+                <svg class="workspace-selector-icon" xmlns="http://www.w3.org/2000/svg" height="18px"
+                    viewBox="0 -960 960 960" width="18px" fill="currentColor" aria-hidden="true">
+                    <path
+                        d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h640v-480H160v480Zm40-120h200v-80H200v80Zm0-160h200v-80H200v80Zm0-160h200v-80H200v80Zm280 320h240v-80H480v80Zm0-160h240v-80H480v80Zm0-160h240v-80H480v80Z" />
+                </svg>
+                <span class="workspace-selector-label">{{ activeWorkspaceLabel }}</span>
+                <svg class="workspace-selector-chevron" xmlns="http://www.w3.org/2000/svg" height="18px"
+                    viewBox="0 -960 960 960" width="18px" fill="currentColor" aria-hidden="true">
+                    <path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" />
+                </svg>
+            </button>
+        </ng-template>
+        <mat-menu #workspaceMenu="matMenu" class="import-menu-panel workspace-menu-panel">
+            <div class="workspace-menu-header">Workspaces</div>
+            <button mat-menu-item *ngFor="let tab of workspaceTabs" (click)="switchWorkspaceTab(tab.id)"
+                [class.workspace-menu-active]="tab.id === activeWorkspaceTabId"
+                [title]="getWorkspaceTabTitle(tab)">
+                <span class="workspace-menu-check" aria-hidden="true"
+                    [class.workspace-menu-check-visible]="tab.id === activeWorkspaceTabId">✓</span>
+                <span class="workspace-menu-item-main">
+                    <span class="workspace-menu-label">{{ tab.label }}</span>
+                    <span class="workspace-menu-meta" *ngIf="tab.fileName">{{ tab.fileName }}</span>
+                    <span class="workspace-menu-meta workspace-menu-meta-empty" *ngIf="!tab.fileName">No file loaded</span>
+                </span>
+                <span role="button" tabindex="0" class="workspace-menu-close" *ngIf="workspaceTabs.length > 1"
+                    (click)="closeWorkspaceTab($event, tab.id)"
+                    (keydown.enter)="closeWorkspaceTab($event, tab.id)"
+                    [attr.aria-label]="'Close ' + tab.label">×</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="createWorkspaceTab()">
+                <span>New workspace</span>
+            </button>
+            <button mat-menu-item (click)="startRenamingActiveTab()">
+                <span>Rename workspace…</span>
+            </button>
+        </mat-menu>
         <span class="toolbar-spacer"></span>
-        <span class="selected-file-name" [title]="this.selectedFileName">{{ this.selectedFileName }}</span>
         <button mat-icon-button aria-label="Import and export" matTooltip="Import and export"
             [matMenuTriggerFor]="importMenu">
             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">

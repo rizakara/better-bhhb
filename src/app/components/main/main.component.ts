@@ -10,6 +10,8 @@ import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { Base64 } from 'js-base64';
+import { WorkspaceService } from '../../services/workspace/workspace.service';
+import { WorkspaceViewState } from '../../services/workspace/workspace-view-state';
 
 interface SiteMapNode {
   id: string;
@@ -52,6 +54,7 @@ export class MainComponent implements OnInit {
     private FileHandleService: FileHandleService,
     private requestReplayService: RequestReplayService,
     private httpDiffService: HttpDiffService,
+    private workspaceService: WorkspaceService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) { }
@@ -162,13 +165,17 @@ export class MainComponent implements OnInit {
   ngOnInit(): void {
     this.loadColumnLayout();
     this.setupFilterPredicate();
+    this.workspaceService.registerViewStateProvider(() => this.captureViewState());
     this.beforeSaveSub = this.FileHandleService.onBeforeSave()
       .subscribe(() => {
         this.flushCurrentRequestEdit();
         this.flushAllCommentEdits();
       });
     this.fileSub = this.FileHandleService.getselectedFileDataListener()
-      .subscribe((selectedFileData: { selectedFileContent: BurpExport | undefined }) => {
+      .subscribe((selectedFileData: {
+        selectedFileContent: BurpExport | undefined;
+        viewState?: WorkspaceViewState;
+      }) => {
         if (!selectedFileData.selectedFileContent) {
           this.dataSource = new MatTableDataSource();
           this.selectedFileContent = selectedFileData.selectedFileContent;
@@ -181,14 +188,18 @@ export class MainComponent implements OnInit {
         }
         this.clearRequestEdits();
         this.selectedFileContent = selectedFileData.selectedFileContent
-        // console.log(this.selectedFileContent);
         this.elementDataGen(this.selectedFileContent)
         this.buildSiteMapTree();
-        this.initializeColumnFilters();
+        if (selectedFileData.viewState) {
+          this.restoreViewState(selectedFileData.viewState);
+        } else {
+          this.initializeColumnFilters();
+        }
         this.dataSource = new MatTableDataSource(this.ELEMENT_DATA);
         this.dataSource.filterPredicate = this.createFilterPredicate();
         this.dataSource.sort = this.sort;
         this.refreshTableFilter();
+        this.restoreSelectionFromViewState(selectedFileData.viewState);
       })
   }
 
@@ -2336,5 +2347,116 @@ export class MainComponent implements OnInit {
 
   private hasFileDataTransfer(event: DragEvent): boolean {
     return !!(event.dataTransfer && event.dataTransfer.types && Array.from(event.dataTransfer.types).includes('Files'));
+  }
+
+  captureViewState(): WorkspaceViewState {
+    const columnFilters: Record<string, string[] | null> = {};
+    this.filterableColumns.forEach((column) => {
+      const selected = this.columnFilters[column];
+      columnFilters[column] = selected === null || selected === undefined
+        ? null
+        : Array.from(selected);
+    });
+
+    return {
+      globalSearchTerm: this.globalSearchTerm,
+      columnFilters,
+      columnFilterOptions: { ...this.columnFilterOptions },
+      activeFilterColumn: this.activeFilterColumn,
+      ipFilterMode: this.ipFilterMode,
+      ipRangeStart: this.ipRangeStart,
+      ipRangeEnd: this.ipRangeEnd,
+      ipSubnet: this.ipSubnet,
+      columnTextFilterModes: { ...this.columnTextFilterModes },
+      columnTextFilters: { ...this.columnTextFilters },
+      columnTextFilterBlocked: { ...this.columnTextFilterBlocked },
+      timeFilterMode: this.timeFilterMode,
+      timeAbsoluteStart: this.timeAbsoluteStart,
+      timeAbsoluteEnd: this.timeAbsoluteEnd,
+      dataTimeMinMs: this.dataTimeMinMs,
+      dataTimeMaxMs: this.dataTimeMaxMs,
+      treeViewOpen: this.treeViewOpen,
+      treeFilter: this.treeFilter ? { ...this.treeFilter } : null,
+      selectedTreeNodeId: this.selectedTreeNodeId,
+      selectedRowPosition: this.clickedRow?.position ?? null,
+      compareRowPosition: this.compareRow?.position ?? null,
+      diffMode: this.diffMode,
+      diffLayout: this.diffLayout,
+      replayMode: this.replayMode,
+      requestSearch: this.requestSearch,
+      responseSearch: this.responseSearch,
+      wrapRequest: this.wrapRequest,
+      wrapResponse: this.wrapResponse,
+    };
+  }
+
+  private restoreViewState(state: WorkspaceViewState): void {
+    this.globalSearchTerm = state.globalSearchTerm ?? '';
+    this.columnFilterOptions = { ...state.columnFilterOptions };
+    this.activeFilterColumn = state.activeFilterColumn ?? '';
+    this.ipFilterMode = state.ipFilterMode ?? 'values';
+    this.ipRangeStart = state.ipRangeStart ?? '';
+    this.ipRangeEnd = state.ipRangeEnd ?? '';
+    this.ipSubnet = state.ipSubnet ?? '';
+    this.columnTextFilterModes = { ...this.columnTextFilterModes, ...state.columnTextFilterModes };
+    this.columnTextFilters = { ...this.columnTextFilters, ...state.columnTextFilters };
+    this.columnTextFilterBlocked = { ...this.columnTextFilterBlocked, ...state.columnTextFilterBlocked };
+    this.timeFilterMode = state.timeFilterMode ?? 'none';
+    this.timeAbsoluteStart = state.timeAbsoluteStart ?? '';
+    this.timeAbsoluteEnd = state.timeAbsoluteEnd ?? '';
+    this.dataTimeMinMs = state.dataTimeMinMs ?? null;
+    this.dataTimeMaxMs = state.dataTimeMaxMs ?? null;
+    this.treeViewOpen = !!state.treeViewOpen;
+    this.treeFilter = state.treeFilter ? { ...state.treeFilter } : null;
+    this.selectedTreeNodeId = state.selectedTreeNodeId ?? null;
+    this.diffMode = !!state.diffMode;
+    this.diffLayout = state.diffLayout ?? 'unified';
+    this.replayMode = !!state.replayMode;
+    this.requestSearch = state.requestSearch ?? '';
+    this.responseSearch = state.responseSearch ?? '';
+    this.wrapRequest = !!state.wrapRequest;
+    this.wrapResponse = !!state.wrapResponse;
+
+    this.filterableColumns.forEach((column) => {
+      const saved = state.columnFilters?.[column];
+      if (saved === null || saved === undefined) {
+        this.columnFilters[column] = null;
+        return;
+      }
+      this.columnFilters[column] = new Set(saved);
+    });
+
+    const searchInput = document.getElementById('search') as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.value = this.globalSearchTerm;
+    }
+  }
+
+  private restoreSelectionFromViewState(state?: WorkspaceViewState): void {
+    this.clickedRow = undefined;
+    this.compareRow = undefined;
+
+    if (!state) {
+      return;
+    }
+
+    if (state.selectedRowPosition != null) {
+      const row = this.findRowByPosition(state.selectedRowPosition);
+      if (row) {
+        this.selectRow(row);
+      }
+    }
+
+    if (state.compareRowPosition != null) {
+      const compareRow = this.findRowByPosition(state.compareRowPosition);
+      if (compareRow) {
+        this.compareRow = compareRow;
+        this.updateDiffView();
+      }
+    }
+
+    if (state.replayMode && this.clickedRow) {
+      this.setReplayMode(true);
+    }
   }
 }
