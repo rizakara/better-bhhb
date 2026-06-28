@@ -9,6 +9,11 @@ import {
   ImportDestinationDialogData,
   ImportDestinationDialogResult,
 } from '../../components/header/import-destination-dialog.component';
+import {
+  ImportDuplicateDialogComponent,
+  ImportDuplicateDialogData,
+  ImportDuplicateDialogResult,
+} from '../../components/header/import-duplicate-dialog.component';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { WorkspaceTabData, WorkspaceViewState } from '../workspace/workspace-view-state';
 
@@ -264,7 +269,9 @@ export class FileHandleService {
         return null;
       }
 
-      this.applyImportedExports([{ name: fileName, content: normalized }], destination.mode);
+      if (!(await this.applyImportedExports([{ name: fileName, content: normalized }], destination.mode))) {
+        return null;
+      }
       await this.persistCurrentSession({
         source: options?.source ?? 'burp-extension',
         rawXml: options?.rawXml ?? xml,
@@ -296,21 +303,16 @@ export class FileHandleService {
       throw new Error('Saved session not found.');
     }
 
-    const openedSession = validEntries.length === 1
-      ? {
-          fileName: validEntries[0].fileName,
-          content: validEntries[0].content,
-        }
-      : {
-          fileName: this.formatMergedFileName(validEntries.map((entry) => entry.fileName)),
-          content: this.mergeExports(validEntries.map((entry) => entry.content)),
-        };
+    const imports = validEntries.map((entry) => ({
+      name: entry.fileName,
+      content: entry.content,
+    }));
 
-    return this.applyOpenedSession(openedSession, validEntries.length);
+    return this.applyOpenedSession(imports, validEntries.length);
   }
 
   private async applyOpenedSession(
-    openedSession: { fileName: string; content: BurpExport },
+    imports: Array<{ name: string; content: BurpExport }>,
     openedCount: number
   ): Promise<boolean> {
     this.importing.next(true);
@@ -320,10 +322,9 @@ export class FileHandleService {
         return false;
       }
 
-      this.applyImportedExports(
-        [{ name: openedSession.fileName, content: openedSession.content }],
-        destination.mode,
-      );
+      if (!(await this.applyImportedExports(imports, destination.mode))) {
+        return false;
+      }
       await this.persistCurrentSession({ recordHistory: false });
       return true;
     } finally {
@@ -370,7 +371,9 @@ export class FileHandleService {
         name: file.name,
         content: this.normalizeExport(parsedExports[index]),
       }));
-      this.applyImportedExports(imports, destination.mode);
+      if (!(await this.applyImportedExports(imports, destination.mode))) {
+        return;
+      }
       await this.persistCurrentSession();
     } finally {
       this.importing.next(false);
@@ -434,10 +437,10 @@ export class FileHandleService {
     return true;
   }
 
-  private applyImportedExports(
+  private async applyImportedExports(
     imports: Array<{ name: string; content: BurpExport }>,
     mode: 'merge' | 'replace',
-  ): void {
+  ): Promise<boolean> {
     const normalizedExports = imports.map((entry) => entry.content);
 
     if (mode === 'replace' || !this.selectedFileContent) {
@@ -446,17 +449,26 @@ export class FileHandleService {
         this.selectedFileContent = normalizedExports[0];
       } else {
         this.selectedFileName = this.formatMergedFileName(imports.map((entry) => entry.name));
-        this.selectedFileContent = this.mergeExports(normalizedExports);
+        const merged = await this.mergeExports(normalizedExports);
+        if (!merged) {
+          return false;
+        }
+        this.selectedFileContent = merged;
       }
     } else {
       const exportsToMerge = [this.selectedFileContent, ...normalizedExports];
       const names = [this.selectedFileName!, ...imports.map((entry) => entry.name)];
       this.selectedFileName = this.formatMergedFileName(names);
-      this.selectedFileContent = this.mergeExports(exportsToMerge);
+      const merged = await this.mergeExports(exportsToMerge);
+      if (!merged) {
+        return false;
+      }
+      this.selectedFileContent = merged;
     }
 
     this.clearEdits();
     this.syncWorkspaceAfterImport();
+    return true;
   }
 
   async fileClear(): Promise<void> {
@@ -540,8 +552,24 @@ export class FileHandleService {
     return Array.isArray(rawItems) ? rawItems : [rawItems];
   }
 
-  private mergeExports(exports: BurpExport[]): BurpExport {
+  private async mergeExports(exports: BurpExport[]): Promise<BurpExport | null> {
     const mergedItems = exports.flatMap((entry) => entry.items.item ?? []);
+    const { hasDuplicates, duplicateCount } = this.analyzeDuplicates(mergedItems);
+    let items = mergedItems;
+
+    if (hasDuplicates) {
+      const choice = await this.promptForDuplicateHandling({
+        duplicateCount,
+        totalItems: mergedItems.length,
+      });
+      if (!choice) {
+        return null;
+      }
+      if (choice === 'keep-one') {
+        items = this.deduplicateItems(mergedItems);
+      }
+    }
+
     const firstMetadata = exports[0]?.items?.$ ?? {
       burpVersion: 'merged',
       exportTime: new Date().toISOString(),
@@ -553,9 +581,114 @@ export class FileHandleService {
           ...firstMetadata,
           exportTime: new Date().toISOString(),
         },
-        item: mergedItems,
+        item: items,
       },
     };
+  }
+
+  private async promptForDuplicateHandling(
+    data: ImportDuplicateDialogData,
+  ): Promise<ImportDuplicateDialogResult | null> {
+    const dialogRef = this.dialog.open(ImportDuplicateDialogComponent, {
+      width: '460px',
+      panelClass: 'bhhb-dialog',
+      data,
+    });
+
+    return new Promise((resolve) => {
+      dialogRef.afterClosed().subscribe((result) => {
+        resolve(result ?? null);
+      });
+    });
+  }
+
+  private analyzeDuplicates(items: object[]): { hasDuplicates: boolean; duplicateCount: number } {
+    const seen = new Set<string>();
+    let duplicateCount = 0;
+
+    for (const item of items) {
+      const fingerprint = this.buildItemFingerprint(item);
+      if (seen.has(fingerprint)) {
+        duplicateCount += 1;
+      } else {
+        seen.add(fingerprint);
+      }
+    }
+
+    return {
+      hasDuplicates: duplicateCount > 0,
+      duplicateCount,
+    };
+  }
+
+  private deduplicateItems(items: object[]): object[] {
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      const fingerprint = this.buildItemFingerprint(item);
+      if (seen.has(fingerprint)) {
+        return false;
+      }
+      seen.add(fingerprint);
+      return true;
+    });
+  }
+
+  private buildItemFingerprint(item: object): string {
+    const record = item as Record<string, unknown>;
+    return [
+      this.normalizeItemField(record['time']),
+      this.normalizeItemField(record['method']),
+      this.normalizeItemField(record['protocol']),
+      this.normalizeItemHost(record['host']),
+      this.normalizeItemField(record['port']),
+      this.normalizeItemField(record['path']),
+      this.normalizeItemField(record['url']),
+      this.normalizeItemPayload(record['request']),
+      this.normalizeItemField(record['status']),
+      this.normalizeItemPayload(record['response']),
+    ].join('\0');
+  }
+
+  private normalizeItemField(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (Array.isArray(value)) {
+      return String(value[0] ?? '').trim();
+    }
+    return String(value).trim();
+  }
+
+  private normalizeItemHost(host: unknown): string {
+    if (!host) {
+      return '';
+    }
+    const node = Array.isArray(host) ? host[0] : host;
+    if (!node || typeof node !== 'object') {
+      return '';
+    }
+    const record = node as { $?: { ip?: string }; _?: string };
+    return `${record.$?.ip ?? ''}\0${record._ ?? ''}`;
+  }
+
+  private normalizeItemPayload(payload: unknown): string {
+    if (!payload) {
+      return '';
+    }
+    const node = Array.isArray(payload) ? payload[0] : payload;
+    if (!node || typeof node !== 'object') {
+      return '';
+    }
+    const record = node as { $?: { base64?: string }; _?: string };
+    const raw = record._ ?? '';
+    if (record.$?.base64 === 'true') {
+      try {
+        return Base64.decode(raw);
+      } catch {
+        return raw;
+      }
+    }
+    return raw;
   }
 
   private formatMergedFileName(names: string[]): string {

@@ -5,6 +5,31 @@ import { of } from 'rxjs';
 import { FileHandleService } from './file-handle.service';
 import { FileSessionStorageService } from './file-session-storage.service';
 import { WorkspaceService } from '../workspace/workspace.service';
+import { BurpExport } from './file-handle.service';
+
+function makeBurpItem(pathSuffix: string, time = 'Mon Jan 01 12:00:00 UTC 2024') {
+  return {
+    time,
+    method: 'GET',
+    protocol: 'https',
+    host: [{ $: { ip: '127.0.0.1' }, _: 'example.com' }],
+    port: '443',
+    path: `/path-${pathSuffix}`,
+    url: `https://example.com/path-${pathSuffix}`,
+    request: [{ $: { base64: 'false' }, _: `GET /path-${pathSuffix} HTTP/1.1\r\n\r\n` }],
+    status: '200',
+    response: [{ $: { base64: 'false' }, _: 'HTTP/1.1 200 OK\r\n\r\n' }],
+  };
+}
+
+function makeBurpExport(items: object[]): BurpExport {
+  return {
+    items: {
+      '$': { burpVersion: '2024.1', exportTime: '2024-01-01T00:00:00Z' },
+      item: items,
+    },
+  };
+}
 
 describe('FileHandleService', () => {
   let service: FileHandleService;
@@ -125,6 +150,149 @@ describe('FileHandleService', () => {
       { fileName: 'history.xml', content: entry.content },
       { source: undefined, rawXml: undefined, recordHistory: false }
     );
+  });
+
+  it('prompts to keep only one duplicate when merging overlapping history entries', async () => {
+    const duplicateItem = makeBurpItem('shared');
+    const first = {
+      id: 'session-1',
+      fileName: 'first.xml',
+      importedAt: '2024-01-01T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-01T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([duplicateItem]),
+    };
+    const second = {
+      id: 'session-2',
+      fileName: 'second.xml',
+      importedAt: '2024-01-02T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-02T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([duplicateItem]),
+    };
+    storage.loadHistoryEntry.and.callFake(async (id: string) => {
+      if (id === 'session-1') {
+        return first;
+      }
+      if (id === 'session-2') {
+        return second;
+      }
+      return null;
+    });
+    storage.save.and.resolveTo(null);
+    dialogSpy.open.and.returnValues(
+      {
+        afterClosed: () => of({
+          workspaceId: workspaceService.getActiveTabId()!,
+          mode: 'replace',
+        }),
+      } as ReturnType<MatDialog['open']>,
+      {
+        afterClosed: () => of('keep-one'),
+      } as ReturnType<MatDialog['open']>,
+    );
+
+    const opened = await service.openHistoryEntries(['session-1', 'session-2']);
+
+    expect(opened).toBeTrue();
+    expect(dialogSpy.open).toHaveBeenCalledTimes(2);
+    const savedSession = storage.save.calls.mostRecent().args[0];
+    expect(savedSession.content.items.item.length).toBe(1);
+  });
+
+  it('does not treat identical requests with different timestamps as duplicates', async () => {
+    const first = {
+      id: 'session-1',
+      fileName: 'first.xml',
+      importedAt: '2024-01-01T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-01T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([makeBurpItem('shared', 'Mon Jan 01 12:00:00 UTC 2024')]),
+    };
+    const second = {
+      id: 'session-2',
+      fileName: 'second.xml',
+      importedAt: '2024-01-02T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-02T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([makeBurpItem('shared', 'Mon Jan 02 12:00:00 UTC 2024')]),
+    };
+    storage.loadHistoryEntry.and.callFake(async (id: string) => {
+      if (id === 'session-1') {
+        return first;
+      }
+      if (id === 'session-2') {
+        return second;
+      }
+      return null;
+    });
+    storage.save.and.resolveTo(null);
+
+    const opened = await service.openHistoryEntries(['session-1', 'session-2']);
+
+    expect(opened).toBeTrue();
+    expect(dialogSpy.open).toHaveBeenCalledTimes(1);
+    const savedSession = storage.save.calls.mostRecent().args[0];
+    expect(savedSession.content.items.item.length).toBe(2);
+  });
+
+  it('keeps all duplicates when the user chooses keep all', async () => {
+    const duplicateItem = makeBurpItem('shared');
+    const first = {
+      id: 'session-1',
+      fileName: 'first.xml',
+      importedAt: '2024-01-01T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-01T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([duplicateItem]),
+    };
+    const second = {
+      id: 'session-2',
+      fileName: 'second.xml',
+      importedAt: '2024-01-02T00:00:00.000Z',
+      itemCount: 1,
+      burpVersion: '2024.1',
+      exportTime: '2024-01-02T00:00:00Z',
+      source: 'file' as const,
+      content: makeBurpExport([duplicateItem]),
+    };
+    storage.loadHistoryEntry.and.callFake(async (id: string) => {
+      if (id === 'session-1') {
+        return first;
+      }
+      if (id === 'session-2') {
+        return second;
+      }
+      return null;
+    });
+    storage.save.and.resolveTo(null);
+    dialogSpy.open.and.returnValues(
+      {
+        afterClosed: () => of({
+          workspaceId: workspaceService.getActiveTabId()!,
+          mode: 'replace',
+        }),
+      } as ReturnType<MatDialog['open']>,
+      {
+        afterClosed: () => of('keep-all'),
+      } as ReturnType<MatDialog['open']>,
+    );
+
+    const opened = await service.openHistoryEntries(['session-1', 'session-2']);
+
+    expect(opened).toBeTrue();
+    const savedSession = storage.save.calls.mostRecent().args[0];
+    expect(savedSession.content.items.item.length).toBe(2);
   });
 
   it('merges multiple selected history entries into one open session', async () => {
