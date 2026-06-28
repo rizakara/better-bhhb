@@ -84,6 +84,35 @@ export class ThemeService {
     } else {
       body.classList.remove('dark-theme');
     }
+
+    this.updateThemeColorMeta(theme);
+  }
+
+  private updateThemeColorMeta(theme: Theme): void {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      return;
+    }
+
+    const lightThemeColors: Record<string, string> = {
+      light: '#ffffff',
+      'solarized-light': '#fdf6e3',
+      'github-light': '#ffffff',
+      'one-light': '#fafafa',
+    };
+    const darkThemeColors: Record<string, string> = {
+      dark: '#1d1e20',
+      dracula: '#282a36',
+      nord: '#2e3440',
+      'solarized-dark': '#002b36',
+      'github-dark': '#0d1117',
+      'one-dark': '#282c34',
+    };
+
+    const color = theme.type === 'light'
+      ? (lightThemeColors[theme.id] ?? '#ffffff')
+      : (darkThemeColors[theme.id] ?? '#1d1e20');
+    meta.setAttribute('content', color);
   }
 
   initialize(): void {

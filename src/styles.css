@@ -10,7 +10,9 @@ body {
 }
 
 /* ============================================
-   Theme color variables (default = Dark)
+   Theme color variables
+   :root = dark fallback before theme class is applied
+   body.theme-light / body.theme-dark set the active palette
    ============================================ */
 :root {
   --bg-primary: rgb(29, 30, 32);
@@ -152,7 +154,22 @@ body.theme-one-dark {
 
 /* Popular light themes (existing Light preserved as theme-light) */
 body.theme-light {
-  /* inherits default light vars */
+  --bg-primary: rgb(255, 255, 255);
+  --bg-secondary: rgb(235, 235, 235);
+  --text-primary: rgb(29, 30, 32);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-muted: rgba(0, 0, 0, 0.54);
+  --border-color: rgba(0, 0, 0, 0.12);
+  --border-color-strong: rgba(0, 0, 0, 0.24);
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --selected-bg: rgba(0, 0, 0, 0.144);
+  --menu-bg: rgb(255, 255, 255);
+  --menu-text: rgb(29, 30, 32);
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --label-bg: rgba(195, 195, 195, 1);
+  --progress-buffer: rgb(226, 225, 223);
+  --split-gutter: rgba(0, 0, 0, 0.12);
+  color-scheme: light;
 }
 
 body.theme-solarized-light {
