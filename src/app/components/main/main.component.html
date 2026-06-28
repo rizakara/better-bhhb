@@ -302,7 +302,7 @@
                 </as-split-area>
                 <as-split-area [size]="40" *ngIf="clickedRow">
                     <as-split direction="horizontal" [gutterSize]=7>
-                        <as-split-area>
+                        <as-split-area [size]="inspectorOpen ? 37 : 50">
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Request #{{clickedRow.position}}</span>
@@ -316,6 +316,8 @@
                                     <button type="button" *ngIf="compareRow" (click)="clearCompare()">Clear</button>
                                     <button type="button" [class.active]="wrapRequest"
                                         (click)="wrapRequest = !wrapRequest">Wrap</button>
+                                    <button type="button" [class.active]="inspectorOpen"
+                                        (click)="toggleInspector()" matTooltip="Toggle inspector panel">Inspector</button>
                                 </div>
                                 <div class="panel-search-row request-toolbar">
                                     <button type="button" (click)="copyRequestAsCurl()" matTooltip="Copy as cURL">cURL</button>
@@ -394,7 +396,7 @@
                                 <div id="req_body" [innerHTML]="requestHighlightedBody"></div>
                             </div>
                         </as-split-area>
-                        <as-split-area>
+                        <as-split-area [size]="inspectorOpen ? 37 : 50">
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Response</span>
@@ -469,6 +471,17 @@
                                 <br><br>
                                 <div id="res_body" [innerHTML]="responseHighlightedBody"></div>
                             </div>
+                        </as-split-area>
+                        <as-split-area [size]="26" [visible]="inspectorOpen" [minSize]="18" [maxSize]="45">
+                            <app-inspector-panel
+                                [tab]="inspectorTab"
+                                [attributes]="inspectorAttributes"
+                                [requestCookies]="inspectorRequestCookies"
+                                [requestHeaders]="inspectorRequestHeaders"
+                                [responseHeaders]="inspectorResponseHeaders"
+                                (tabChange)="setInspectorTab($event)"
+                                (close)="toggleInspector()">
+                            </app-inspector-panel>
                         </as-split-area>
                     </as-split>
                 </as-split-area>

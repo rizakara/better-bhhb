@@ -7,6 +7,16 @@ export interface ParsedHttpRequest {
   body: string;
 }
 
+export interface ParsedCookie {
+  name: string;
+  value: string;
+}
+
+export interface HttpHeaderRow {
+  key: string;
+  value: string;
+}
+
 type RequestParts = [Array<[string, string]>, string];
 
 @Injectable({
@@ -88,6 +98,38 @@ export class RequestReplayService {
       headers,
       body,
     };
+  }
+
+  extractHttpHeaders(headerRows: Array<[string, string]>): HttpHeaderRow[] {
+    return headerRows
+      .slice(1)
+      .map(([key, value]) => ({ key, value }))
+      .filter((row) => !!row.key);
+  }
+
+  parseRequestCookies(headerRows: Array<[string, string]>): ParsedCookie[] {
+    const cookies: ParsedCookie[] = [];
+    headerRows.slice(1).forEach(([key, value]) => {
+      if (key.toLowerCase() !== 'cookie' || !value) {
+        return;
+      }
+      value.split(';').forEach((part) => {
+        const trimmed = part.trim();
+        if (!trimmed) {
+          return;
+        }
+        const eqIndex = trimmed.indexOf('=');
+        if (eqIndex === -1) {
+          cookies.push({ name: trimmed, value: '' });
+          return;
+        }
+        cookies.push({
+          name: trimmed.slice(0, eqIndex).trim(),
+          value: trimmed.slice(eqIndex + 1).trim(),
+        });
+      });
+    });
+    return cookies;
   }
 
   rawRequestToCurl(raw: string, fallbackBaseUrl?: string, fallbackUrl?: string): string {

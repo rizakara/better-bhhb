@@ -27,6 +27,8 @@ export interface WorkspaceViewState {
   responseSearch: string;
   wrapRequest: boolean;
   wrapResponse: boolean;
+  inspectorTab: 'attributes' | 'cookies' | 'request-headers' | 'response-headers';
+  inspectorOpen: boolean;
 }
 
 export interface WorkspaceTabData {

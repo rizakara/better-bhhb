@@ -1,0 +1,80 @@
+<div class="inspector-panel">
+    <div class="panel-header">
+        <div class="label">
+            <span>Inspector</span>
+            <span class="toolbar-spacer"></span>
+            <button type="button" (click)="onClose()" aria-label="Close inspector">×</button>
+        </div>
+        <div class="inspector-tabs">
+            <button type="button" [class.active]="tab === 'attributes'"
+                (click)="setTab('attributes')">Request attributes</button>
+            <button type="button" [class.active]="tab === 'cookies'"
+                (click)="setTab('cookies')">Request cookies</button>
+            <button type="button" [class.active]="tab === 'request-headers'"
+                (click)="setTab('request-headers')">Request headers</button>
+            <button type="button" [class.active]="tab === 'response-headers'"
+                (click)="setTab('response-headers')">Response headers</button>
+        </div>
+    </div>
+    <div class="inspector-content content">
+        <table class="inspector-table" *ngIf="tab === 'attributes'">
+            <tbody>
+                <tr *ngFor="let row of attributes">
+                    <th>{{ row.name }}</th>
+                    <td [title]="row.value">{{ row.value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="inspector-table" *ngIf="tab === 'cookies'">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let cookie of requestCookies">
+                    <td class="inspector-key">{{ cookie.name }}</td>
+                    <td [title]="cookie.value">{{ cookie.value }}</td>
+                </tr>
+                <tr *ngIf="requestCookies.length === 0">
+                    <td colspan="2" class="inspector-empty">No cookies</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="inspector-table" *ngIf="tab === 'request-headers'">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let header of requestHeaders">
+                    <td class="inspector-key">{{ header.key }}</td>
+                    <td [title]="header.value">{{ header.value }}</td>
+                </tr>
+                <tr *ngIf="requestHeaders.length === 0">
+                    <td colspan="2" class="inspector-empty">No headers</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="inspector-table" *ngIf="tab === 'response-headers'">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let header of responseHeaders">
+                    <td class="inspector-key">{{ header.key }}</td>
+                    <td [title]="header.value">{{ header.value }}</td>
+                </tr>
+                <tr *ngIf="responseHeaders.length === 0">
+                    <td colspan="2" class="inspector-empty">No headers</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

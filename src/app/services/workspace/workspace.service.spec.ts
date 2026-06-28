@@ -34,6 +34,8 @@ describe('WorkspaceService', () => {
     responseSearch: '',
     wrapRequest: false,
     wrapResponse: false,
+    inspectorTab: 'attributes',
+    inspectorOpen: true,
   });
 
   beforeEach(() => {

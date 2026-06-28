@@ -1,6 +1,10 @@
 import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
-import { RequestReplayService } from '../../services/request-replay/request-replay.service';
+import {
+  HttpHeaderRow,
+  ParsedCookie,
+  RequestReplayService,
+} from '../../services/request-replay/request-replay.service';
 import { DiffLine, HttpDiffService, SideBySideRow } from '../../services/http-diff/http-diff.service';
 import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
@@ -12,6 +16,7 @@ import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { Base64 } from 'js-base64';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceViewState } from '../../services/workspace/workspace-view-state';
+import { InspectorTab } from '../inspector/inspector-panel.component';
 
 interface SiteMapNode {
   id: string;
@@ -142,6 +147,12 @@ export class MainComponent implements OnInit {
   requestHighlightedBody: string = '';
   responseHighlightedHeaders: { key: string; value: string; hasValue: boolean }[] = [];
   responseHighlightedBody: string = '';
+  inspectorOpen = true;
+  inspectorTab: InspectorTab = 'attributes';
+  inspectorAttributes: Array<{ name: string; value: string }> = [];
+  inspectorRequestCookies: ParsedCookie[] = [];
+  inspectorRequestHeaders: HttpHeaderRow[] = [];
+  inspectorResponseHeaders: HttpHeaderRow[] = [];
   treeViewOpen = false;
   treeFilter: { host: string; pathPrefix: string } | null = null;
   selectedTreeNodeId: string | null = null;
@@ -1188,7 +1199,16 @@ export class MainComponent implements OnInit {
     this.applyStoredCommentEdit(row);
     this.updateRequestHighlights();
     this.updateResponseHighlights();
+    this.updateInspector();
     this.updateDiffView();
+  }
+
+  setInspectorTab(tab: InspectorTab): void {
+    this.inspectorTab = tab;
+  }
+
+  toggleInspector(): void {
+    this.inspectorOpen = !this.inspectorOpen;
   }
 
   toggleDiffMode(): void {
@@ -1369,6 +1389,7 @@ export class MainComponent implements OnInit {
     this.FileHandleService.setRequestEdit(position, null);
     this.clickedRow.request = this.requestReplayService.rawRequestToParts(original);
     this.updateRequestHighlights();
+    this.updateInspector();
   }
 
   async copyRequestAsCurl(): Promise<void> {
@@ -1457,6 +1478,7 @@ export class MainComponent implements OnInit {
           this.originalRequestRaws.get(this.clickedRow.position)!,
         );
         this.updateRequestHighlights();
+        this.updateInspector();
       }
       return true;
     }
@@ -1465,6 +1487,7 @@ export class MainComponent implements OnInit {
       this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
       this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
       this.updateRequestHighlights();
+      this.updateInspector();
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Invalid HTTP request';
@@ -1665,6 +1688,46 @@ export class MainComponent implements OnInit {
       state,
       activeIndex
     );
+  }
+
+  private updateInspector(): void {
+    if (!this.clickedRow) {
+      this.inspectorAttributes = [];
+      this.inspectorRequestCookies = [];
+      this.inspectorRequestHeaders = [];
+      this.inspectorResponseHeaders = [];
+      return;
+    }
+
+    const row = this.clickedRow;
+    this.inspectorAttributes = [
+      { name: 'Method', value: row.method ?? '' },
+      { name: 'URL', value: row.url ?? '' },
+      { name: 'Host', value: row.host ?? '' },
+      { name: 'Path', value: row.path ?? '' },
+      { name: 'Protocol', value: row.protocol ?? '' },
+      { name: 'Port', value: row.port ?? '' },
+      { name: 'IP', value: row.ip ?? '' },
+      { name: 'Time', value: row.time ?? '' },
+      { name: 'Status', value: row.status ?? '' },
+      { name: 'Length', value: row.responselength ?? '' },
+      { name: 'MIME type', value: row.mimetype ?? '' },
+      { name: 'Extension', value: row.extension ?? '' },
+      { name: 'Title', value: row.title ?? '' },
+    ].filter((entry) => entry.value !== '' && entry.value !== undefined && entry.value !== null);
+
+    const requestHeaders = row.request?.[0] as Array<[string, string]> | undefined;
+    const responseHeaders = row.response?.[0] as Array<[string, string]> | undefined;
+
+    this.inspectorRequestCookies = requestHeaders
+      ? this.requestReplayService.parseRequestCookies(requestHeaders)
+      : [];
+    this.inspectorRequestHeaders = requestHeaders
+      ? this.requestReplayService.extractHttpHeaders(requestHeaders)
+      : [];
+    this.inspectorResponseHeaders = responseHeaders
+      ? this.requestReplayService.extractHttpHeaders(responseHeaders)
+      : [];
   }
 
   private countPanelMatches(panelContent: any, search: string): number {
@@ -2387,6 +2450,8 @@ export class MainComponent implements OnInit {
       responseSearch: this.responseSearch,
       wrapRequest: this.wrapRequest,
       wrapResponse: this.wrapResponse,
+      inspectorTab: this.inspectorTab,
+      inspectorOpen: this.inspectorOpen,
     };
   }
 
@@ -2416,6 +2481,8 @@ export class MainComponent implements OnInit {
     this.responseSearch = state.responseSearch ?? '';
     this.wrapRequest = !!state.wrapRequest;
     this.wrapResponse = !!state.wrapResponse;
+    this.inspectorTab = state.inspectorTab ?? 'attributes';
+    this.inspectorOpen = state.inspectorOpen !== false;
 
     this.filterableColumns.forEach((column) => {
       const saved = state.columnFilters?.[column];

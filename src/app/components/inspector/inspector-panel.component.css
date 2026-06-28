@@ -1,0 +1,125 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  border-left: 1px solid var(--border-color);
+}
+
+.panel-header {
+  flex-shrink: 0;
+}
+
+.label {
+  background-color: var(--label-bg);
+  padding: 10px;
+  display: flex;
+  max-height: 18px;
+}
+
+.label button {
+  box-shadow: var(--shadow-light);
+  user-select: none;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.content {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.inspector-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.inspector-tabs button {
+  box-shadow: var(--shadow-light);
+  user-select: none;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  font-size: 11px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.inspector-tabs button.active {
+  font-weight: bold;
+  color: var(--bg-primary);
+  background-color: var(--text-primary);
+}
+
+.inspector-content {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-size: 12px;
+  white-space: normal;
+}
+
+.inspector-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.inspector-table th,
+.inspector-table td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.inspector-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  z-index: 1;
+}
+
+.inspector-table tbody th {
+  width: 34%;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.inspector-key {
+  width: 34%;
+  color: #1565c0;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.inspector-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+body.theme-is-dark .inspector-key {
+  color: #7ec1ff;
+}

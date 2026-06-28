@@ -51,4 +51,31 @@ describe('RequestReplayService', () => {
     const roundTrip = service.rawRequestToParts(raw);
     expect(service.requestPartsToRaw(roundTrip)).toBe(raw);
   });
+
+  it('extracts request headers without the request line', () => {
+    const headers: Array<[string, string]> = [
+      ['GET /index HTTP/1.1', ''],
+      ['Host', 'example.com'],
+      ['Cookie', 'session=abc; theme=dark'],
+    ];
+
+    expect(service.extractHttpHeaders(headers)).toEqual([
+      { key: 'Host', value: 'example.com' },
+      { key: 'Cookie', value: 'session=abc; theme=dark' },
+    ]);
+  });
+
+  it('parses request cookies from Cookie headers', () => {
+    const headers: Array<[string, string]> = [
+      ['GET / HTTP/1.1', ''],
+      ['Cookie', 'session=abc; theme=dark'],
+      ['Cookie', 'lang=en'],
+    ];
+
+    expect(service.parseRequestCookies(headers)).toEqual([
+      { name: 'session', value: 'abc' },
+      { name: 'theme', value: 'dark' },
+      { name: 'lang', value: 'en' },
+    ]);
+  });
 });
