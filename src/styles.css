@@ -260,6 +260,106 @@ body.theme-is-dark .mat-menu-panel.import-menu-panel {
   box-shadow: var(--shadow-dark);
 }
 
+.mat-menu-panel.row-context-menu-panel {
+  min-width: 240px !important;
+  max-width: 360px;
+  background: var(--menu-bg) !important;
+  color: var(--menu-text) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-menu-content {
+  padding: 4px 0 !important;
+  background: transparent !important;
+}
+
+.mat-menu-panel.row-context-menu-panel .row-context-menu-header {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 16px 4px;
+  color: var(--text-muted);
+  pointer-events: none;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-menu-item {
+  font-size: 13px;
+  line-height: 36px;
+  height: 36px;
+  color: inherit !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-menu-item:hover:not([disabled]) {
+  background-color: var(--hover-bg) !important;
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-divider {
+  border-top-color: var(--border-color);
+}
+
+body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
+  box-shadow: var(--shadow-dark);
+}
+
+.mat-menu-panel.row-context-copy-submenu,
+.mat-menu-panel.row-context-compare-submenu {
+  min-width: 280px !important;
+  max-width: 420px;
+}
+
+.mat-menu-panel.row-context-compare-submenu .mat-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mat-menu-panel.row-context-compare-submenu .row-context-menu-hint {
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 4px 16px 6px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-menu-item.row-context-submenu-trigger,
+.mat-menu-panel.row-context-menu-panel button.mat-menu-item[aria-haspopup="true"] {
+  padding-right: 32px;
+}
+
+.mat-menu-panel.row-context-copy-submenu .mat-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mat-menu-panel.row-context-copy-submenu .row-context-copy-label {
+  flex: 0 0 auto;
+}
+
+.mat-menu-panel.row-context-copy-submenu .row-context-copy-preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mat-menu-panel.row-context-copy-submenu .mat-menu-item[disabled] .row-context-copy-preview {
+  opacity: 0.55;
+}
+
 /* Workspace selector menu */
 .mat-menu-panel.workspace-menu-panel {
   min-width: 260px !important;

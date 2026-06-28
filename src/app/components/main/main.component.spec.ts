@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTableDataSource } from '@angular/material/table';
 import { of } from 'rxjs';
 
 import { MainComponent } from './main.component';
@@ -187,6 +188,126 @@ describe('MainComponent', () => {
     expect(component.compareRow).toBeUndefined();
     expect(component.diffMode).toBeFalse();
     expect(component.requestDiffLines.length).toBe(0);
+  });
+
+  it('filters table rows from context menu action', () => {
+    component.ELEMENT_DATA = [
+      { position: 1, host: 'https://a.test', method: 'GET', path: '/one', status: '200', ip: '1.1.1.1' },
+      { position: 2, host: 'https://b.test', method: 'POST', path: '/two', status: '404', ip: '2.2.2.2' },
+    ];
+    component.dataSource = new MatTableDataSource(component.ELEMENT_DATA);
+    (component as any).setupFilterPredicate();
+    component.contextMenuRow = component.ELEMENT_DATA[0];
+
+    component.filterContextMenuByColumn('host');
+
+    expect(component.columnFilters['host']?.has('https://a.test')).toBeTrue();
+    expect(component.dataSource.filteredData.length).toBe(1);
+  });
+
+  it('copies a metadata field from the context menu', async () => {
+    const writeText = jasmine.createSpy('writeText').and.resolveTo();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    component.contextMenuRow = {
+      position: 3,
+      comment: 'interesting',
+      mimetype: 'application/json',
+      time: 'Mon Jun 28 12:00:00 2026',
+    };
+
+    await component.copyContextMenuField('comment');
+
+    expect(writeText).toHaveBeenCalledWith('interesting');
+    expect(snackBar.open).toHaveBeenCalledWith('Copied Comment to clipboard', undefined, { duration: 2200 });
+  });
+
+  it('blocks native context menu on table cells', () => {
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    spyOn(event, 'preventDefault');
+
+    component.onHistoryTableContextMenu(event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('allows native context menu while editing a comment', () => {
+    const input = document.createElement('input');
+    input.className = 'comment-cell-input';
+    document.body.appendChild(input);
+
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    spyOn(event, 'preventDefault');
+    Object.defineProperty(event, 'target', { value: input, configurable: true });
+
+    component.onHistoryTableContextMenu(event);
+    component.onRowContextMenu(event, { position: 1, request: [[], ''], response: [[], ''], comment: '' });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    document.body.removeChild(input);
+  });
+
+  it('auto-compares on the next row click after setting compare base', () => {
+    const rowA = {
+      position: 1,
+      request: [[['GET /a HTTP/1.1', '']], ''],
+      response: [[['HTTP/1.1 200', '']], 'ok'],
+      comment: '',
+    };
+    const rowB = {
+      position: 2,
+      request: [[['GET /b HTTP/1.1', '']], ''],
+      response: [[['HTTP/1.1 404', '']], 'missing'],
+      comment: '',
+    };
+
+    component.contextMenuRow = rowA;
+    component.pinContextMenuCompareBase();
+    component.selectRow(rowB, new MouseEvent('click'));
+
+    expect(component.comparePinRow).toBe(rowA);
+    expect(component.clickedRow).toBe(rowB);
+    expect(component.compareRow).toBe(rowA);
+    expect(component.diffMode).toBeTrue();
+  });
+
+  it('compares with adjacent rows from the context menu', () => {
+    const rows = [
+      { position: 1, request: [[], ''], response: [[], ''], comment: '' },
+      { position: 2, request: [[], ''], response: [[], ''], comment: '' },
+      { position: 3, request: [[], ''], response: [[], ''], comment: '' },
+    ];
+    component.ELEMENT_DATA = rows;
+    component.dataSource = new MatTableDataSource(rows);
+    component.contextMenuRow = rows[1];
+
+    component.compareContextMenuWithAdjacent(-1);
+
+    expect(component.clickedRow).toBe(rows[1]);
+    expect(component.compareRow).toBe(rows[0]);
+    expect(component.diffMode).toBeTrue();
+  });
+
+  it('prepares compare target when opening row context menu', () => {
+    const rowA = { position: 1, request: [[], ''], response: [[], ''], comment: '' };
+    const rowB = { position: 2, request: [[], ''], response: [[], ''], comment: '' };
+    component.clickedRow = rowA;
+
+    const event = new MouseEvent('contextmenu', { clientX: 12, clientY: 34, bubbles: true, cancelable: true });
+    spyOn(event, 'preventDefault');
+    spyOn(event, 'stopPropagation');
+    component.rowContextMenuTrigger = { openMenu: jasmine.createSpy('openMenu') } as any;
+
+    component.onRowContextMenu(event, rowB);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(component.contextMenuPreviousSelection).toBe(rowA);
+    expect(component.contextMenuRow).toBe(rowB);
+    expect(component.clickedRow).toBe(rowB);
+    expect(component.contextMenuPosition).toEqual({ x: 12, y: 34 });
   });
 
   it('captures and restores workspace filter state', () => {

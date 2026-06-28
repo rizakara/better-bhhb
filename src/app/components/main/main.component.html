@@ -98,8 +98,9 @@
                         </button>
                     </div>
 
-                    <table mat-table [dataSource]="dataSource" matSort cdkDropList cdkDropListOrientation="horizontal"
-                        (cdkDropListDropped)="drop($event)">
+                    <table mat-table class="history-table" [dataSource]="dataSource" matSort cdkDropList
+                        cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)"
+                        (contextmenu)="onHistoryTableContextMenu($event)">
 
                         <ng-container matColumnDef="position">
                             <th mat-header-cell *matHeaderCellDef mat-sort-header cdkDrag> # </th>
@@ -163,10 +164,170 @@
 
                         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                         <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="selectRow(row, $event)"
+                            (contextmenu)="onRowContextMenu($event, row)"
                             [attr.data-row-position]="row.position"
                             [class.row-is-clicked]="clickedRow == row"
-                            [class.row-is-compare]="compareRow == row"></tr>
+                            [class.row-is-compare]="compareRow == row"
+                            [class.row-is-compare-base]="comparePinRow?.position === row.position"></tr>
                     </table>
+
+                    <div class="context-menu-anchor" [style.left.px]="contextMenuPosition.x"
+                        [style.top.px]="contextMenuPosition.y" [matMenuTriggerFor]="rowContextMenu"
+                        #rowContextMenuTrigger="matMenuTrigger"></div>
+
+                    <mat-menu #rowContextMenu="matMenu" class="row-context-menu-panel">
+                        <div class="row-context-menu-header" *ngIf="contextMenuRow">
+                            #{{ contextMenuRow.position }} · {{ contextMenuRow.method }} {{ formatContextMenuValue(contextMenuRow.path, 48) }}
+                        </div>
+                        <mat-divider *ngIf="contextMenuRow"></mat-divider>
+                        <button mat-menu-item [matMenuTriggerFor]="rowCopyMenu" [disabled]="!contextMenuRow">
+                            Copy
+                        </button>
+                        <mat-menu #rowCopyMenu="matMenu" class="row-context-menu-panel row-context-copy-submenu">
+                            <button mat-menu-item (click)="copyContextMenuField('url')"
+                                [disabled]="!contextMenuFieldHasValue('url')">
+                                <span class="row-context-copy-label">URL</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('url') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('host')"
+                                [disabled]="!contextMenuFieldHasValue('host')">
+                                <span class="row-context-copy-label">Host</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('host') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('path')"
+                                [disabled]="!contextMenuFieldHasValue('path')">
+                                <span class="row-context-copy-label">Path</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('path') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('method')"
+                                [disabled]="!contextMenuFieldHasValue('method')">
+                                <span class="row-context-copy-label">Method</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('method') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('status')"
+                                [disabled]="!contextMenuFieldHasValue('status')">
+                                <span class="row-context-copy-label">Status</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('status') }}</span>
+                            </button>
+                            <mat-divider></mat-divider>
+                            <button mat-menu-item (click)="copyRequestRaw()" [disabled]="!contextMenuRow">
+                                Request (raw)
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuResponseRaw()" [disabled]="!contextMenuRow">
+                                Response (raw)
+                            </button>
+                            <button mat-menu-item (click)="copyRequestAsCurl()" [disabled]="!contextMenuRow">
+                                as cURL
+                            </button>
+                            <mat-divider></mat-divider>
+                            <button mat-menu-item (click)="copyContextMenuField('time')"
+                                [disabled]="!contextMenuFieldHasValue('time')">
+                                <span class="row-context-copy-label">Time</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('time', 36) }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('mimetype')"
+                                [disabled]="!contextMenuFieldHasValue('mimetype')">
+                                <span class="row-context-copy-label">MIME type</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('mimetype') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('extension')"
+                                [disabled]="!contextMenuFieldHasValue('extension')">
+                                <span class="row-context-copy-label">Extension</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('extension') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('title')"
+                                [disabled]="!contextMenuFieldHasValue('title')">
+                                <span class="row-context-copy-label">Title</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('title') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('comment')"
+                                [disabled]="!contextMenuFieldHasValue('comment')">
+                                <span class="row-context-copy-label">Comment</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('comment') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('responselength')"
+                                [disabled]="!contextMenuFieldHasValue('responselength')">
+                                <span class="row-context-copy-label">Length</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('responselength') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('ip')"
+                                [disabled]="!contextMenuFieldHasValue('ip')">
+                                <span class="row-context-copy-label">IP</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('ip') }}</span>
+                            </button>
+                            <button mat-menu-item (click)="copyContextMenuField('position')"
+                                [disabled]="!contextMenuFieldHasValue('position')">
+                                <span class="row-context-copy-label">#</span>
+                                <span class="row-context-copy-preview">{{ getContextMenuFieldPreview('position') }}</span>
+                            </button>
+                        </mat-menu>
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item [matMenuTriggerFor]="rowCompareMenu" [disabled]="!contextMenuRow">
+                            Compare
+                        </button>
+                        <mat-menu #rowCompareMenu="matMenu" class="row-context-menu-panel row-context-compare-submenu">
+                            <button mat-menu-item (click)="pinContextMenuCompareBase()" [disabled]="!contextMenuRow">
+                                <span class="row-context-copy-label">
+                                    {{ isContextMenuRowCompareBase() ? 'Compare base (this row)' : 'Set as compare base' }}
+                                </span>
+                                <span class="row-context-copy-preview" *ngIf="comparePinRow && !isContextMenuRowCompareBase()">
+                                    #{{ comparePinRow.position }}
+                                </span>
+                            </button>
+                            <div class="row-context-menu-hint" *ngIf="comparePinRow">
+                                Click another row to compare with #{{ comparePinRow.position }}
+                            </div>
+                            <button mat-menu-item (click)="compareContextMenuWithAdjacent(-1)"
+                                [disabled]="!getContextMenuAdjacentRow(-1)">
+                                <span class="row-context-copy-label">Compare with row above</span>
+                                <span class="row-context-copy-preview" *ngIf="getContextMenuAdjacentRow(-1) as above">
+                                    #{{ above.position }}
+                                </span>
+                            </button>
+                            <button mat-menu-item (click)="compareContextMenuWithAdjacent(1)"
+                                [disabled]="!getContextMenuAdjacentRow(1)">
+                                <span class="row-context-copy-label">Compare with row below</span>
+                                <span class="row-context-copy-preview" *ngIf="getContextMenuAdjacentRow(1) as below">
+                                    #{{ below.position }}
+                                </span>
+                            </button>
+                            <button mat-menu-item (click)="compareContextMenuWithPrevious()"
+                                *ngIf="contextMenuPreviousSelection" [disabled]="!contextMenuPreviousSelection">
+                                {{ contextMenuComparePreviousLabel }}
+                            </button>
+                            <mat-divider *ngIf="comparePinRow"></mat-divider>
+                            <button mat-menu-item (click)="clearContextMenuCompareBase()" *ngIf="comparePinRow">
+                                Clear compare base
+                            </button>
+                        </mat-menu>
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item (click)="filterContextMenuByColumn('host')" [disabled]="!contextMenuRow">
+                            Show only host: {{ formatContextMenuValue(contextMenuRow?.host ?? '') }}
+                        </button>
+                        <button mat-menu-item (click)="filterContextMenuByColumn('method')" [disabled]="!contextMenuRow">
+                            Show only method: {{ contextMenuRow?.method || '(empty)' }}
+                        </button>
+                        <button mat-menu-item (click)="filterContextMenuByColumn('status')" [disabled]="!contextMenuRow">
+                            Show only status: {{ contextMenuRow?.status || '(empty)' }}
+                        </button>
+                        <button mat-menu-item (click)="filterContextMenuByColumn('path')" [disabled]="!contextMenuRow">
+                            Show only path: {{ formatContextMenuValue(contextMenuRow?.path ?? '') }}
+                        </button>
+                        <button mat-menu-item (click)="filterContextMenuByColumn('ip')" [disabled]="!contextMenuRow">
+                            Show only IP: {{ contextMenuRow?.ip || '(empty)' }}
+                        </button>
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item (click)="editContextMenuComment()" [disabled]="!contextMenuRow">
+                            Edit comment
+                        </button>
+                        <button mat-menu-item (click)="editContextMenuRequest()" [disabled]="!contextMenuRow">
+                            Edit request
+                        </button>
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item (click)="openContextMenuUrl()" [disabled]="!contextMenuRow?.url">
+                            Open URL in new tab
+                        </button>
+                    </mat-menu>
 
                     <mat-menu #columnVisibilityMenu="matMenu" class="column-filter-menu-panel">
                         <div class="column-filter-toolbar" (click)="$event.stopPropagation()">

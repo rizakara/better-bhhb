@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatMenuTrigger } from '@angular/material/menu';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
@@ -160,6 +161,10 @@ export class MainComponent implements OnInit {
   treeDataSource = new MatTreeNestedDataSource<SiteMapNode>();
 
   isDraggingFile = false;
+  contextMenuRow: any | null = null;
+  contextMenuPreviousSelection: any | null = null;
+  comparePinRow: any | null = null;
+  contextMenuPosition = { x: 0, y: 0 };
 
   get hasData(): boolean {
     return this.ELEMENT_DATA.length > 0;
@@ -215,6 +220,7 @@ export class MainComponent implements OnInit {
   }
 
   @ViewChild(MatSort, { static: false }) sort!: MatSort;
+  @ViewChild('rowContextMenuTrigger', { static: false }) rowContextMenuTrigger!: MatMenuTrigger;
 
   elementDataGen(content: any) {
     this.ELEMENT_DATA = []
@@ -1165,15 +1171,281 @@ export class MainComponent implements OnInit {
     return pathOnly === prefix || pathOnly.startsWith(`${prefix}/`);
   }
 
+  get contextMenuComparePreviousLabel(): string {
+    if (!this.contextMenuPreviousSelection) {
+      return '';
+    }
+    return `Compare with #${this.contextMenuPreviousSelection.position} (previous)`;
+  }
+
+  isContextMenuRowCompareBase(): boolean {
+    return !!this.contextMenuRow
+      && !!this.comparePinRow
+      && this.contextMenuRow.position === this.comparePinRow.position;
+  }
+
+  getContextMenuAdjacentRow(offset: -1 | 1): any | null {
+    const row = this.contextMenuRow;
+    if (!row) {
+      return null;
+    }
+
+    const rows = this.getNavigableRows();
+    const index = rows.findIndex((entry) => entry === row || entry.position === row.position);
+    if (index === -1) {
+      return null;
+    }
+
+    const adjacentIndex = index + offset;
+    if (adjacentIndex < 0 || adjacentIndex >= rows.length) {
+      return null;
+    }
+
+    return rows[adjacentIndex];
+  }
+
+  onHistoryTableContextMenu(event: MouseEvent): void {
+    if (this.shouldAllowNativeTableContextMenu(event)) {
+      return;
+    }
+    event.preventDefault();
+  }
+
+  onRowContextMenu(event: MouseEvent, row: any): void {
+    if (this.shouldAllowNativeTableContextMenu(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.contextMenuPreviousSelection =
+      this.clickedRow && this.clickedRow !== row ? this.clickedRow : null;
+    this.contextMenuRow = row;
+    this.contextMenuPosition = { x: event.clientX, y: event.clientY };
+
+    if (this.clickedRow !== row) {
+      this.selectRow(row);
+    }
+
+    this.cdr.detectChanges();
+    requestAnimationFrame(() => this.rowContextMenuTrigger?.openMenu());
+  }
+
+  pinContextMenuCompareBase(): void {
+    if (!this.contextMenuRow) {
+      return;
+    }
+
+    this.comparePinRow = this.contextMenuRow;
+    this.clearCompare();
+    this.snackBar.open(
+      `#${this.contextMenuRow.position} set as compare base — click another row to compare`,
+      undefined,
+      { duration: 2800 },
+    );
+  }
+
+  clearContextMenuCompareBase(): void {
+    this.comparePinRow = null;
+    this.clearCompare();
+    this.snackBar.open('Compare base cleared', undefined, { duration: 1800 });
+  }
+
+  compareContextMenuWithPrevious(): void {
+    if (!this.contextMenuRow || !this.contextMenuPreviousSelection) {
+      return;
+    }
+    this.startRowCompare(this.contextMenuRow, this.contextMenuPreviousSelection);
+  }
+
+  compareContextMenuWithAdjacent(offset: -1 | 1): void {
+    const adjacent = this.getContextMenuAdjacentRow(offset);
+    if (!this.contextMenuRow || !adjacent) {
+      return;
+    }
+    this.startRowCompare(this.contextMenuRow, adjacent);
+  }
+
+  private shouldAutoCompareWithPin(row: any, event?: MouseEvent): boolean {
+    if (!event || event.shiftKey || !this.comparePinRow) {
+      return false;
+    }
+    return row.position !== this.comparePinRow.position;
+  }
+
+  private startRowCompare(primary: any, secondary: any): void {
+    this.clickedRow = primary;
+    this.applyStoredRequestEdit(primary);
+    this.applyStoredCommentEdit(primary);
+    this.compareRow = secondary;
+    this.diffMode = true;
+    if (this.replayMode) {
+      this.setReplayMode(false);
+    }
+    this.updateRequestHighlights();
+    this.updateResponseHighlights();
+    this.updateInspector();
+    this.updateDiffView();
+    this.snackBar.open(
+      `Comparing #${primary.position} with #${secondary.position}`,
+      undefined,
+      { duration: 2200 },
+    );
+  }
+
+  filterContextMenuByColumn(column: string): void {
+    const row = this.contextMenuRow;
+    if (!row) {
+      return;
+    }
+
+    const value = String(row[column] ?? '');
+    this.filterByColumnValue(column, value);
+  }
+
+  private filterByColumnValue(column: string, value: string): void {
+    if (column === 'ip') {
+      this.resetIpAdvancedFilter();
+    }
+
+    if (this.isTextFilterColumn(column)) {
+      this.columnTextFilterModes[column] = 'values';
+      this.columnTextFilters[column] = '';
+      this.columnTextFilterBlocked[column] = false;
+    }
+
+    this.columnFilters[column] = new Set([value]);
+    this.refreshTableFilter();
+    this.snackBar.open(
+      `Filtered by ${this.getColumnDisplayLabel(column)}`,
+      undefined,
+      { duration: 2000 },
+    );
+  }
+
+  private readonly contextMenuCopyFieldLabels: Record<string, string> = {
+    url: 'URL',
+    host: 'Host',
+    path: 'Path',
+    method: 'Method',
+    status: 'Status',
+    ip: 'IP',
+    time: 'Time',
+    mimetype: 'MIME type',
+    extension: 'Extension',
+    title: 'Title',
+    comment: 'Comment',
+    responselength: 'Response length',
+    position: '#',
+  };
+
+  contextMenuFieldHasValue(field: string): boolean {
+    const row = this.contextMenuRow;
+    if (!row) {
+      return false;
+    }
+    if (field === 'position') {
+      return row.position != null;
+    }
+    const value = row[field];
+    return value !== null && value !== undefined && String(value) !== '';
+  }
+
+  getContextMenuFieldPreview(field: string, maxLength = 28): string {
+    const row = this.contextMenuRow;
+    if (!row) {
+      return '';
+    }
+    const value = field === 'position' ? String(row.position ?? '') : String(row[field] ?? '');
+    return this.formatContextMenuValue(value, maxLength);
+  }
+
+  async copyContextMenuField(field: string): Promise<void> {
+    const row = this.contextMenuRow;
+    if (!row) {
+      return;
+    }
+
+    const value = field === 'position' ? String(row.position ?? '') : String(row[field] ?? '');
+    const label = this.contextMenuCopyFieldLabels[field] ?? field;
+    await this.copyContextMenuText(value, label);
+  }
+
+  async copyContextMenuResponseRaw(): Promise<void> {
+    if (!this.contextMenuRow) {
+      return;
+    }
+
+    const raw = this.getRowResponseRaw(this.contextMenuRow);
+    await this.copyContextMenuText(raw, 'raw response');
+  }
+
+  private async copyContextMenuText(value: string, label: string): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    try {
+      await this.copyTextToClipboard(value);
+      this.snackBar.open(`Copied ${label} to clipboard`, undefined, { duration: 2200 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Failed to copy ${label}`;
+      this.snackBar.open(message, undefined, { duration: 3200 });
+    }
+  }
+
+  editContextMenuComment(): void {
+    if (!this.contextMenuRow) {
+      return;
+    }
+    this.startCommentEdit(new MouseEvent('click'), this.contextMenuRow);
+  }
+
+  editContextMenuRequest(): void {
+    if (!this.contextMenuRow) {
+      return;
+    }
+    if (this.clickedRow !== this.contextMenuRow) {
+      this.selectRow(this.contextMenuRow);
+    }
+    this.setReplayMode(true);
+  }
+
+  openContextMenuUrl(): void {
+    const url = this.contextMenuRow?.url;
+    if (!url) {
+      return;
+    }
+    window.open(String(url), '_blank', 'noopener,noreferrer');
+  }
+
+  private shouldAllowNativeTableContextMenu(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    return !!target?.closest('.comment-cell-input');
+  }
+
+  formatContextMenuValue(value: string, maxLength = 40): string {
+    if (!value) {
+      return '(empty)';
+    }
+    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
+  }
+
   selectRow(row: any, event?: MouseEvent) {
     if (event?.shiftKey && this.clickedRow && this.clickedRow !== row) {
-      this.compareRow = row;
-      this.diffMode = true;
-      if (this.replayMode) {
-        this.setReplayMode(false);
+      this.startRowCompare(this.clickedRow, row);
+      return;
+    }
+
+    if (this.shouldAutoCompareWithPin(row, event)) {
+      if (this.editingCommentPosition !== null && row.position !== this.editingCommentPosition) {
+        const editingRow = this.findRowByPosition(this.editingCommentPosition);
+        if (editingRow) {
+          this.stopCommentEdit(editingRow);
+        }
       }
-      this.updateDiffView();
-      this.snackBar.open(`Comparing #${this.clickedRow.position} with #${row.position}`, undefined, { duration: 2200 });
+      this.startRowCompare(row, this.comparePinRow);
       return;
     }
 
@@ -1213,7 +1485,11 @@ export class MainComponent implements OnInit {
 
   toggleDiffMode(): void {
     if (!this.compareRow) {
-      this.snackBar.open('Shift+click another row to compare', undefined, { duration: 2600 });
+      this.snackBar.open(
+        'Shift+click another row, or use Compare in the right-click menu',
+        undefined,
+        { duration: 3000 },
+      );
       return;
     }
     this.diffMode = !this.diffMode;
@@ -1550,6 +1826,7 @@ export class MainComponent implements OnInit {
     this.replayRequestRaw = '';
     this.replayRequestBaseline = '';
     this.replayMode = false;
+    this.comparePinRow = null;
     this.clearCompare();
   }
 
@@ -1990,6 +2267,12 @@ export class MainComponent implements OnInit {
     if (this.diffMode || this.compareRow) {
       event.preventDefault();
       this.clearCompare();
+      return true;
+    }
+
+    if (this.comparePinRow) {
+      event.preventDefault();
+      this.clearContextMenuCompareBase();
       return true;
     }
 
