@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 export interface ImportDuplicateDialogData {
@@ -9,8 +9,8 @@ export interface ImportDuplicateDialogData {
 export type ImportDuplicateDialogResult = 'keep-all' | 'keep-one';
 
 @Component({
-  selector: 'app-import-duplicate-dialog',
-  template: `
+    selector: 'app-import-duplicate-dialog',
+    template: `
     <h2 mat-dialog-title>
       Duplicate items found
       <button type="button" class="dialog-close-x" mat-dialog-close aria-label="Close">×</button>
@@ -30,7 +30,7 @@ export type ImportDuplicateDialogResult = 'keep-all' | 'keep-one';
       </div>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     :host {
       display: block;
     }
@@ -66,6 +66,8 @@ export type ImportDuplicateDialogResult = 'keep-all' | 'keep-one';
       opacity: 1;
     }
   `],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ImportDuplicateDialogComponent {
   constructor(

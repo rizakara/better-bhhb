@@ -1,12 +1,14 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { HttpHeaderRow, ParsedCookie } from '../../services/request-replay/request-replay.service';
 
 export type InspectorTab = 'attributes' | 'cookies' | 'request-headers' | 'response-headers';
 
 @Component({
-  selector: 'app-inspector-panel',
-  templateUrl: './inspector-panel.component.html',
-  styleUrls: ['./inspector-panel.component.css'],
+    selector: 'app-inspector-panel',
+    templateUrl: './inspector-panel.component.html',
+    styleUrls: ['./inspector-panel.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class InspectorPanelComponent {
   @Input() tab: InspectorTab = 'attributes';

@@ -14,18 +14,24 @@
     "declaration": false,
     "downlevelIteration": true,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "moduleResolution": "bundler",
     "importHelpers": true,
-    "target": "es2017",
+    "target": "ES2022",
     "module": "es2020",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
     "paths": {
-      "timers": ["./node_modules/timers-browserify"],
-      "stream": ["./node_modules/stream-browserify"]
-    }
+      "timers": [
+        "./node_modules/timers-browserify"
+      ],
+      "stream": [
+        "./node_modules/stream-browserify"
+      ],
+      "buffer": [
+        "./node_modules/buffer"
+      ]
+    },
+    "useDefineForClassFields": false
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

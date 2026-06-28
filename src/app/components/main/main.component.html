@@ -12,7 +12,7 @@
     </button>
 
     <as-split direction="horizontal" class="main-split" [gutterSize]="treeViewOpen ? 7 : 0">
-        <as-split-area [order]="1" [size]="treeViewOpen ? 20 : 0" [visible]="treeViewOpen" [minSize]="12"
+        <as-split-area [size]="treeViewOpen ? 20 : 0" [visible]="treeViewOpen" [minSize]="12"
             [maxSize]="45">
             <div class="tree-panel">
                 <div class="tree-panel-header label">
@@ -63,7 +63,7 @@
             </div>
         </as-split-area>
 
-        <as-split-area [order]="2" [size]="treeViewOpen ? 80 : 100">
+        <as-split-area [size]="treeViewOpen ? 80 : 100">
             <as-split direction="vertical" [gutterSize]=7>
                 <as-split-area [size]="60">
                     <div class="table-toolbar">

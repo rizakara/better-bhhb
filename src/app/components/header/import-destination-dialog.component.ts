@@ -21,6 +21,7 @@ export interface ImportDestinationDialogResult {
 
 @Component({
   selector: 'app-import-destination-dialog',
+  standalone: false,
   template: `
     <h2 mat-dialog-title>
       Import files

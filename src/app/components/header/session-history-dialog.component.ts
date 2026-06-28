@@ -1,12 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
 import { StoredHistoryEntry } from '../../services/file-handle/file-session-storage.service';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
 
 @Component({
-  selector: 'app-session-history-dialog',
-  templateUrl: './session-history-dialog.component.html',
-  styleUrls: ['./session-history-dialog.component.css']
+    selector: 'app-session-history-dialog',
+    templateUrl: './session-history-dialog.component.html',
+    styleUrls: ['./session-history-dialog.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class SessionHistoryDialogComponent implements OnInit {
   entries: StoredHistoryEntry[] = [];

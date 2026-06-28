@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 export interface ImportModeDialogData {
@@ -7,8 +7,8 @@ export interface ImportModeDialogData {
 }
 
 @Component({
-  selector: 'app-import-mode-dialog',
-  template: `
+    selector: 'app-import-mode-dialog',
+    template: `
     <h2 mat-dialog-title>
       Import files
       <button type="button" class="dialog-close-x" [mat-dialog-close] aria-label="Close">×</button>
@@ -28,7 +28,7 @@ export interface ImportModeDialogData {
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     :host {
       display: block;
     }
@@ -80,7 +80,9 @@ export interface ImportModeDialogData {
       background-color: var(--bg-primary);
       color: inherit;
     }
-  `]
+  `],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ImportModeDialogComponent {
   constructor(@Inject(MAT_DIALOG_DATA) public data: ImportModeDialogData) {}

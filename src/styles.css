@@ -244,7 +244,8 @@ app-root {
   height: 100vh;
 }
 
-.mat-menu-panel.import-menu-panel {
+.mat-menu-panel.import-menu-panel,
+.mat-mdc-menu-panel.import-menu-panel {
   min-width: 180px !important;
   background: var(--menu-bg) !important;
   color: var(--menu-text) !important;
@@ -252,32 +253,38 @@ app-root {
   box-shadow: var(--shadow-light);
 }
 
-.mat-menu-panel.import-menu-panel .mat-menu-content {
+.mat-menu-panel.import-menu-panel .mat-menu-content,
+.mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-content {
   padding: 4px 0 !important;
   background: transparent !important;
 }
 
-.mat-menu-panel.import-menu-panel .mat-menu-item {
+.mat-menu-panel.import-menu-panel .mat-menu-item,
+.mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-item {
   font-size: 13px;
   line-height: 36px;
   height: 36px;
   color: inherit !important;
 }
 
-.mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]) {
+.mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]),
+.mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-item:hover:not([disabled]) {
   background-color: var(--hover-bg) !important;
 }
 
-.mat-menu-panel.import-menu-panel .mat-divider {
+.mat-menu-panel.import-menu-panel .mat-divider,
+.mat-mdc-menu-panel.import-menu-panel .mat-divider {
   border-top-color: var(--border-color);
 }
 
 /* Darker shadow for dark themes */
-body.theme-is-dark .mat-menu-panel.import-menu-panel {
+body.theme-is-dark .mat-menu-panel.import-menu-panel,
+body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
   box-shadow: var(--shadow-dark);
 }
 
-.mat-menu-panel.row-context-menu-panel {
+.mat-menu-panel.row-context-menu-panel,
+.mat-mdc-menu-panel.row-context-menu-panel {
   min-width: 240px !important;
   max-width: 360px;
   background: var(--menu-bg) !important;
@@ -286,7 +293,8 @@ body.theme-is-dark .mat-menu-panel.import-menu-panel {
   box-shadow: var(--shadow-light);
 }
 
-.mat-menu-panel.row-context-menu-panel .mat-menu-content {
+.mat-menu-panel.row-context-menu-panel .mat-menu-content,
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-content {
   padding: 4px 0 !important;
   background: transparent !important;
 }
@@ -378,7 +386,8 @@ body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
 }
 
 /* Workspace selector menu */
-.mat-menu-panel.workspace-menu-panel {
+.mat-menu-panel.workspace-menu-panel,
+.mat-mdc-menu-panel.workspace-menu-panel {
   min-width: 260px !important;
   max-width: 340px;
 }
@@ -393,7 +402,8 @@ body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
   letter-spacing: 0.04em;
 }
 
-.mat-menu-panel.workspace-menu-panel .mat-menu-item {
+.mat-menu-panel.workspace-menu-panel .mat-menu-item,
+.mat-mdc-menu-panel.workspace-menu-panel .mat-mdc-menu-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -405,7 +415,8 @@ body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
   white-space: normal;
 }
 
-.mat-menu-panel.workspace-menu-panel .mat-menu-item.workspace-menu-active {
+.mat-menu-panel.workspace-menu-panel .mat-menu-item.workspace-menu-active,
+.mat-mdc-menu-panel.workspace-menu-panel .mat-mdc-menu-item.workspace-menu-active {
   background-color: var(--selected-bg) !important;
   font-weight: 600;
 }
@@ -479,19 +490,22 @@ body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
 
 
 /* Themed Material dialogs (panelClass is on cdk-overlay-pane, not mat-dialog-container) */
-.cdk-overlay-container .mat-dialog-container {
+.cdk-overlay-container .mat-dialog-container,
+.cdk-overlay-container .mat-mdc-dialog-container {
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;
 }
 
-.cdk-overlay-pane.bhhb-dialog .mat-dialog-container {
+.cdk-overlay-pane.bhhb-dialog .mat-dialog-container,
+.cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   box-shadow: var(--shadow-light) !important;
   border: 1px solid var(--border-color);
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;
 }
 
-body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-dialog-container {
+body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-dialog-container,
+body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   box-shadow: var(--shadow-dark) !important;
 }
 
@@ -520,12 +534,16 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-dialog-container {
 
 .bhhb-dialog .mat-dialog-actions .mat-button,
 .bhhb-dialog .mat-dialog-actions .mat-flat-button,
-.bhhb-dialog .mat-dialog-actions .mat-stroked-button {
+.bhhb-dialog .mat-dialog-actions .mat-stroked-button,
+.bhhb-dialog .mat-dialog-actions .mat-mdc-button,
+.bhhb-dialog .mat-dialog-actions .mat-mdc-unelevated-button,
+.bhhb-dialog .mat-dialog-actions .mat-mdc-outlined-button {
   border: 1px solid var(--border-color) !important;
   color: inherit !important;
 }
 
-.bhhb-dialog .mat-dialog-actions .mat-button.mat-primary {
+.bhhb-dialog .mat-dialog-actions .mat-button.mat-primary,
+.bhhb-dialog .mat-dialog-actions .mat-mdc-button.mat-primary {
   border-color: #177fc5 !important;
   color: #177fc5 !important;
 }
@@ -554,16 +572,20 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-dialog-container {
   margin: 0 !important;
 }
 
-.bhhb-dialog .mat-checkbox-label {
+.bhhb-dialog .mat-checkbox-label,
+.bhhb-dialog .mat-mdc-checkbox .mdc-label {
   color: var(--text-primary) !important;
 }
 
-.bhhb-dialog .mat-checkbox-frame {
+.bhhb-dialog .mat-checkbox-frame,
+.bhhb-dialog .mat-mdc-checkbox .mdc-checkbox__outline,
+.bhhb-dialog .mat-mdc-checkbox .mdc-checkbox__background {
   border-color: var(--text-muted) !important;
 }
 
 .bhhb-dialog .mat-checkbox-checked .mat-checkbox-background,
-.bhhb-dialog .mat-checkbox-indeterminate .mat-checkbox-background {
+.bhhb-dialog .mat-checkbox-indeterminate .mat-checkbox-background,
+.bhhb-dialog .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
   background-color: var(--text-primary) !important;
 }
 
@@ -588,7 +610,8 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   stroke: #1d1e20 !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel {
+.mat-menu-panel.column-filter-menu-panel,
+.mat-mdc-menu-panel.column-filter-menu-panel {
   min-width: 220px !important;
   max-width: 360px !important;
   background: var(--menu-bg) !important;
@@ -597,7 +620,8 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   box-shadow: var(--shadow-light);
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-menu-content {
+.mat-menu-panel.column-filter-menu-panel .mat-menu-content,
+.mat-mdc-menu-panel.column-filter-menu-panel .mat-mdc-menu-content {
   padding: 0 !important;
   background: transparent !important;
 }
@@ -641,7 +665,8 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   width: 100%;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-label {
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-label,
+.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-label {
   color: inherit !important;
   font-size: 13px;
   line-height: 20px;
@@ -650,12 +675,14 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   text-overflow: ellipsis;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame,
+.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
   border-color: var(--text-muted) !important;
 }
 
 .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background {
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background,
+.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
   background-color: var(--text-primary) !important;
 }
 
@@ -663,12 +690,14 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   stroke: var(--bg-primary) !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
+.mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
+.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
   background-color: var(--hover-bg);
 }
 
 /* Dark theme checkbox adjustments */
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
   background-color: #e0e0e0 !important;
 }
 
@@ -676,11 +705,13 @@ body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkm
   stroke: #1d1e20 !important;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame,
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
   border-color: rgba(255, 255, 255, 0.54) !important;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element {
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
+body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
   background-color: rgba(255, 255, 255, 0.12);
 }
 

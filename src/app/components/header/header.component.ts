@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ExportFilterState, FileHandleService } from "../../services/file-handle/file-handle.service"
 import { Theme, ThemeService } from "../../services/theme/theme.service";
 import { Subscription } from 'rxjs';
@@ -10,9 +10,11 @@ import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceTabData } from '../../services/workspace/workspace-view-state';
 
 @Component({
-  selector: 'app-header',
-  templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+    selector: 'app-header',
+    templateUrl: './header.component.html',
+    styleUrls: ['./header.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class HeaderComponent implements OnInit {
 
@@ -266,8 +268,10 @@ export class HeaderComponent implements OnInit {
 }
 
 @Component({
-  templateUrl: './info-dialog.component.html',
-  styleUrls: ['./info-dialog.component.css']
+    templateUrl: './info-dialog.component.html',
+    styleUrls: ['./info-dialog.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class InfoDialogComponent {
   gotIt() {
