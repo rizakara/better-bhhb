@@ -11,6 +11,7 @@ import burp.api.montoya.ui.contextmenu.InvocationType;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -53,12 +54,17 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
 
         List<Component> menuItems = new ArrayList<>();
 
-        if (isSupportedInvocation(event)) {
+        if (isProxyInvocation(event)) {
             List<ProxyHttpRequestResponse> history = api.proxy().history();
-            List<ProxyHttpRequestResponse> selected = resolveSelectedForEvent(event, history);
+            List<ProxyHttpRequestResponse> selected = resolveSelectedProxyItems(event, history);
             log.debug("Context menu: history=" + history.size() + ", matched selection=" + selected.size());
-            menuItems.add(createSendSelectedMenuItem(selected, "context-menu"));
-            menuItems.add(createSendAllMenuItem(history, "context-menu"));
+            menuItems.add(createSendSelectedProxyMenuItem(selected, "context-menu"));
+            menuItems.add(createSendAllProxyMenuItem(history, "context-menu"));
+            menuItems.add(new JPopupMenu.Separator());
+        } else if (isIntruderResultsInvocation(event)) {
+            List<HttpRequestResponse> selected = event.selectedRequestResponses();
+            log.debug("Context menu: intruder selection=" + selected.size());
+            menuItems.add(createSendSelectedIntruderMenuItem(selected, "context-menu"));
             menuItems.add(new JPopupMenu.Separator());
         }
 
@@ -70,7 +76,7 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         JMenuItem sendAll = new JMenuItem("Send all proxy history to PWA");
         sendAll.addActionListener(actionEvent -> {
             log.debug("Top menu action clicked: Send all proxy history to PWA");
-            sendAllFromMenu();
+            sendAllProxyFromMenu();
         });
 
         JMenuItem configurePwa = new JMenuItem("Configure PWA URL…");
@@ -83,7 +89,7 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         log.debug("Registered top-level Better-BHHB menu.");
     }
 
-    private void sendAllFromMenu() {
+    private void sendAllProxyFromMenu() {
         List<ProxyHttpRequestResponse> items = api.proxy().history();
         log.debug("Menu send-all requested. proxy.history() size=" + items.size());
 
@@ -92,10 +98,10 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
             return;
         }
 
-        sendToPwaAsync(items, "menu-send-all");
+        sendProxyHistoryToPwaAsync(items, "menu-send-all");
     }
 
-    private JMenuItem createSendSelectedMenuItem(List<ProxyHttpRequestResponse> items, String source) {
+    private JMenuItem createSendSelectedProxyMenuItem(List<ProxyHttpRequestResponse> items, String source) {
         String label = items.size() == 1
                 ? "Send selected to Better-BHHB PWA"
                 : "Send selected (" + items.size() + " items) to Better-BHHB PWA";
@@ -106,13 +112,13 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         JMenuItem menuItem = new JMenuItem(label);
         menuItem.setEnabled(!items.isEmpty());
         menuItem.addActionListener(actionEvent -> {
-            log.debug(source + " send-selected clicked for " + items.size() + " item(s).");
-            sendToPwaAsync(items, source + "-send-selected");
+            log.debug(source + " send-selected clicked for " + items.size() + " proxy item(s).");
+            sendProxyHistoryToPwaAsync(items, source + "-send-selected");
         });
         return menuItem;
     }
 
-    private JMenuItem createSendAllMenuItem(List<ProxyHttpRequestResponse> history, String source) {
+    private JMenuItem createSendAllProxyMenuItem(List<ProxyHttpRequestResponse> history, String source) {
         String label = history.isEmpty()
                 ? "Send all to Better-BHHB PWA"
                 : "Send all (" + history.size() + " items) to Better-BHHB PWA";
@@ -120,8 +126,25 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         JMenuItem menuItem = new JMenuItem(label);
         menuItem.setEnabled(!history.isEmpty());
         menuItem.addActionListener(actionEvent -> {
-            log.debug(source + " send-all clicked for " + history.size() + " item(s).");
-            sendToPwaAsync(history, source + "-send-all");
+            log.debug(source + " send-all clicked for " + history.size() + " proxy item(s).");
+            sendProxyHistoryToPwaAsync(history, source + "-send-all");
+        });
+        return menuItem;
+    }
+
+    private JMenuItem createSendSelectedIntruderMenuItem(List<HttpRequestResponse> items, String source) {
+        String label = items.size() == 1
+                ? "Send selected intruder results to Better-BHHB PWA"
+                : "Send selected (" + items.size() + " intruder results) to Better-BHHB PWA";
+        if (items.isEmpty()) {
+            label = "Send selected intruder results to Better-BHHB PWA";
+        }
+
+        JMenuItem menuItem = new JMenuItem(label);
+        menuItem.setEnabled(!items.isEmpty());
+        menuItem.addActionListener(actionEvent -> {
+            log.debug(source + " send-selected clicked for " + items.size() + " intruder result(s).");
+            sendRequestResponsesToPwaAsync(items, source + "-send-selected");
         });
         return menuItem;
     }
@@ -163,7 +186,7 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         return source instanceof Component component ? component : null;
     }
 
-    private List<ProxyHttpRequestResponse> resolveSelectedForEvent(
+    private List<ProxyHttpRequestResponse> resolveSelectedProxyItems(
             ContextMenuEvent event,
             List<ProxyHttpRequestResponse> history
     ) {
@@ -182,37 +205,63 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         return matched;
     }
 
-    private boolean isSupportedInvocation(ContextMenuEvent event) {
+    private boolean isProxyInvocation(ContextMenuEvent event) {
         return event.isFrom(
                 InvocationType.PROXY_HISTORY,
                 InvocationType.PROXY_INTERCEPT
         );
     }
 
-    private void sendToPwaAsync(List<ProxyHttpRequestResponse> items, String source) {
+    private boolean isIntruderResultsInvocation(ContextMenuEvent event) {
+        return event.isFrom(InvocationType.INTRUDER_ATTACK_RESULTS);
+    }
+
+    private void sendProxyHistoryToPwaAsync(List<ProxyHttpRequestResponse> items, String source) {
         if (items.isEmpty()) {
             showMessage("No proxy history items are available to export.", "Better-BHHB", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        queueSend(source, items.size(), () -> coordinator.sendProxyHistory(api, items));
+    }
+
+    private void sendRequestResponsesToPwaAsync(List<HttpRequestResponse> items, String source) {
+        if (items.isEmpty()) {
+            showMessage(
+                    "No intruder results are selected.\nSelect rows in the attack results table (Ctrl+A for all), then try again.",
+                    "Better-BHHB",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        queueSend(source, items.size(), () -> coordinator.sendRequestResponses(api, items));
+    }
+
+    private void queueSend(String source, int itemCount, ThrowingRunnable sendTask) {
         log.info("Queueing send from " + source + " on background thread...");
         log.info("Using PWA URL: " + pwaSettings.getPwaUrl());
-        log.info("Exporting " + items.size() + " item(s). Watch this Output tab for progress.");
+        log.info("Exporting " + itemCount + " item(s). Watch this Output tab for progress.");
 
         sendExecutor.submit(() -> {
             try {
                 log.debug("Background send started on thread " + Thread.currentThread().getName());
-                coordinator.send(api, items);
+                sendTask.run();
                 log.info("Send flow finished successfully. Switch to Better-BHHB to complete the import.");
             } catch (Exception exception) {
                 log.error("Send flow failed.", exception);
                 showMessage(
-                        "Failed to send proxy history to Better-BHHB.\n" + exception.getMessage(),
+                        "Failed to send items to Better-BHHB.\n" + exception.getMessage(),
                         "Better-BHHB",
                         JOptionPane.ERROR_MESSAGE
                 );
             }
         });
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws IOException;
     }
 
     private void showMessage(String message, String title, int messageType) {

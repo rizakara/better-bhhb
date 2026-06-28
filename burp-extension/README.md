@@ -1,6 +1,6 @@
 # Better-BHHB Burp Extension
 
-Burp Suite extension that sends Proxy HTTP history to the [Better-BHHB](https://better-bhhb.pages.dev) PWA over a short-lived localhost server.
+Burp Suite extension that sends Proxy HTTP history and Intruder attack results to the [Better-BHHB](https://better-bhhb.pages.dev) PWA over a short-lived localhost server.
 
 ## Build
 
@@ -22,12 +22,14 @@ Use the included Gradle wrapper (`./gradlew`), not the system `gradle` command. 
 ## Usage
 
 1. Keep Better-BHHB open (installed PWA or dev server)
-2. Open **Proxy → HTTP history**
-3. Select items, then right-click → **Extensions → Send selected…** or **Send all…**
+2. From **Proxy → HTTP history** or **Intruder → attack results**, select items and right-click → **Extensions → Send selected…**
+3. For proxy history you can also use **Send all…** without selecting rows first.
 
 Burp starts a temporary server on `localhost:19876`–`19886`, exports the XML, and waits for the app to pull it. **Burp does not open any browser.**
 
 The PWA polls those ports automatically and imports within a couple of seconds.
+
+For Intruder, select the rows you want (Ctrl+A to select all results in the attack table) before sending — Burp's API only exposes the current selection, not the full results list.
 
 You can also use the top menu bar: **Better-BHHB → Send all proxy history to PWA**.
 
@@ -51,7 +53,7 @@ export BETTER_BHHB_DEBUG=false
 
 Use either:
 
-1. **In Burp:** Proxy → HTTP history → right-click → **Extensions → Configure PWA URL…**
+1. **In Burp:** Proxy → HTTP history or Intruder → attack results → right-click → **Extensions → Configure PWA URL…**
 2. **Top menu:** **Better-BHHB → Configure PWA URL…**
 
 For local Angular dev, set:

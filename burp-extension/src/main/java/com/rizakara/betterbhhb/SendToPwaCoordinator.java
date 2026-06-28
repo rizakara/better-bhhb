@@ -1,6 +1,7 @@
 package com.rizakara.betterbhhb;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.proxy.ProxyHttpRequestResponse;
 
 import java.awt.Toolkit;
@@ -16,17 +17,25 @@ final class SendToPwaCoordinator {
         this.settings = settings;
     }
 
-    void send(MontoyaApi api, List<ProxyHttpRequestResponse> items) throws IOException {
-        ExtensionLogger log = new ExtensionLogger(api);
-        log.info("Send started with " + items.size() + " proxy item(s).");
+    void sendProxyHistory(MontoyaApi api, List<ProxyHttpRequestResponse> items) throws IOException {
+        send(api, items.size(), "proxy history", () -> BurpXmlExporter.exportProxyHistory(api, items, log(api)));
+    }
 
-        if (items.isEmpty()) {
-            throw new IOException("No proxy history items to export.");
+    void sendRequestResponses(MontoyaApi api, List<HttpRequestResponse> items) throws IOException {
+        send(api, items.size(), "HTTP", () -> BurpXmlExporter.exportRequestResponses(api, items, log(api)));
+    }
+
+    private void send(MontoyaApi api, int itemCount, String sourceLabel, XmlSupplier xmlSupplier) throws IOException {
+        ExtensionLogger log = log(api);
+        log.info("Send started with " + itemCount + " " + sourceLabel + " item(s).");
+
+        if (itemCount == 0) {
+            throw new IOException("No " + sourceLabel + " items to export.");
         }
 
         long exportStarted = System.currentTimeMillis();
         log.debug("Building Burp XML export...");
-        String xml = BurpXmlExporter.export(api, items, log);
+        String xml = xmlSupplier.get();
         log.info("XML export complete in " + (System.currentTimeMillis() - exportStarted) + "ms, size="
                 + xml.length() + " chars (" + xml.getBytes().length + " bytes).");
 
@@ -42,6 +51,15 @@ final class SendToPwaCoordinator {
         log.info("Keep Better-BHHB open — it listens for Burp and imports automatically.");
         log.info("Server stays up for ~" + TemporaryImportServer.autoShutdownSeconds() + " seconds.");
         log.info("Data URL: http://127.0.0.1:" + port + "/data");
+    }
+
+    private ExtensionLogger log(MontoyaApi api) {
+        return new ExtensionLogger(api);
+    }
+
+    @FunctionalInterface
+    private interface XmlSupplier {
+        String get() throws IOException;
     }
 
     private void verifyHealth(int port, ExtensionLogger log) throws IOException {

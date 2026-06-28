@@ -2,6 +2,8 @@ package com.rizakara.betterbhhb;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.HttpService;
+import burp.api.montoya.http.handler.TimingData;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.MimeType;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
@@ -20,8 +22,22 @@ final class BurpXmlExporter {
     private BurpXmlExporter() {
     }
 
-    static String export(MontoyaApi api, List<ProxyHttpRequestResponse> items, ExtensionLogger log) {
+    static String exportProxyHistory(MontoyaApi api, List<ProxyHttpRequestResponse> items, ExtensionLogger log) {
         log.debug("Serializing " + items.size() + " proxy item(s) to XML.");
+        return exportItems(api, items, log, (xml, item) -> appendProxyItem(xml, item));
+    }
+
+    static String exportRequestResponses(MontoyaApi api, List<HttpRequestResponse> items, ExtensionLogger log) {
+        log.debug("Serializing " + items.size() + " HTTP item(s) to XML.");
+        return exportItems(api, items, log, (xml, item) -> appendRequestResponseItem(xml, item));
+    }
+
+    private static <T> String exportItems(
+            MontoyaApi api,
+            List<T> items,
+            ExtensionLogger log,
+            ItemAppender<T> appender
+    ) {
         StringBuilder xml = new StringBuilder(Math.max(items.size() * 2048, 4096));
         xml.append("<?xml version=\"1.0\"?>\n");
         xml.append("<items burpVersion=\"")
@@ -31,12 +47,12 @@ final class BurpXmlExporter {
                 .append("\">\n");
 
         int index = 0;
-        for (ProxyHttpRequestResponse item : items) {
+        for (T item : items) {
             index++;
             try {
-                appendItem(xml, item);
+                appender.append(xml, item);
             } catch (Exception exception) {
-                log.error("Failed to export proxy item #" + index + " (proxy id=" + item.id() + ").", exception);
+                log.error("Failed to export item #" + index + ".", exception);
                 throw exception;
             }
             if (index % 100 == 0) {
@@ -49,8 +65,51 @@ final class BurpXmlExporter {
         return xml.toString();
     }
 
-    private static void appendItem(StringBuilder xml, ProxyHttpRequestResponse item) {
+    private static void appendProxyItem(StringBuilder xml, ProxyHttpRequestResponse item) {
         HttpRequest request = item.finalRequest();
+        String comment = item.annotations() != null && item.annotations().hasNotes()
+                ? item.annotations().notes()
+                : "";
+        MimeType mimeType = item.hasResponse() ? item.mimeType() : MimeType.NONE;
+        appendItem(
+                xml,
+                request,
+                item.hasResponse() ? item.response() : null,
+                item.time(),
+                comment,
+                mimeType
+        );
+    }
+
+    private static void appendRequestResponseItem(StringBuilder xml, HttpRequestResponse item) {
+        String comment = item.annotations() != null && item.annotations().hasNotes()
+                ? item.annotations().notes()
+                : "";
+        MimeType mimeType = item.hasResponse() ? item.response().inferredMimeType() : MimeType.NONE;
+        appendItem(
+                xml,
+                item.request(),
+                item.hasResponse() ? item.response() : null,
+                resolveItemTime(item),
+                comment,
+                mimeType
+        );
+    }
+
+    private static ZonedDateTime resolveItemTime(HttpRequestResponse item) {
+        return item.timingData()
+                .map(TimingData::timeRequestSent)
+                .orElseGet(ZonedDateTime::now);
+    }
+
+    private static void appendItem(
+            StringBuilder xml,
+            HttpRequest request,
+            HttpResponse response,
+            ZonedDateTime time,
+            String comment,
+            MimeType mimeType
+    ) {
         HttpService service = request.httpService();
         String protocol = service.secure() ? "https" : "http";
         String host = service.host();
@@ -59,16 +118,13 @@ final class BurpXmlExporter {
         String path = safePath(request);
         String extension = safeExtension(request);
         String method = request.method();
-        String time = item.time().format(BURP_TIME_FORMAT);
-        String comment = item.annotations() != null && item.annotations().hasNotes()
-                ? item.annotations().notes()
-                : "";
+        String formattedTime = time.format(BURP_TIME_FORMAT);
 
         byte[] requestBytes = request.toByteArray().getBytes();
         String requestPayload = Base64.getEncoder().encodeToString(requestBytes);
 
         xml.append("  <item>\n");
-        xml.append("    <time>").append(escapeText(time)).append("</time>\n");
+        xml.append("    <time>").append(escapeText(formattedTime)).append("</time>\n");
         xml.append("    <url><![CDATA[").append(cdata(url)).append("]]></url>\n");
         xml.append("    <host ip=\"").append(escapeAttribute(ip)).append("\">")
                 .append(escapeText(host))
@@ -82,13 +138,12 @@ final class BurpXmlExporter {
                 .append(cdata(requestPayload))
                 .append("]]></request>\n");
 
-        if (item.hasResponse()) {
-            HttpResponse response = item.response();
+        if (response != null) {
             byte[] responseBytes = response.toByteArray().getBytes();
             String responsePayload = Base64.getEncoder().encodeToString(responseBytes);
             xml.append("    <status>").append(response.statusCode()).append("</status>\n");
             xml.append("    <responselength>").append(responseBytes.length).append("</responselength>\n");
-            xml.append("    <mimetype>").append(escapeText(mapMimeType(item.mimeType()))).append("</mimetype>\n");
+            xml.append("    <mimetype>").append(escapeText(mapMimeType(mimeType))).append("</mimetype>\n");
             xml.append("    <response base64=\"true\"><![CDATA[")
                     .append(cdata(responsePayload))
                     .append("]]></response>\n");
@@ -159,5 +214,10 @@ final class BurpXmlExporter {
             return "";
         }
         return value.replace("]]>", "]]]]><![CDATA[>");
+    }
+
+    @FunctionalInterface
+    private interface ItemAppender<T> {
+        void append(StringBuilder xml, T item);
     }
 }
