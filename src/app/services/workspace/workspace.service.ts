@@ -227,6 +227,7 @@ export class WorkspaceService {
     content: BurpExport,
     options?: {
       label?: string;
+      labelCustomized?: boolean;
       requestEdits?: Record<number, string>;
       commentEdits?: Record<number, string>;
       highlightEdits?: Record<number, RowHighlightColor | null>;
@@ -236,7 +237,7 @@ export class WorkspaceService {
   ): WorkspaceTabData {
     this.tabs = [];
     const tab = this.createEmptyTab(options?.label ?? this.deriveLabelFromFileName(fileName));
-    tab.labelCustomized = !!options?.label;
+    tab.labelCustomized = options?.labelCustomized ?? !!options?.label;
     tab.fileName = fileName;
     tab.content = content;
     tab.requestEdits = options?.requestEdits ?? {};
@@ -257,12 +258,19 @@ export class WorkspaceService {
     return this.tabs.find((tab) => tab.id === this.activeTabId)!;
   }
 
+  flushActiveTabViewState(): void {
+    this.persistActiveTabViewState();
+  }
+
   private persistActiveTabViewState(): void {
     const tab = this.tabs.find((candidate) => candidate.id === this.activeTabId);
     if (!tab) {
       return;
     }
-    tab.viewState = this.viewStateProvider?.();
+    const captured = this.viewStateProvider?.();
+    if (captured) {
+      tab.viewState = captured;
+    }
   }
 
   private createEmptyTab(label?: string): WorkspaceTabData {

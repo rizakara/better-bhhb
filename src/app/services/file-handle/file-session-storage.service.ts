@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { RowHighlightColor } from '../row-triage/row-triage.types';
+import { WorkspaceViewState } from '../workspace/workspace-view-state';
 import { BurpExport } from './file-handle.service';
 
 const DB_NAME = 'bhhb-storage';
@@ -11,6 +13,13 @@ const SESSION_KEY = 'last-opened-file';
 export interface StoredFileSession {
   fileName: string;
   content: BurpExport;
+  requestEdits?: Record<number, string>;
+  commentEdits?: Record<number, string>;
+  highlightEdits?: Record<number, RowHighlightColor | null>;
+  bookmarkEdits?: Record<number, boolean>;
+  viewState?: WorkspaceViewState;
+  label?: string;
+  labelCustomized?: boolean;
 }
 
 export interface StoredHistoryMetadata {

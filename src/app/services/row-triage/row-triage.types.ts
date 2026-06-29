@@ -35,7 +35,10 @@ export function isRowHighlightColor(value: string | null | undefined): value is 
 
 export function normalizeRowHighlight(value: unknown): RowHighlightColor | null {
   const raw = Array.isArray(value) ? value[0] : value;
-  const normalized = raw == null ? '' : String(raw).trim().toLowerCase();
+  let normalized = raw == null ? '' : String(raw).trim().toLowerCase();
+  if (normalized === 'magenta') {
+    normalized = 'mauve';
+  }
   return isRowHighlightColor(normalized) ? normalized : null;
 }
 

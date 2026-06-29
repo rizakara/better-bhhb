@@ -7,6 +7,8 @@ describe('WorkspaceService', () => {
 
   const sampleViewState = (): WorkspaceViewState => ({
     globalSearchTerm: 'login',
+    bookmarkFilterOnly: false,
+    highlightFilterColors: ['red', 'green'],
     columnFilters: { host: ['https://example.com'] },
     columnFilterOptions: { host: ['https://example.com'] },
     activeFilterColumn: 'host',

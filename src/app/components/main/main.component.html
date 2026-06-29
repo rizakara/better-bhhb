@@ -72,6 +72,19 @@
                         <div class="indexing-status" *ngIf="showIndexingStatus" aria-live="polite">
                             Indexing bodies… {{ indexingState.indexed | number }} / {{ indexingState.total | number }}
                         </div>
+                        <button type="button" mat-icon-button class="highlight-filter-button"
+                            #highlightFilterMenuTrigger="matMenuTrigger"
+                            [class.highlight-filter-active]="highlightFilterActive"
+                            [matMenuTriggerFor]="highlightFilterMenu"
+                            [matMenuTriggerRestoreFocus]="false"
+                            (click)="$event.stopPropagation()"
+                            (menuOpened)="onHighlightFilterMenuOpened()"
+                            (menuClosed)="onHighlightFilterMenuClosed()"
+                            matTooltip="Filter highlighted rows"
+                            [matTooltipDisabled]="highlightFilterMenuOpen"
+                            aria-label="Filter highlighted rows">
+                            <mat-icon aria-hidden="true">flag</mat-icon>
+                        </button>
                         <button type="button" mat-icon-button class="column-visibility-button"
                             [class.column-visibility-active]="hiddenColumnCount > 0"
                             [matMenuTriggerFor]="columnVisibilityMenu" matTooltip="Choose columns"
@@ -126,7 +139,11 @@
                                 [style.width.px]="getColumnWidthPx('position')"
                                 [style.minWidth.px]="getColumnWidthPx('position')"
                                 [style.maxWidth.px]="getColumnWidthPx('position')">
-                                {{element.position}}
+                                <span class="row-position-cell">
+                                    <mat-icon class="row-bookmark-icon" *ngIf="element.bookmark"
+                                        aria-hidden="true">bookmark</mat-icon>
+                                    <span>{{element.position}}</span>
+                                </span>
                             </td>
                         </ng-container>
 
@@ -212,7 +229,9 @@
                             [attr.data-row-position]="row.position"
                             [class.row-is-clicked]="clickedRow == row"
                             [class.row-is-compare]="compareRow == row"
-                            [class.row-is-compare-base]="comparePinRow?.position === row.position"></tr>
+                            [class.row-is-compare-base]="comparePinRow?.position === row.position"
+                            [class.row-bookmarked]="row.bookmark"
+                            [ngClass]="getRowHighlightClass(row)"></tr>
                     </table>
                     </div>
 
@@ -377,6 +396,28 @@
                             Show only IP: {{ contextMenuRow?.ip || '(empty)' }}
                         </button>
                         <mat-divider></mat-divider>
+                        <button mat-menu-item [matMenuTriggerFor]="rowHighlightMenu" [disabled]="!contextMenuRow">
+                            Highlight
+                        </button>
+                        <mat-menu #rowHighlightMenu="matMenu" class="row-context-menu-panel row-highlight-submenu">
+                            <button mat-menu-item (click)="setContextMenuHighlight(null)">
+                                <span class="row-highlight-swatch row-highlight-swatch-none" aria-hidden="true"></span>
+                                <span class="row-context-copy-label">Clear highlight</span>
+                            </button>
+                            <mat-divider></mat-divider>
+                            <button mat-menu-item *ngFor="let option of rowHighlightOptions"
+                                (click)="setContextMenuHighlight(option.color)">
+                                <span class="row-highlight-swatch row-highlight-swatch-{{ option.color }}"
+                                    aria-hidden="true"></span>
+                                <span class="row-context-copy-label">{{ option.label }}</span>
+                            </button>
+                        </mat-menu>
+                        <button mat-menu-item (click)="toggleContextMenuBookmark()" [disabled]="!contextMenuRow">
+                            <span class="row-context-copy-label">
+                                {{ contextMenuRow?.bookmark ? 'Remove bookmark' : 'Bookmark row' }}
+                            </span>
+                        </button>
+                        <mat-divider></mat-divider>
                         <button mat-menu-item (click)="editContextMenuComment()" [disabled]="!contextMenuRow">
                             Edit comment
                         </button>
@@ -387,6 +428,44 @@
                         <button mat-menu-item (click)="openContextMenuUrl()" [disabled]="!contextMenuRow?.url">
                             Open URL in new tab
                         </button>
+                    </mat-menu>
+
+                    <mat-menu #highlightFilterMenu="matMenu" class="column-filter-menu-panel highlight-filter-menu-panel"
+                        [hasBackdrop]="false" (click)="$event.stopPropagation()"
+                        (mousedown)="$event.stopPropagation()">
+                        <div class="column-filter-toolbar" (click)="$event.stopPropagation()"
+                            (mousedown)="$event.stopPropagation()">
+                            <span class="column-filter-title">Highlights</span>
+                            <button type="button" mat-button (click)="$event.stopPropagation(); selectAllHighlightFilters()">All</button>
+                            <button type="button" mat-button (click)="$event.stopPropagation(); clearHighlightFilters()">None</button>
+                        </div>
+                        <mat-divider></mat-divider>
+                        <div class="column-filter-options" (click)="$event.stopPropagation()"
+                            (mousedown)="$event.stopPropagation()">
+                            <div class="column-filter-option" (click)="$event.stopPropagation()"
+                                (mousedown)="$event.stopPropagation()">
+                                <mat-checkbox [checked]="bookmarkFilterOnly"
+                                    (click)="$event.stopPropagation()"
+                                    (mousedown)="$event.stopPropagation()"
+                                    (change)="setBookmarkFilterOnly($event.checked)">
+                                    <span>Bookmarked only</span>
+                                </mat-checkbox>
+                            </div>
+                            <mat-divider></mat-divider>
+                            <div class="column-filter-option" *ngFor="let option of rowHighlightOptions"
+                                (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                                <mat-checkbox [checked]="isHighlightColorSelected(option.color)"
+                                    (click)="$event.stopPropagation()"
+                                    (mousedown)="$event.stopPropagation()"
+                                    (change)="toggleHighlightFilterColor(option.color, $event.checked)">
+                                    <span class="highlight-filter-option">
+                                        <span class="row-highlight-swatch row-highlight-swatch-{{ option.color }}"
+                                            aria-hidden="true"></span>
+                                        <span [title]="option.label">{{ option.label }}</span>
+                                    </span>
+                                </mat-checkbox>
+                            </div>
+                        </div>
                     </mat-menu>
 
                     <mat-menu #columnVisibilityMenu="matMenu" class="column-filter-menu-panel">
@@ -409,8 +488,8 @@
                     <mat-menu #columnFilterMenu="matMenu" class="column-filter-menu-panel" [hasBackdrop]="false">
                         <div class="column-filter-toolbar" (click)="$event.stopPropagation()">
                             <span class="column-filter-title">{{ activeFilterColumnLabel }}</span>
-                            <button type="button" mat-button (click)="selectAllColumnFilter(activeFilterColumn)">All</button>
-                            <button type="button" mat-button (click)="resetColumnFilter(activeFilterColumn)">None</button>
+                            <button type="button" mat-button (click)="$event.stopPropagation(); selectAllColumnFilter(activeFilterColumn)">All</button>
+                            <button type="button" mat-button (click)="$event.stopPropagation(); resetColumnFilter(activeFilterColumn)">None</button>
                         </div>
                         <mat-divider></mat-divider>
                         <div class="ip-filter-advanced" *ngIf="activeFilterColumn === 'ip'"

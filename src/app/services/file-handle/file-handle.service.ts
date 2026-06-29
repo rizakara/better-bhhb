@@ -5,6 +5,7 @@ import { Base64 } from 'js-base64';
 import { MatDialog } from '@angular/material/dialog';
 import {
   FileSessionStorageService,
+  StoredFileSession,
   StoredHistoryEntry,
   StoredHistoryMetadata,
 } from './file-session-storage.service';
@@ -18,6 +19,7 @@ import {
   ImportDuplicateDialogData,
   ImportDuplicateDialogResult,
 } from '../../components/header/import-duplicate-dialog.component';
+import { RowHighlightColor } from '../row-triage/row-triage.types';
 import { WorkspaceService } from '../workspace/workspace.service';
 import {
   WORKSPACE_BUNDLE_FORMAT_VERSION,
@@ -83,7 +85,12 @@ export class FileHandleService {
     private fileSessionStorage: FileSessionStorageService,
     private dialog: MatDialog,
     private workspaceService: WorkspaceService,
-  ) { }
+  ) {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', this.beforeUnloadListener);
+      document.addEventListener('visibilitychange', this.visibilityChangeListener);
+    }
+  }
 
   private selectedFileName!: string | undefined;
   private selectedFileContent!: BurpExport | undefined;
@@ -97,8 +104,20 @@ export class FileHandleService {
   private beforeSave = new Subject<void>();
   private requestEdits = new Map<number, string>();
   private commentEdits = new Map<number, string>();
+  private highlightEdits = new Map<number, RowHighlightColor | null>();
+  private bookmarkEdits = new Map<number, boolean>();
   private importing = new BehaviorSubject<boolean>(false);
   private sessionReadyPromise: Promise<void> | null = null;
+  private persistSessionTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly persistSessionDebounceMs = 400;
+  private readonly beforeUnloadListener = (): void => {
+    void this.flushPersistSession();
+  };
+  private readonly visibilityChangeListener = (): void => {
+    if (document.visibilityState === 'hidden') {
+      void this.flushPersistSession();
+    }
+  };
 
   getselectedFileDataListener() {
     return this.selectedFileData.asObservable();
@@ -123,9 +142,10 @@ export class FileHandleService {
   setRequestEdit(position: number, raw: string | null): void {
     if (raw === null) {
       this.requestEdits.delete(position);
-      return;
+    } else {
+      this.requestEdits.set(position, raw);
     }
-    this.requestEdits.set(position, raw);
+    this.schedulePersistSession();
   }
 
   hasRequestEdit(position: number): boolean {
@@ -143,9 +163,10 @@ export class FileHandleService {
   setCommentEdit(position: number, comment: string | null): void {
     if (comment === null) {
       this.commentEdits.delete(position);
-      return;
+    } else {
+      this.commentEdits.set(position, comment);
     }
-    this.commentEdits.set(position, comment);
+    this.schedulePersistSession();
   }
 
   hasCommentEdit(position: number): boolean {
@@ -160,9 +181,56 @@ export class FileHandleService {
     this.commentEdits.clear();
   }
 
+  applyHighlightEdit(position: number, current: RowHighlightColor | null, baseline: RowHighlightColor | null): void {
+    if (current === baseline) {
+      this.highlightEdits.delete(position);
+    } else {
+      this.highlightEdits.set(position, current);
+    }
+    this.persistSessionImmediately();
+  }
+
+  hasHighlightEdit(position: number): boolean {
+    return this.highlightEdits.has(position);
+  }
+
+  getHighlightEdit(position: number): RowHighlightColor | null | undefined {
+    if (!this.highlightEdits.has(position)) {
+      return undefined;
+    }
+    return this.highlightEdits.get(position) ?? null;
+  }
+
+  clearHighlightEdits(): void {
+    this.highlightEdits.clear();
+  }
+
+  applyBookmarkEdit(position: number, current: boolean, baseline: boolean): void {
+    if (current === baseline) {
+      this.bookmarkEdits.delete(position);
+    } else {
+      this.bookmarkEdits.set(position, current);
+    }
+    this.persistSessionImmediately();
+  }
+
+  hasBookmarkEdit(position: number): boolean {
+    return this.bookmarkEdits.has(position);
+  }
+
+  getBookmarkEdit(position: number): boolean | undefined {
+    return this.bookmarkEdits.get(position);
+  }
+
+  clearBookmarkEdits(): void {
+    this.bookmarkEdits.clear();
+  }
+
   clearEdits(): void {
     this.clearRequestEdits();
     this.clearCommentEdits();
+    this.clearHighlightEdits();
+    this.clearBookmarkEdits();
   }
 
   ensureSessionRestored(): Promise<void> {
@@ -199,6 +267,7 @@ export class FileHandleService {
       return;
     }
     await this.applyWorkspaceTab(tab);
+    await this.persistCurrentSession({ recordHistory: false });
   }
 
   async closeWorkspaceTab(tabId: string): Promise<void> {
@@ -211,6 +280,7 @@ export class FileHandleService {
       return;
     }
     await this.applyWorkspaceTab(nextTab);
+    await this.persistCurrentSession({ recordHistory: false });
   }
 
   renameWorkspaceTab(tabId: string, label: string): void {
@@ -221,6 +291,8 @@ export class FileHandleService {
     this.workspaceService.updateActiveTabFromFile(this.selectedFileName, this.selectedFileContent, {
       requestEdits: this.serializeEdits(this.requestEdits),
       commentEdits: this.serializeEdits(this.commentEdits),
+      highlightEdits: this.serializeHighlightEdits(this.highlightEdits),
+      bookmarkEdits: this.serializeBookmarkEdits(this.bookmarkEdits),
     });
   }
 
@@ -235,7 +307,7 @@ export class FileHandleService {
   private async applyWorkspaceTab(tab: WorkspaceTabData): Promise<void> {
     this.selectedFileName = tab.fileName;
     this.selectedFileContent = tab.content;
-    this.loadEdits(tab.requestEdits, tab.commentEdits);
+    this.loadEdits(tab.requestEdits, tab.commentEdits, tab.highlightEdits, tab.bookmarkEdits);
 
     if (!tab.content) {
       this.exportFilterState.next(this.createEmptyExportFilterState());
@@ -247,6 +319,8 @@ export class FileHandleService {
   private loadEdits(
     requestEdits: Record<number, string>,
     commentEdits: Record<number, string>,
+    highlightEdits: Record<number, RowHighlightColor | null> = {},
+    bookmarkEdits: Record<number, boolean> = {},
   ): void {
     this.requestEdits = new Map(
       Object.entries(requestEdits).map(([position, value]) => [Number(position), value]),
@@ -254,10 +328,32 @@ export class FileHandleService {
     this.commentEdits = new Map(
       Object.entries(commentEdits).map(([position, value]) => [Number(position), value]),
     );
+    this.highlightEdits = new Map(
+      Object.entries(highlightEdits).map(([position, value]) => [Number(position), value]),
+    );
+    this.bookmarkEdits = new Map(
+      Object.entries(bookmarkEdits).map(([position, value]) => [Number(position), value]),
+    );
   }
 
   private serializeEdits(edits: Map<number, string>): Record<number, string> {
     const serialized: Record<number, string> = {};
+    edits.forEach((value, position) => {
+      serialized[position] = value;
+    });
+    return serialized;
+  }
+
+  private serializeHighlightEdits(edits: Map<number, RowHighlightColor | null>): Record<number, RowHighlightColor | null> {
+    const serialized: Record<number, RowHighlightColor | null> = {};
+    edits.forEach((value, position) => {
+      serialized[position] = value;
+    });
+    return serialized;
+  }
+
+  private serializeBookmarkEdits(edits: Map<number, boolean>): Record<number, boolean> {
+    const serialized: Record<number, boolean> = {};
     edits.forEach((value, position) => {
       serialized[position] = value;
     });
@@ -355,7 +451,15 @@ export class FileHandleService {
       return false;
     }
 
-    const tab = this.workspaceService.restoreTab(session.fileName, session.content);
+    const tab = this.workspaceService.restoreTab(session.fileName, session.content, {
+      label: session.labelCustomized ? session.label : undefined,
+      labelCustomized: session.labelCustomized,
+      requestEdits: session.requestEdits,
+      commentEdits: session.commentEdits,
+      highlightEdits: session.highlightEdits,
+      bookmarkEdits: session.bookmarkEdits,
+      viewState: session.viewState,
+    });
     await this.applyWorkspaceTab(tab);
     return true;
   }
@@ -547,6 +651,8 @@ export class FileHandleService {
     this.beforeSave.next();
     this.applyRequestEditsToContent();
     this.applyCommentEditsToContent();
+    this.applyHighlightEditsToContent();
+    this.applyBookmarkEditsToContent();
 
     const filterState = this.exportFilterState.value;
     let exportContent = this.selectedFileContent;
@@ -760,6 +866,8 @@ export class FileHandleService {
     this.workspaceService.updateActiveTabFromFile(this.selectedFileName, this.selectedFileContent, {
       requestEdits: {},
       commentEdits: {},
+      highlightEdits: {},
+      bookmarkEdits: {},
       resetViewState: true,
     });
     this.emitSelectedFileData();
@@ -773,20 +881,66 @@ export class FileHandleService {
     });
   }
 
+  private schedulePersistSession(): void {
+    if (this.persistSessionTimer !== null) {
+      clearTimeout(this.persistSessionTimer);
+    }
+    this.persistSessionTimer = setTimeout(() => {
+      this.persistSessionTimer = null;
+      void this.persistCurrentSession({ recordHistory: false });
+    }, this.persistSessionDebounceMs);
+  }
+
+  private persistSessionImmediately(): void {
+    if (this.persistSessionTimer !== null) {
+      clearTimeout(this.persistSessionTimer);
+      this.persistSessionTimer = null;
+    }
+    void this.persistCurrentSession({ recordHistory: false });
+  }
+
+  private flushPersistSession(): Promise<void> {
+    if (this.persistSessionTimer !== null) {
+      clearTimeout(this.persistSessionTimer);
+      this.persistSessionTimer = null;
+    }
+    return this.persistCurrentSession({ recordHistory: false });
+  }
+
+  private buildStoredSession(): StoredFileSession | null {
+    if (!this.selectedFileName || !this.selectedFileContent) {
+      return null;
+    }
+
+    this.syncActiveWorkspaceTab();
+    this.workspaceService.flushActiveTabViewState();
+    const tab = this.workspaceService.getActiveTab();
+
+    return {
+      fileName: this.selectedFileName,
+      content: this.selectedFileContent,
+      requestEdits: tab?.requestEdits,
+      commentEdits: tab?.commentEdits,
+      highlightEdits: tab?.highlightEdits,
+      bookmarkEdits: tab?.bookmarkEdits,
+      viewState: tab?.viewState,
+      label: tab?.label,
+      labelCustomized: tab?.labelCustomized,
+    };
+  }
+
   private async persistCurrentSession(options?: {
     source?: StoredHistoryEntry['source'];
     rawXml?: string;
     recordHistory?: boolean;
   }): Promise<void> {
-    if (!this.selectedFileName || !this.selectedFileContent) {
+    const session = this.buildStoredSession();
+    if (!session) {
       return;
     }
 
     try {
-      await this.fileSessionStorage.save({
-        fileName: this.selectedFileName,
-        content: this.selectedFileContent,
-      }, {
+      await this.fileSessionStorage.save(session, {
         source: options?.source,
         rawXml: options?.rawXml,
         recordHistory: options?.recordHistory,
@@ -835,6 +989,36 @@ export class FileHandleService {
     this.selectedFileContent.items.item = items;
   }
 
+  private applyHighlightEditsToContent(): void {
+    if (!this.selectedFileContent || !this.highlightEdits.size) {
+      return;
+    }
+
+    const items = this.normalizeItems(this.selectedFileContent.items.item);
+    this.highlightEdits.forEach((color, position) => {
+      const item = items[position - 1];
+      if (item) {
+        this.writeHighlightToItem(item, color);
+      }
+    });
+    this.selectedFileContent.items.item = items;
+  }
+
+  private applyBookmarkEditsToContent(): void {
+    if (!this.selectedFileContent || !this.bookmarkEdits.size) {
+      return;
+    }
+
+    const items = this.normalizeItems(this.selectedFileContent.items.item);
+    this.bookmarkEdits.forEach((bookmarked, position) => {
+      const item = items[position - 1];
+      if (item) {
+        this.writeBookmarkToItem(item, bookmarked);
+      }
+    });
+    this.selectedFileContent.items.item = items;
+  }
+
   private normalizeItems(items: object[] | object | undefined): object[] {
     if (!items) {
       return [];
@@ -848,6 +1032,30 @@ export class FileHandleService {
       return;
     }
     item.comment = comment;
+  }
+
+  private writeHighlightToItem(item: any, color: RowHighlightColor | null): void {
+    if (!color) {
+      delete item.highlight;
+      return;
+    }
+    if (Array.isArray(item.highlight)) {
+      item.highlight = [color];
+      return;
+    }
+    item.highlight = color;
+  }
+
+  private writeBookmarkToItem(item: any, bookmarked: boolean): void {
+    if (!bookmarked) {
+      delete item.bookmark;
+      return;
+    }
+    if (Array.isArray(item.bookmark)) {
+      item.bookmark = ['true'];
+      return;
+    }
+    item.bookmark = 'true';
   }
 
   private writeRequestToItem(item: any, rawRequest: string): void {
@@ -986,7 +1194,12 @@ export class FileHandleService {
     if (mode === 'replace' || !this.selectedFileContent) {
       this.selectedFileName = payload.fileName;
       this.selectedFileContent = payload.content;
-      this.loadEdits(payload.requestEdits ?? {}, payload.commentEdits ?? {});
+      this.loadEdits(
+        payload.requestEdits ?? {},
+        payload.commentEdits ?? {},
+        payload.highlightEdits ?? {},
+        payload.bookmarkEdits ?? {},
+      );
       this.workspaceService.updateTab(activeTabId, {
         ...this.workspacePayloadToTabUpdate(payload),
         viewState: payload.viewState,
@@ -1016,15 +1229,25 @@ export class FileHandleService {
         ...this.serializeEdits(this.commentEdits),
         ...payload.commentEdits,
       };
+      const mergedHighlightEdits = {
+        ...this.serializeHighlightEdits(this.highlightEdits),
+        ...payload.highlightEdits,
+      };
+      const mergedBookmarkEdits = {
+        ...this.serializeBookmarkEdits(this.bookmarkEdits),
+        ...payload.bookmarkEdits,
+      };
 
       this.selectedFileName = mergedFileName;
       this.selectedFileContent = mergedContent;
-      this.loadEdits(mergedRequestEdits, mergedCommentEdits);
+      this.loadEdits(mergedRequestEdits, mergedCommentEdits, mergedHighlightEdits, mergedBookmarkEdits);
       this.workspaceService.updateTab(activeTabId, {
         fileName: mergedFileName,
         content: mergedContent,
         requestEdits: mergedRequestEdits,
         commentEdits: mergedCommentEdits,
+        highlightEdits: mergedHighlightEdits,
+        bookmarkEdits: mergedBookmarkEdits,
       });
 
       const tab = this.workspaceService.getActiveTab();
@@ -1068,6 +1291,8 @@ export class FileHandleService {
       content: tab.content,
       requestEdits: { ...tab.requestEdits },
       commentEdits: { ...tab.commentEdits },
+      highlightEdits: { ...tab.highlightEdits },
+      bookmarkEdits: { ...tab.bookmarkEdits },
       viewState: tab.viewState ? { ...tab.viewState } : undefined,
     };
   }
@@ -1077,6 +1302,8 @@ export class FileHandleService {
     content?: BurpExport;
     requestEdits: Record<number, string>;
     commentEdits: Record<number, string>;
+    highlightEdits: Record<number, RowHighlightColor | null>;
+    bookmarkEdits: Record<number, boolean>;
     label?: string;
     labelCustomized?: boolean;
   } {
@@ -1085,6 +1312,8 @@ export class FileHandleService {
       content: payload.content,
       requestEdits: { ...payload.requestEdits },
       commentEdits: { ...payload.commentEdits },
+      highlightEdits: { ...payload.highlightEdits },
+      bookmarkEdits: { ...payload.bookmarkEdits },
       label: payload.labelCustomized ? payload.label : undefined,
       labelCustomized: payload.labelCustomized,
     };

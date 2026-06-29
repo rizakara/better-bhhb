@@ -7,7 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { QueryList } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { AngularMaterialModule } from '../../modules/angular-material/angular-material.module';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
@@ -58,6 +58,12 @@ describe('MainComponent', () => {
             getCommentEdit: () => undefined,
             setRequestEdit: () => undefined,
             setCommentEdit: () => undefined,
+            applyHighlightEdit: () => undefined,
+            applyBookmarkEdit: () => undefined,
+            hasHighlightEdit: () => false,
+            hasBookmarkEdit: () => false,
+            getHighlightEdit: () => undefined,
+            getBookmarkEdit: () => undefined,
           },
         },
         { provide: RequestReplayService, useValue: requestReplayService },
@@ -579,5 +585,129 @@ describe('MainComponent', () => {
     expect(component.globalSearchTerm).toBe('token');
     expect((component.columnFilters['host'] as unknown as Set<string>)?.has('https://example.com')).toBeTrue();
     expect(captured.selectedRowPosition).toBe(4);
+  });
+
+  it('applies stored highlight and bookmark edits when file data loads without clearing service edits', () => {
+    const fileData$ = new Subject<{
+      selectedFileName: string;
+      selectedFileContent: {
+        items: {
+          $: { burpVersion: 'test', exportTime: '2026-01-01T00:00:00Z' };
+          item: Array<Record<string, unknown>>;
+        };
+      };
+      viewState?: undefined;
+    }>();
+    const clearEditsSpy = jasmine.createSpy('clearEdits');
+    const fileHandleService = {
+      getselectedFileDataListener: () => fileData$.asObservable(),
+      onBeforeSave: () => of(undefined),
+      setExportFilterState: () => undefined,
+      clearEdits: clearEditsSpy,
+      hasRequestEdit: () => false,
+      hasCommentEdit: () => false,
+      getRequestEdit: () => undefined,
+      getCommentEdit: () => undefined,
+      setRequestEdit: () => undefined,
+      setCommentEdit: () => undefined,
+      applyHighlightEdit: () => undefined,
+      applyBookmarkEdit: () => undefined,
+      hasHighlightEdit: () => true,
+      hasBookmarkEdit: () => true,
+      getHighlightEdit: (position: number) => (position === 1 ? 'red' : undefined),
+      getBookmarkEdit: (position: number) => (position === 1 ? true : undefined),
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      declarations: [MainComponent, InspectorPanelComponent, RequestPanelComponent, ResponsePanelComponent],
+      imports: [CommonModule, AngularMaterialModule, NoopAnimationsModule],
+      providers: [
+        { provide: FileHandleService, useValue: fileHandleService },
+        { provide: RequestReplayService, useValue: requestReplayService },
+        { provide: MatSnackBar, useValue: snackBar },
+        { provide: MatDialog, useValue: { openDialogs: [] } },
+        {
+          provide: HistoryIndexService,
+          useValue: {
+            state$: of({ indexed: 0, total: 0, complete: true }),
+            batchResults$: of([]),
+            startIndexing: () => undefined,
+            cancel: () => undefined,
+          },
+        },
+        HistoryRowParseService,
+        HttpDiffService,
+        WorkspaceService,
+      ],
+    }).compileComponents();
+
+    const localFixture = TestBed.createComponent(MainComponent);
+    const localComponent = localFixture.componentInstance;
+    localFixture.detectChanges();
+
+    fileData$.next({
+      selectedFileName: 'history.xml',
+      selectedFileContent: {
+        items: {
+          $: { burpVersion: 'test', exportTime: '2026-01-01T00:00:00Z' },
+          item: [{
+            host: [{ $: { ip: '127.0.0.1' }, _: 'example.com' }],
+            protocol: 'https',
+            port: '443',
+            method: 'GET',
+            status: '200',
+            path: '/',
+            responselength: '100',
+            comment: '',
+            url: 'https://example.com/',
+            time: 'Mon Jan 01 00:00:00 UTC 2026',
+            mimetype: 'text/html',
+            extension: 'html',
+            request: [{ $: { base64: 'false' }, _: 'GET / HTTP/1.1\r\n\r\n' }],
+            response: [{ $: { base64: 'false' }, _: 'HTTP/1.1 200 OK\r\n\r\n' }],
+          }],
+        },
+      },
+    });
+
+    expect(clearEditsSpy).not.toHaveBeenCalled();
+    expect((localComponent as any).ELEMENT_DATA[0].highlight).toBe('red');
+    expect((localComponent as any).ELEMENT_DATA[0].bookmark).toBeTrue();
+  });
+
+  it('filters rows by highlight color and bookmark state', () => {
+    const rows = [
+      { position: 1, highlight: 'red', bookmark: false, searchIndex: 'a', metadataSearchIndex: 'a' },
+      { position: 2, highlight: 'green', bookmark: true, searchIndex: 'b', metadataSearchIndex: 'b' },
+      { position: 3, highlight: null, bookmark: false, searchIndex: 'c', metadataSearchIndex: 'c' },
+    ];
+    component.dataSource.data = rows;
+    component.dataSource.filterPredicate = (component as any).createFilterPredicate();
+
+    component.toggleHighlightFilterColor('red', true);
+    expect(component.isHighlightColorSelected('red')).toBeTrue();
+    expect(component.isHighlightColorSelected('green')).toBeFalse();
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([1]);
+
+    component.clearHighlightFilters();
+    component.toggleHighlightFilterColor('red', true);
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([1]);
+
+    component.selectAllHighlightFilters();
+    expect(component.rowHighlightOptions.every((option) => component.isHighlightColorSelected(option.color))).toBeTrue();
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([1, 2]);
+
+    component.toggleHighlightFilterColor('green', false);
+    expect(component.isHighlightColorSelected('green')).toBeFalse();
+    expect(component.isHighlightColorSelected('red')).toBeTrue();
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([1]);
+
+    component.clearHighlightFilters();
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([3]);
+
+    component.selectAllHighlightFilters();
+    component.setBookmarkFilterOnly(true);
+    expect((component.dataSource.filteredData as any[]).map((row) => row.position)).toEqual([2]);
   });
 });

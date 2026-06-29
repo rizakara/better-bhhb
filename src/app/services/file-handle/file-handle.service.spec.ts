@@ -93,12 +93,29 @@ describe('FileHandleService', () => {
     expect(service.hasCommentEdit(3)).toBeFalse();
   });
 
+  it('stores highlight and bookmark edits for export', () => {
+    service.applyHighlightEdit(2, 'red', null);
+    service.applyBookmarkEdit(2, true, false);
+    expect(service.hasHighlightEdit(2)).toBeTrue();
+    expect(service.getHighlightEdit(2)).toBe('red');
+    expect(service.hasBookmarkEdit(2)).toBeTrue();
+    expect(service.getBookmarkEdit(2)).toBeTrue();
+    service.applyHighlightEdit(2, null, null);
+    service.applyBookmarkEdit(2, false, false);
+    expect(service.hasHighlightEdit(2)).toBeFalse();
+    expect(service.hasBookmarkEdit(2)).toBeFalse();
+  });
+
   it('clears all edits together', () => {
     service.setRequestEdit(1, 'GET / HTTP/1.1\r\n\r\n');
     service.setCommentEdit(1, 'flagged');
+    service.applyHighlightEdit(1, 'green', null);
+    service.applyBookmarkEdit(1, true, false);
     service.clearEdits();
     expect(service.hasRequestEdit(1)).toBeFalse();
     expect(service.hasCommentEdit(1)).toBeFalse();
+    expect(service.hasHighlightEdit(1)).toBeFalse();
+    expect(service.hasBookmarkEdit(1)).toBeFalse();
   });
 
   it('restores the last opened file session', async () => {
@@ -116,6 +133,40 @@ describe('FileHandleService', () => {
     const restored = await service.restoreLastSession();
 
     expect(restored).toBeTrue();
+  });
+
+  it('restores highlight and bookmark edits from the saved session', async () => {
+    const session = {
+      fileName: 'history.xml',
+      content: makeBurpExport([makeBurpItem('one')]),
+      highlightEdits: { 1: 'red' as const },
+      bookmarkEdits: { 1: true },
+    };
+    storage.load.and.resolveTo(session);
+
+    const restored = await service.restoreLastSession();
+
+    expect(restored).toBeTrue();
+    expect(service.getHighlightEdit(1)).toBe('red');
+    expect(service.getBookmarkEdit(1)).toBeTrue();
+  });
+
+  it('persists highlight and bookmark edits with the session snapshot', async () => {
+    storage.save.and.resolveTo(null);
+    storage.load.and.resolveTo({
+      fileName: 'history.xml',
+      content: makeBurpExport([makeBurpItem('one')]),
+    });
+    await service.restoreLastSession();
+
+    service.applyHighlightEdit(1, 'green', null);
+    service.applyBookmarkEdit(1, true, false);
+    await (service as unknown as { persistCurrentSession(options?: { recordHistory?: boolean }): Promise<void> })
+      .persistCurrentSession({ recordHistory: false });
+
+    const savedSession = storage.save.calls.mostRecent().args[0];
+    expect(savedSession.highlightEdits?.[1]).toBe('green');
+    expect(savedSession.bookmarkEdits?.[1]).toBeTrue();
   });
 
   it('clears persisted session when file is cleared', async () => {
@@ -153,7 +204,7 @@ describe('FileHandleService', () => {
 
     expect(opened).toBeTrue();
     expect(storage.save).toHaveBeenCalledWith(
-      { fileName: 'history.xml', content: entry.content },
+      jasmine.objectContaining({ fileName: 'history.xml', content: entry.content }),
       { source: undefined, rawXml: undefined, recordHistory: false }
     );
   });
@@ -356,6 +407,8 @@ describe('FileHandleService', () => {
     storage.save.and.resolveTo(null);
     const viewState = {
       globalSearchTerm: 'token',
+      bookmarkFilterOnly: false,
+      highlightFilterColors: null,
       columnFilters: {},
       columnFilterOptions: {},
       activeFilterColumn: '',
@@ -398,6 +451,8 @@ describe('FileHandleService', () => {
         content: makeBurpExport([makeBurpItem('prod')]),
         requestEdits: { 1: 'GET /edited HTTP/1.1\r\n\r\n' },
         commentEdits: { 1: 'flagged' },
+        highlightEdits: { 1: 'red' },
+        bookmarkEdits: { 1: true },
         viewState,
       },
     };
@@ -412,6 +467,8 @@ describe('FileHandleService', () => {
     expect(activeTab?.viewState?.globalSearchTerm).toBe('token');
     expect(activeTab?.requestEdits[1]).toContain('/edited');
     expect(activeTab?.commentEdits[1]).toBe('flagged');
+    expect(activeTab?.highlightEdits[1]).toBe('red');
+    expect(activeTab?.bookmarkEdits[1]).toBeTrue();
     expect(storage.save).toHaveBeenCalled();
   });
 
@@ -430,6 +487,8 @@ describe('FileHandleService', () => {
           content: makeBurpExport([makeBurpItem('first')]),
           requestEdits: {},
           commentEdits: {},
+          highlightEdits: {},
+          bookmarkEdits: {},
         },
         {
           label: 'Workspace 2',
@@ -438,6 +497,8 @@ describe('FileHandleService', () => {
           content: makeBurpExport([makeBurpItem('second')]),
           requestEdits: {},
           commentEdits: {},
+          highlightEdits: {},
+          bookmarkEdits: {},
         },
       ],
     };

@@ -3,6 +3,7 @@ import { RowHighlightColor } from '../row-triage/row-triage.types';
 export interface WorkspaceViewState {
   globalSearchTerm: string;
   bookmarkFilterOnly: boolean;
+  highlightFilterColors: RowHighlightColor[] | null;
   columnFilters: Record<string, string[] | null>;
   columnFilterOptions: Record<string, string[]>;
   activeFilterColumn: string;

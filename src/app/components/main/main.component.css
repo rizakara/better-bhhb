@@ -544,6 +544,173 @@ as-split>as-split-area {
   box-shadow: inset 0 -3px 0 var(--text-muted);
 }
 
+.row-position-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.row-bookmark-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  line-height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.highlight-filter-button {
+  flex-shrink: 0;
+  width: 36px;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 0;
+  color: inherit;
+  opacity: 0.54;
+}
+
+.highlight-filter-button mat-icon {
+  font-size: calc(20px * var(--font-scale));
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+}
+
+.highlight-filter-button.highlight-filter-active {
+  opacity: 1;
+}
+
+.highlight-filter-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+:host ::ng-deep .column-filter-menu-panel .column-filter-option .mat-mdc-checkbox .mdc-label {
+  width: 100%;
+}
+
+:host ::ng-deep .column-filter-menu-panel .column-filter-option .mat-mdc-checkbox .mdc-form-field {
+  width: 100%;
+}
+
+:host ::ng-deep .column-filter-menu-panel .column-filter-option .mat-mdc-checkbox .mdc-label .highlight-filter-option {
+  display: flex;
+  width: 100%;
+}
+
+.row-highlight-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+
+.row-highlight-swatch-none {
+  background: transparent;
+  border-style: dashed;
+}
+
+.row-highlight-swatch-red { background: #ff8a80; }
+.row-highlight-swatch-orange { background: #ffb74d; }
+.row-highlight-swatch-yellow { background: #fff176; }
+.row-highlight-swatch-green { background: #81c784; }
+.row-highlight-swatch-cyan { background: #4dd0e1; }
+.row-highlight-swatch-blue { background: #64b5f6; }
+.row-highlight-swatch-pink { background: #f48fb1; }
+.row-highlight-swatch-mauve { background: #ce93d8; }
+.row-highlight-swatch-gray { background: #bdbdbd; }
+
+tr.row-highlight-red,
+tr.row-highlight-red td,
+tr.row-highlight-red .mat-mdc-cell {
+  background-color: rgba(255, 82, 82, 0.16) !important;
+}
+
+tr.row-highlight-orange,
+tr.row-highlight-orange td,
+tr.row-highlight-orange .mat-mdc-cell {
+  background-color: rgba(255, 152, 0, 0.16) !important;
+}
+
+tr.row-highlight-yellow,
+tr.row-highlight-yellow td,
+tr.row-highlight-yellow .mat-mdc-cell {
+  background-color: rgba(255, 235, 59, 0.2) !important;
+}
+
+tr.row-highlight-green,
+tr.row-highlight-green td,
+tr.row-highlight-green .mat-mdc-cell {
+  background-color: rgba(76, 175, 80, 0.16) !important;
+}
+
+tr.row-highlight-cyan,
+tr.row-highlight-cyan td,
+tr.row-highlight-cyan .mat-mdc-cell {
+  background-color: rgba(0, 188, 212, 0.14) !important;
+}
+
+tr.row-highlight-blue,
+tr.row-highlight-blue td,
+tr.row-highlight-blue .mat-mdc-cell {
+  background-color: rgba(66, 133, 244, 0.14) !important;
+}
+
+tr.row-highlight-pink,
+tr.row-highlight-pink td,
+tr.row-highlight-pink .mat-mdc-cell {
+  background-color: rgba(233, 30, 99, 0.14) !important;
+}
+
+tr.row-highlight-mauve,
+tr.row-highlight-mauve td,
+tr.row-highlight-mauve .mat-mdc-cell {
+  background-color: rgba(156, 39, 176, 0.14) !important;
+}
+
+tr.row-highlight-gray,
+tr.row-highlight-gray td,
+tr.row-highlight-gray .mat-mdc-cell {
+  background-color: rgba(158, 158, 158, 0.14) !important;
+}
+
+tr.row-is-clicked.row-highlight-red,
+tr.row-is-clicked.row-highlight-red td,
+tr.row-is-clicked.row-highlight-red .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-orange,
+tr.row-is-clicked.row-highlight-orange td,
+tr.row-is-clicked.row-highlight-orange .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-yellow,
+tr.row-is-clicked.row-highlight-yellow td,
+tr.row-is-clicked.row-highlight-yellow .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-green,
+tr.row-is-clicked.row-highlight-green td,
+tr.row-is-clicked.row-highlight-green .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-cyan,
+tr.row-is-clicked.row-highlight-cyan td,
+tr.row-is-clicked.row-highlight-cyan .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-blue,
+tr.row-is-clicked.row-highlight-blue td,
+tr.row-is-clicked.row-highlight-blue .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-pink,
+tr.row-is-clicked.row-highlight-pink td,
+tr.row-is-clicked.row-highlight-pink .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-mauve,
+tr.row-is-clicked.row-highlight-mauve td,
+tr.row-is-clicked.row-highlight-mauve .mat-mdc-cell,
+tr.row-is-clicked.row-highlight-gray,
+tr.row-is-clicked.row-highlight-gray td,
+tr.row-is-clicked.row-highlight-gray .mat-mdc-cell {
+  background-color: var(--selected-bg) !important;
+}
+
 .comment-cell {
   cursor: text;
   vertical-align: middle;

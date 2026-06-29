@@ -29,6 +29,13 @@ import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceViewState } from '../../services/workspace/workspace-view-state';
+import {
+  normalizeRowBookmark,
+  normalizeRowHighlight,
+  ROW_HIGHLIGHT_COLORS,
+  ROW_HIGHLIGHT_OPTIONS,
+  RowHighlightColor,
+} from '../../services/row-triage/row-triage.types';
 import { InspectorTab } from '../inspector/inspector-panel.component';
 import { RequestPanelComponent } from '../panels/request-panel.component';
 import { ResponsePanelComponent } from '../panels/response-panel.component';
@@ -123,6 +130,7 @@ export class MainComponent implements OnInit, OnDestroy {
 
   detailPanelLoading = false;
   readonly columnFilterOptionsCap = COLUMN_FILTER_OPTIONS_CAP;
+  readonly rowHighlightOptions = ROW_HIGHLIGHT_OPTIONS;
 
   fileSub!: Subscription
   beforeSaveSub!: Subscription
@@ -175,6 +183,9 @@ export class MainComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource();
   ELEMENT_DATA: any = [];
   globalSearchTerm: string = '';
+  bookmarkFilterOnly = false;
+  highlightFilterColors: Set<RowHighlightColor> | null = null;
+  highlightFilterMenuOpen = false;
   columnFilterOptions: Record<string, string[]> = {};
   columnFilterSearch: Record<string, string> = {};
   columnFilters: Record<string, Set<string> | null> = {};
@@ -220,6 +231,8 @@ export class MainComponent implements OnInit, OnDestroy {
   editingCommentPosition: number | null = null;
   private originalRequestRaws = new Map<number, string>();
   private originalComments = new Map<number, string>();
+  private originalHighlights = new Map<number, RowHighlightColor | null>();
+  private originalBookmarks = new Map<number, boolean>();
   wrapRequest: boolean = false;
   wrapResponse: boolean = false;
   requestSearch: string = '';
@@ -275,6 +288,10 @@ export class MainComponent implements OnInit, OnDestroy {
     return this.hiddenColumns.size;
   }
 
+  get highlightFilterActive(): boolean {
+    return this.bookmarkFilterOnly || this.highlightFilterColors !== null;
+  }
+
   ngOnDestroy(): void {
     document.removeEventListener('keydown', this.onEscapeCapture, true);
     this.endColumnResize();
@@ -307,6 +324,7 @@ export class MainComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.flushCurrentRequestEdit();
         this.flushAllCommentEdits();
+        this.flushAllTriageEdits();
         this.flushExportFilterState();
       });
     this.indexingStateSub = this.historyIndexService.state$.subscribe((state) => {
@@ -377,7 +395,11 @@ export class MainComponent implements OnInit, OnDestroy {
     const itemList = Array.isArray(items) ? items : items ? [items] : [];
     itemList.forEach((element: any) => {
       const comment = this.normalizeXmlValue(element.comment);
+      const highlight = normalizeRowHighlight(element.highlight);
+      const bookmark = normalizeRowBookmark(element.bookmark);
       this.originalComments.set(position, comment);
+      this.originalHighlights.set(position, highlight);
+      this.originalBookmarks.set(position, bookmark);
       const metadata = {
         position,
         ip: element.host[0].$.ip,
@@ -389,6 +411,8 @@ export class MainComponent implements OnInit, OnDestroy {
         path: this.normalizeXmlValue(element.path),
         responselength: element.responselength,
         comment,
+        highlight,
+        bookmark,
         url: element.url,
         time: this.normalizeXmlValue(element.time),
         timeMs: this.parseBurpTime(element.time),
@@ -409,6 +433,7 @@ export class MainComponent implements OnInit, OnDestroy {
       )
       position += 1;
     });
+    this.ELEMENT_DATA.forEach((row: any) => this.applyStoredTriageEdits(row));
   }
 
   private mergeIndexResults(results: IndexedRowResult[]): void {
@@ -750,6 +775,7 @@ export class MainComponent implements OnInit, OnDestroy {
     if (column === 'time') {
       this.resetTimeFilter();
       this.refreshTableFilter();
+      this.touchView();
       return;
     }
     this.columnFilters[column] = null;
@@ -760,6 +786,7 @@ export class MainComponent implements OnInit, OnDestroy {
       this.resetColumnTextFilter(column);
     }
     this.refreshTableFilter();
+    this.touchView();
   }
 
   resetColumnFilter(column: string) {
@@ -767,12 +794,14 @@ export class MainComponent implements OnInit, OnDestroy {
       this.timeFilterMode = 'blocked';
       this.timeFilterError = '';
       this.refreshTableFilter();
+      this.touchView();
       return;
     }
     if (this.isTextFilterColumn(column) && this.getColumnTextFilterMode(column) === 'text') {
       this.columnTextFilters[column] = '';
       this.columnTextFilterBlocked[column] = true;
       this.refreshTableFilter();
+      this.touchView();
       return;
     }
     this.columnFilters[column] = new Set();
@@ -783,6 +812,7 @@ export class MainComponent implements OnInit, OnDestroy {
       this.resetColumnTextFilter(column);
     }
     this.refreshTableFilter();
+    this.touchView();
   }
 
   setColumnTextFilterMode(column: string, mode: 'values' | 'text') {
@@ -959,6 +989,21 @@ export class MainComponent implements OnInit, OnDestroy {
         const term = this.globalSearchTerm.toLowerCase();
         const searchIndex = String(data.searchIndex ?? data.metadataSearchIndex ?? '');
         if (!searchIndex.includes(term)) {
+          return false;
+        }
+      }
+
+      if (this.bookmarkFilterOnly && !data.bookmark) {
+        return false;
+      }
+
+      if (this.highlightFilterColors !== null) {
+        const rowColor = (data.highlight as RowHighlightColor | null) ?? null;
+        if (!this.highlightFilterColors.size) {
+          if (rowColor) {
+            return false;
+          }
+        } else if (!rowColor || !this.highlightFilterColors.has(rowColor)) {
           return false;
         }
       }
@@ -1629,6 +1674,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.clickedRow = primary;
     this.applyStoredRequestEdit(primary);
     this.applyStoredCommentEdit(primary);
+    this.applyStoredTriageEdits(primary);
     this.compareRow = secondary;
     this.diffMode = true;
     if (this.replayMode) {
@@ -2311,14 +2357,159 @@ export class MainComponent implements OnInit, OnDestroy {
     this.ELEMENT_DATA.forEach((row: any) => this.flushCommentEdit(row));
   }
 
+  private applyStoredTriageEdits(row: any): void {
+    this.applyStoredHighlightEdit(row);
+    this.applyStoredBookmarkEdit(row);
+  }
+
+  private applyStoredHighlightEdit(row: any): void {
+    const editedHighlight = this.FileHandleService.getHighlightEdit(row.position);
+    if (editedHighlight === undefined) {
+      return;
+    }
+    row.highlight = editedHighlight;
+  }
+
+  private applyStoredBookmarkEdit(row: any): void {
+    const editedBookmark = this.FileHandleService.getBookmarkEdit(row.position);
+    if (editedBookmark === undefined) {
+      return;
+    }
+    row.bookmark = editedBookmark;
+  }
+
+  private flushHighlightEdit(row: any): void {
+    const position = row.position;
+    const baseline = this.originalHighlights.get(position) ?? null;
+    const current = row.highlight ?? null;
+    this.FileHandleService.applyHighlightEdit(position, current, baseline);
+  }
+
+  private flushBookmarkEdit(row: any): void {
+    const position = row.position;
+    const baseline = this.originalBookmarks.get(position) ?? false;
+    const current = !!row.bookmark;
+    this.FileHandleService.applyBookmarkEdit(position, current, baseline);
+  }
+
+  private flushAllTriageEdits(): void {
+    this.ELEMENT_DATA.forEach((row: any) => {
+      this.flushHighlightEdit(row);
+      this.flushBookmarkEdit(row);
+    });
+  }
+
+  getRowHighlightClass(row: any): string {
+    return row.highlight ? `row-highlight-${row.highlight}` : '';
+  }
+
+  highlightIsEdited(row: any): boolean {
+    return this.FileHandleService.hasHighlightEdit(row.position);
+  }
+
+  bookmarkIsEdited(row: any): boolean {
+    return this.FileHandleService.hasBookmarkEdit(row.position);
+  }
+
+  isHighlightColorSelected(color: RowHighlightColor): boolean {
+    return this.highlightFilterColors?.has(color) ?? false;
+  }
+
+  onHighlightFilterMenuOpened(): void {
+    this.highlightFilterMenuOpen = true;
+  }
+
+  onHighlightFilterMenuClosed(): void {
+    this.highlightFilterMenuOpen = false;
+  }
+
+  private applyHighlightFilterChanges(): void {
+    this.refreshTableFilter();
+    this.touchView();
+  }
+
+  toggleHighlightFilterColor(color: RowHighlightColor, checked: boolean): void {
+    if (checked) {
+      if (this.highlightFilterColors === null || !this.highlightFilterColors.size) {
+        this.highlightFilterColors = new Set([color]);
+        this.applyHighlightFilterChanges();
+        return;
+      }
+
+      const selected = new Set(this.highlightFilterColors);
+      selected.add(color);
+      this.highlightFilterColors = selected;
+      this.applyHighlightFilterChanges();
+      return;
+    }
+
+    let selected = this.highlightFilterColors;
+    if (selected === null) {
+      selected = new Set(ROW_HIGHLIGHT_COLORS);
+    }
+
+    selected.delete(color);
+    this.highlightFilterColors = selected;
+    this.applyHighlightFilterChanges();
+  }
+
+  setBookmarkFilterOnly(checked: boolean): void {
+    this.bookmarkFilterOnly = checked;
+    this.applyHighlightFilterChanges();
+  }
+
+  selectAllHighlightFilters(): void {
+    this.highlightFilterColors = new Set(ROW_HIGHLIGHT_COLORS);
+    this.bookmarkFilterOnly = false;
+    this.applyHighlightFilterChanges();
+  }
+
+  clearHighlightFilters(): void {
+    this.highlightFilterColors = new Set<RowHighlightColor>();
+    this.applyHighlightFilterChanges();
+  }
+
+  setContextMenuHighlight(color: RowHighlightColor | null): void {
+    if (!this.contextMenuRow) {
+      return;
+    }
+    this.applyRowHighlight(this.contextMenuRow, color);
+  }
+
+  toggleContextMenuBookmark(): void {
+    if (!this.contextMenuRow) {
+      return;
+    }
+    this.applyRowBookmark(this.contextMenuRow, !this.contextMenuRow.bookmark);
+  }
+
+  private applyRowHighlight(row: any, color: RowHighlightColor | null): void {
+    row.highlight = color;
+    this.flushHighlightEdit(row);
+    this.refreshTableFilter();
+    this.touchView();
+  }
+
+  private applyRowBookmark(row: any, bookmarked: boolean): void {
+    row.bookmark = bookmarked;
+    this.flushBookmarkEdit(row);
+    this.refreshTableFilter();
+    this.touchView();
+  }
+
+  getHighlightOptionLabel(color: RowHighlightColor): string {
+    return this.rowHighlightOptions.find((option) => option.color === color)?.label ?? color;
+  }
+
   private findRowByPosition(position: number): any | undefined {
     return this.ELEMENT_DATA.find((row: any) => row.position === position);
   }
 
   private clearRequestEdits(): void {
-    this.FileHandleService.clearEdits();
     this.originalRequestRaws.clear();
     this.originalComments.clear();
+    this.originalHighlights.clear();
+    this.originalBookmarks.clear();
     this.editingCommentPosition = null;
     this.replayRequestRaw = '';
     this.replayRequestBaseline = '';
@@ -3113,6 +3304,9 @@ export class MainComponent implements OnInit, OnDestroy {
       this.resetColumnFilters();
     }
 
+    this.bookmarkFilterOnly = false;
+    this.highlightFilterColors = null;
+
     if (this.treeFilter) {
       this.clearTreeFilter();
     } else {
@@ -3130,6 +3324,31 @@ export class MainComponent implements OnInit, OnDestroy {
       chips.push({
         id: 'search',
         label: `Search: "${short}"`,
+      });
+    }
+
+    if (this.bookmarkFilterOnly) {
+      chips.push({
+        id: 'bookmark',
+        label: 'Bookmarked only',
+      });
+    }
+
+    if (this.highlightFilterColors !== null) {
+      const colors = Array.from(this.highlightFilterColors);
+      let label: string;
+      if (!colors.length) {
+        label = 'Highlight: (none)';
+      } else if (colors.length === ROW_HIGHLIGHT_COLORS.length) {
+        label = 'Highlight: all colors';
+      } else if (colors.length <= 2) {
+        label = `Highlight: ${colors.map((color) => this.getHighlightOptionLabel(color)).join(', ')}`;
+      } else {
+        label = `Highlight: ${this.getHighlightOptionLabel(colors[0])}, ${this.getHighlightOptionLabel(colors[1])} +${colors.length - 2}`;
+      }
+      chips.push({
+        id: 'highlight',
+        label,
       });
     }
 
@@ -3240,6 +3459,14 @@ export class MainComponent implements OnInit, OnDestroy {
     switch (chipId) {
       case 'search':
         this.clearGlobalSearch();
+        return;
+      case 'bookmark':
+        this.setBookmarkFilterOnly(false);
+        return;
+      case 'highlight':
+        this.highlightFilterColors = null;
+        this.refreshTableFilter();
+        this.touchView();
         return;
       case 'tree':
         this.clearTreeFilter();
@@ -3458,6 +3685,10 @@ export class MainComponent implements OnInit, OnDestroy {
 
     return {
       globalSearchTerm: this.globalSearchTerm,
+      bookmarkFilterOnly: this.bookmarkFilterOnly,
+      highlightFilterColors: this.highlightFilterColors === null
+        ? null
+        : Array.from(this.highlightFilterColors),
       columnFilters,
       columnFilterOptions: { ...this.columnFilterOptions },
       activeFilterColumn: this.activeFilterColumn,
@@ -3492,6 +3723,11 @@ export class MainComponent implements OnInit, OnDestroy {
 
   private restoreViewState(state: WorkspaceViewState): void {
     this.globalSearchTerm = state.globalSearchTerm ?? '';
+    this.bookmarkFilterOnly = !!state.bookmarkFilterOnly;
+    const savedHighlightFilter = state.highlightFilterColors;
+    this.highlightFilterColors = savedHighlightFilter === null || savedHighlightFilter === undefined
+      ? null
+      : new Set(savedHighlightFilter);
     this.columnFilterOptions = { ...state.columnFilterOptions };
     this.activeFilterColumn = state.activeFilterColumn ?? '';
     this.ipFilterMode = state.ipFilterMode ?? 'values';

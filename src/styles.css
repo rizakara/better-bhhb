@@ -413,7 +413,9 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 .mat-menu-panel.row-context-copy-submenu,
 .mat-mdc-menu-panel.row-context-copy-submenu,
 .mat-menu-panel.row-context-compare-submenu,
-.mat-mdc-menu-panel.row-context-compare-submenu {
+.mat-mdc-menu-panel.row-context-compare-submenu,
+.mat-menu-panel.row-highlight-submenu,
+.mat-mdc-menu-panel.row-highlight-submenu {
   --mat-menu-item-leading-spacing: 16px;
   --mat-menu-item-trailing-spacing: 16px;
   --mat-menu-item-label-text-line-height: var(--row-menu);
@@ -461,7 +463,8 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 .mat-menu-panel.row-context-menu-panel .mat-menu-item,
 .mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item,
 .mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item,
-.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item {
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item,
+.mat-mdc-menu-panel.row-highlight-submenu .mat-mdc-menu-item {
   font-size: var(--fs-base);
   line-height: var(--row-menu);
   height: var(--row-menu);
@@ -558,7 +561,9 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
 }
 
 .mat-menu-panel.row-context-copy-submenu .mat-menu-item,
-.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item {
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item,
+.mat-menu-panel.row-highlight-submenu .mat-menu-item,
+.mat-mdc-menu-panel.row-highlight-submenu .mat-mdc-menu-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -574,6 +579,24 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   min-width: 0;
   width: 100%;
   white-space: nowrap;
+}
+
+.mat-mdc-menu-panel.row-highlight-submenu .mat-mdc-menu-item .mat-mdc-menu-item-text {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.mat-menu-panel.row-highlight-submenu .row-context-copy-label,
+.mat-mdc-menu-panel.row-highlight-submenu .row-context-copy-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 
 .mat-menu-panel.row-context-copy-submenu .row-context-copy-label,
