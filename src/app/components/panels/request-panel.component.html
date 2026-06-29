@@ -17,6 +17,10 @@
     <div class="panel-search-row request-toolbar">
         <button type="button" (click)="copyCurl.emit()" matTooltip="Copy as cURL">cURL</button>
         <button type="button" (click)="copyRaw.emit()" matTooltip="Copy raw HTTP request">Raw</button>
+        <button type="button" (click)="copyPython.emit()" matTooltip="Copy as Python requests">Python</button>
+        <button type="button" (click)="copyFetch.emit()" matTooltip="Copy as fetch()">fetch</button>
+        <button type="button" (click)="copyAxios.emit()" matTooltip="Copy as axios">axios</button>
+        <button type="button" (click)="copyHttpie.emit()" matTooltip="Copy as HTTPie">HTTPie</button>
         <button type="button" *ngIf="view.replayMode && view.replayRequestDirty" (click)="resetReplay.emit()">Reset</button>
         <span class="toolbar-spacer"></span>
         <span class="edit-status" *ngIf="view.requestIsEdited">Edited</span>
@@ -38,7 +42,7 @@
             (click)="diffLayoutChange.emit('side-by-side')">Split</button>
     </div>
     <div class="replay-hint" *ngIf="view.replayMode">
-        Edit the request, then copy as cURL to replay in your terminal or Burp Repeater.
+        Edit the request, then copy as cURL, Python, fetch, axios, or HTTPie to replay elsewhere.
     </div>
 </div>
 <textarea *ngIf="view.replayMode" class="content replay-editor" [class.wrapy]="view.wrap"

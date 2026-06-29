@@ -26,6 +26,10 @@ export class RequestPanelComponent {
   @Output() toggleInspector = new EventEmitter<void>();
   @Output() copyCurl = new EventEmitter<void>();
   @Output() copyRaw = new EventEmitter<void>();
+  @Output() copyPython = new EventEmitter<void>();
+  @Output() copyFetch = new EventEmitter<void>();
+  @Output() copyAxios = new EventEmitter<void>();
+  @Output() copyHttpie = new EventEmitter<void>();
   @Output() resetReplay = new EventEmitter<void>();
   @Output() searchChange = new EventEmitter<Event>();
   @Output() searchKeydown = new EventEmitter<KeyboardEvent>();

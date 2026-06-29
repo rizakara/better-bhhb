@@ -260,7 +260,8 @@
   cursor: text;
 }
 
-.request-toolbar {
+.request-toolbar,
+.response-toolbar {
   gap: 6px;
   padding: 4px 10px;
 }

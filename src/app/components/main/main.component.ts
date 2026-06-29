@@ -1734,6 +1734,16 @@ export class MainComponent implements OnInit, OnDestroy {
     await this.copyContextMenuText(raw, 'raw response');
   }
 
+  async copyContextMenuResponseBody(): Promise<void> {
+    if (!this.contextMenuRow) {
+      return;
+    }
+
+    this.ensureRowParsed(this.contextMenuRow);
+    const body = String(this.contextMenuRow.response?.[1] ?? '');
+    await this.copyContextMenuText(body, 'response body');
+  }
+
   private async copyContextMenuText(value: string, label: string): Promise<void> {
     if (!value) {
       return;
@@ -2097,6 +2107,59 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   async copyRequestAsCurl(): Promise<void> {
+    await this.copyActiveRequestAs('cURL', (raw) =>
+      this.requestReplayService.rawRequestToCurl(raw, this.clickedRow.host, this.clickedRow.url),
+    );
+  }
+
+  async copyRequestAsPython(): Promise<void> {
+    await this.copyActiveRequestAs('Python requests', (raw) =>
+      this.requestReplayService.rawRequestToPythonRequests(raw, this.clickedRow.host, this.clickedRow.url),
+    );
+  }
+
+  async copyRequestAsFetch(): Promise<void> {
+    await this.copyActiveRequestAs('fetch()', (raw) =>
+      this.requestReplayService.rawRequestToFetch(raw, this.clickedRow.host, this.clickedRow.url),
+    );
+  }
+
+  async copyRequestAsAxios(): Promise<void> {
+    await this.copyActiveRequestAs('axios', (raw) =>
+      this.requestReplayService.rawRequestToAxios(raw, this.clickedRow.host, this.clickedRow.url),
+    );
+  }
+
+  async copyRequestAsHttpie(): Promise<void> {
+    await this.copyActiveRequestAs('HTTPie', (raw) =>
+      this.requestReplayService.rawRequestToHttpie(raw, this.clickedRow.host, this.clickedRow.url),
+    );
+  }
+
+  async copyResponseBody(): Promise<void> {
+    if (!this.clickedRow) {
+      return;
+    }
+
+    try {
+      this.ensureRowParsed(this.clickedRow);
+      const body = String(this.clickedRow.response?.[1] ?? '');
+      if (!body) {
+        this.snackBar.open('Response has no body', undefined, { duration: 2200 });
+        return;
+      }
+      await this.copyTextToClipboard(body);
+      this.snackBar.open('Copied response body to clipboard', undefined, { duration: 2200 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to copy response body';
+      this.snackBar.open(message, undefined, { duration: 3200 });
+    }
+  }
+
+  private async copyActiveRequestAs(
+    label: string,
+    buildCopyText: (raw: string) => string,
+  ): Promise<void> {
     if (!this.clickedRow) {
       return;
     }
@@ -2107,15 +2170,11 @@ export class MainComponent implements OnInit, OnDestroy {
 
     try {
       const raw = this.getActiveRequestRaw();
-      const curl = this.requestReplayService.rawRequestToCurl(
-        raw,
-        this.clickedRow.host,
-        this.clickedRow.url,
-      );
-      await this.copyTextToClipboard(curl);
-      this.snackBar.open('Copied cURL to clipboard', undefined, { duration: 2200 });
+      const text = buildCopyText(raw);
+      await this.copyTextToClipboard(text);
+      this.snackBar.open(`Copied ${label} to clipboard`, undefined, { duration: 2200 });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to build cURL';
+      const message = error instanceof Error ? error.message : `Failed to build ${label}`;
       this.snackBar.open(message, undefined, { duration: 3200 });
     }
   }

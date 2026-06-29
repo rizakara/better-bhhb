@@ -25,6 +25,7 @@ export class ResponsePanelComponent {
   @Output() searchKeydown = new EventEmitter<KeyboardEvent>();
   @Output() diffLayoutChange = new EventEmitter<'unified' | 'side-by-side'>();
   @Output() expandBody = new EventEmitter<void>();
+  @Output() copyBody = new EventEmitter<void>();
 
   @ViewChild('searchInputRef') private searchInputRef?: ElementRef<HTMLInputElement>;
 

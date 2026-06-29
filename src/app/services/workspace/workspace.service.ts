@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { BurpExport } from '../file-handle/file-handle.service';
+import { RowHighlightColor } from '../row-triage/row-triage.types';
 import { WorkspaceTabData, WorkspaceViewState } from './workspace-view-state';
 
 export type ViewStateProvider = () => WorkspaceViewState | undefined;
@@ -120,6 +121,8 @@ export class WorkspaceService {
     options?: {
       requestEdits?: Record<number, string>;
       commentEdits?: Record<number, string>;
+      highlightEdits?: Record<number, RowHighlightColor | null>;
+      bookmarkEdits?: Record<number, boolean>;
       viewState?: WorkspaceViewState;
       resetViewState?: boolean;
     }
@@ -130,6 +133,8 @@ export class WorkspaceService {
     tab.content = content;
     tab.requestEdits = options?.requestEdits ?? {};
     tab.commentEdits = options?.commentEdits ?? {};
+    tab.highlightEdits = options?.highlightEdits ?? {};
+    tab.bookmarkEdits = options?.bookmarkEdits ?? {};
 
     if (options?.resetViewState) {
       tab.viewState = undefined;
@@ -147,10 +152,17 @@ export class WorkspaceService {
     return this.cloneTab(tab);
   }
 
-  updateActiveTabEdits(requestEdits: Record<number, string>, commentEdits: Record<number, string>): void {
+  updateActiveTabEdits(
+    requestEdits: Record<number, string>,
+    commentEdits: Record<number, string>,
+    highlightEdits: Record<number, RowHighlightColor | null> = {},
+    bookmarkEdits: Record<number, boolean> = {},
+  ): void {
     const tab = this.ensureActiveTab();
     tab.requestEdits = { ...requestEdits };
     tab.commentEdits = { ...commentEdits };
+    tab.highlightEdits = { ...highlightEdits };
+    tab.bookmarkEdits = { ...bookmarkEdits };
   }
 
   updateActiveTabViewState(viewState: WorkspaceViewState | undefined): void {
@@ -165,6 +177,8 @@ export class WorkspaceService {
       content?: BurpExport;
       requestEdits?: Record<number, string>;
       commentEdits?: Record<number, string>;
+      highlightEdits?: Record<number, RowHighlightColor | null>;
+      bookmarkEdits?: Record<number, boolean>;
       viewState?: WorkspaceViewState;
       resetViewState?: boolean;
       label?: string;
@@ -188,6 +202,12 @@ export class WorkspaceService {
     if (data.commentEdits !== undefined) {
       tab.commentEdits = { ...data.commentEdits };
     }
+    if (data.highlightEdits !== undefined) {
+      tab.highlightEdits = { ...data.highlightEdits };
+    }
+    if (data.bookmarkEdits !== undefined) {
+      tab.bookmarkEdits = { ...data.bookmarkEdits };
+    }
     if (data.resetViewState) {
       tab.viewState = undefined;
     } else if (data.viewState !== undefined) {
@@ -209,6 +229,8 @@ export class WorkspaceService {
       label?: string;
       requestEdits?: Record<number, string>;
       commentEdits?: Record<number, string>;
+      highlightEdits?: Record<number, RowHighlightColor | null>;
+      bookmarkEdits?: Record<number, boolean>;
       viewState?: WorkspaceViewState;
     }
   ): WorkspaceTabData {
@@ -219,6 +241,8 @@ export class WorkspaceService {
     tab.content = content;
     tab.requestEdits = options?.requestEdits ?? {};
     tab.commentEdits = options?.commentEdits ?? {};
+    tab.highlightEdits = options?.highlightEdits ?? {};
+    tab.bookmarkEdits = options?.bookmarkEdits ?? {};
     tab.viewState = options?.viewState;
     this.tabs.push(tab);
     this.activeTabId = tab.id;
@@ -249,6 +273,8 @@ export class WorkspaceService {
       labelCustomized: !!label,
       requestEdits: {},
       commentEdits: {},
+      highlightEdits: {},
+      bookmarkEdits: {},
     };
   }
 
@@ -257,6 +283,8 @@ export class WorkspaceService {
     tab.content = undefined;
     tab.requestEdits = {};
     tab.commentEdits = {};
+    tab.highlightEdits = {};
+    tab.bookmarkEdits = {};
     tab.viewState = undefined;
     tab.label = this.nextDefaultLabel();
     tab.labelCustomized = false;
@@ -291,6 +319,8 @@ export class WorkspaceService {
       content: tab.content,
       requestEdits: { ...tab.requestEdits },
       commentEdits: { ...tab.commentEdits },
+      highlightEdits: { ...tab.highlightEdits },
+      bookmarkEdits: { ...tab.bookmarkEdits },
       viewState: tab.viewState ? { ...tab.viewState } : undefined,
     };
   }

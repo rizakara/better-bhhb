@@ -261,8 +261,23 @@
                             <button mat-menu-item (click)="copyContextMenuResponseRaw()" [disabled]="!contextMenuRow">
                                 Response (raw)
                             </button>
+                            <button mat-menu-item (click)="copyContextMenuResponseBody()" [disabled]="!contextMenuRow">
+                                Response (body)
+                            </button>
                             <button mat-menu-item (click)="copyRequestAsCurl()" [disabled]="!contextMenuRow">
                                 as cURL
+                            </button>
+                            <button mat-menu-item (click)="copyRequestAsPython()" [disabled]="!contextMenuRow">
+                                as Python requests
+                            </button>
+                            <button mat-menu-item (click)="copyRequestAsFetch()" [disabled]="!contextMenuRow">
+                                as fetch()
+                            </button>
+                            <button mat-menu-item (click)="copyRequestAsAxios()" [disabled]="!contextMenuRow">
+                                as axios
+                            </button>
+                            <button mat-menu-item (click)="copyRequestAsHttpie()" [disabled]="!contextMenuRow">
+                                as HTTPie
                             </button>
                             <mat-divider></mat-divider>
                             <button mat-menu-item (click)="copyContextMenuField('time')"
@@ -528,6 +543,10 @@
                                 (toggleInspector)="toggleInspector()"
                                 (copyCurl)="copyRequestAsCurl()"
                                 (copyRaw)="copyRequestRaw()"
+                                (copyPython)="copyRequestAsPython()"
+                                (copyFetch)="copyRequestAsFetch()"
+                                (copyAxios)="copyRequestAsAxios()"
+                                (copyHttpie)="copyRequestAsHttpie()"
                                 (resetReplay)="resetReplayRequest()"
                                 (searchChange)="onRequestSearch($event)"
                                 (searchKeydown)="onRequestSearchKeydown($event)"
@@ -545,7 +564,8 @@
                                 (searchChange)="onResponseSearch($event)"
                                 (searchKeydown)="onResponseSearchKeydown($event)"
                                 (diffLayoutChange)="setDiffLayout($event)"
-                                (expandBody)="expandResponseBody()">
+                                (expandBody)="expandResponseBody()"
+                                (copyBody)="copyResponseBody()">
                             </app-response-panel>
                         </as-split-area>
                         <as-split-area [size]="26" [visible]="inspectorOpen" [minSize]="18" [maxSize]="45">

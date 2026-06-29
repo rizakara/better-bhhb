@@ -33,6 +33,10 @@ describe('MainComponent', () => {
       requestPartsToRaw: '',
       rawRequestToParts: [[], ''],
       rawRequestToCurl: '',
+      rawRequestToPythonRequests: '',
+      rawRequestToFetch: '',
+      rawRequestToAxios: '',
+      rawRequestToHttpie: '',
       parseRequestCookies: [{ name: 'session', value: 'abc' }],
       extractHttpHeaders: [{ key: 'Content-Type', value: 'text/html' }],
     });

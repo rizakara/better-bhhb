@@ -1,5 +1,8 @@
+import { RowHighlightColor } from '../row-triage/row-triage.types';
+
 export interface WorkspaceViewState {
   globalSearchTerm: string;
+  bookmarkFilterOnly: boolean;
   columnFilters: Record<string, string[] | null>;
   columnFilterOptions: Record<string, string[]>;
   activeFilterColumn: string;
@@ -39,6 +42,8 @@ export interface WorkspaceTabData {
   content?: import('../file-handle/file-handle.service').BurpExport;
   requestEdits: Record<number, string>;
   commentEdits: Record<number, string>;
+  highlightEdits: Record<number, RowHighlightColor | null>;
+  bookmarkEdits: Record<number, boolean>;
   viewState?: WorkspaceViewState;
 }
 
@@ -51,6 +56,8 @@ export interface WorkspaceBundlePayload {
   content?: import('../file-handle/file-handle.service').BurpExport;
   requestEdits: Record<number, string>;
   commentEdits: Record<number, string>;
+  highlightEdits: Record<number, RowHighlightColor | null>;
+  bookmarkEdits: Record<number, boolean>;
   viewState?: WorkspaceViewState;
 }
 

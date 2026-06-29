@@ -9,6 +9,10 @@
         <button type="button" *ngIf="view.hasCompareRow" (click)="clearCompare.emit()">Clear</button>
         <button type="button" [class.active]="view.wrap" (click)="wrapToggle.emit()">Wrap</button>
     </div>
+    <div class="panel-search-row response-toolbar" *ngIf="!view.diffMode">
+        <button type="button" (click)="copyBody.emit()" matTooltip="Copy response body">Body</button>
+        <span class="toolbar-spacer"></span>
+    </div>
     <div class="panel-search-row" *ngIf="!view.diffMode">
         <input matInput type="search" #searchInputRef (input)="searchChange.emit($event)"
             (keydown)="searchKeydown.emit($event)" placeholder="Search response" class="search panel-search">
