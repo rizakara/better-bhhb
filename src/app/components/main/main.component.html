@@ -69,12 +69,19 @@
                     <div class="table-toolbar">
                         <input matInput type="search" (input)="applyFilter($event)" placeholder="Search  ( / )" id="search"
                             class="search" aria-keyshortcuts="/ Control+F">
+                        <div class="indexing-status" *ngIf="showIndexingStatus" aria-live="polite">
+                            Indexing bodies… {{ indexingState.indexed | number }} / {{ indexingState.total | number }}
+                        </div>
                         <button type="button" mat-icon-button class="column-visibility-button"
                             [class.column-visibility-active]="hiddenColumnCount > 0"
                             [matMenuTriggerFor]="columnVisibilityMenu" matTooltip="Choose columns"
                             aria-label="Choose columns">
                             <mat-icon aria-hidden="true">view_column</mat-icon>
                         </button>
+                    </div>
+
+                    <div class="indexing-progress" *ngIf="showIndexingStatus" aria-hidden="true">
+                        <div class="indexing-progress-bar" [style.width.%]="indexingProgressPercent"></div>
                     </div>
 
                     <div class="active-filters" *ngIf="activeFilterChips.length > 0">

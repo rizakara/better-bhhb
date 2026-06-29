@@ -7,6 +7,16 @@ import {
 } from '../../services/request-replay/request-replay.service';
 import { DiffLine, HttpDiffService, SideBySideRow } from '../../services/http-diff/http-diff.service';
 import { Subscription } from 'rxjs';
+import {
+  HistoryIndexService,
+  IndexingState,
+} from '../../services/history-index/history-index.service';
+import {
+  buildMetadataSearchIndex,
+  extractRawPayload,
+  indexRowBodies,
+} from '../../services/history-index/history-row-search';
+import { IndexedRowResult } from '../../services/history-index/history-index.types';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -14,7 +24,6 @@ import { MatMenuTrigger } from '@angular/material/menu';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
-import { Base64 } from 'js-base64';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceViewState } from '../../services/workspace/workspace-view-state';
 import { InspectorTab } from '../inspector/inspector-panel.component';
@@ -88,12 +97,18 @@ export class MainComponent implements OnInit, OnDestroy {
     private requestReplayService: RequestReplayService,
     private httpDiffService: HttpDiffService,
     private workspaceService: WorkspaceService,
+    private historyIndexService: HistoryIndexService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) { }
 
   fileSub!: Subscription
   beforeSaveSub!: Subscription
+  private indexingStateSub?: Subscription
+  private indexingBatchSub?: Subscription
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly SEARCH_DEBOUNCE_MS = 200
+  indexingState: IndexingState = { indexed: 0, total: 0, complete: true }
   selectedFileContent!: BurpExport | undefined;
   private static readonly VALID_COLUMN_KEYS = new Set(DEFAULT_COLUMN_ORDER);
   columnOrder: string[] = [...DEFAULT_COLUMN_ORDER];
@@ -213,6 +228,23 @@ export class MainComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.endColumnResize();
+    this.clearSearchDebounce();
+    this.indexingStateSub?.unsubscribe();
+    this.indexingBatchSub?.unsubscribe();
+    this.historyIndexService.cancel();
+    this.fileSub?.unsubscribe();
+    this.beforeSaveSub?.unsubscribe();
+  }
+
+  get showIndexingStatus(): boolean {
+    return this.indexingState.total > 0 && !this.indexingState.complete;
+  }
+
+  get indexingProgressPercent(): number {
+    if (!this.indexingState.total) {
+      return 0;
+    }
+    return (this.indexingState.indexed / this.indexingState.total) * 100;
   }
 
   ngOnInit(): void {
@@ -224,12 +256,19 @@ export class MainComponent implements OnInit, OnDestroy {
         this.flushCurrentRequestEdit();
         this.flushAllCommentEdits();
       });
+    this.indexingStateSub = this.historyIndexService.state$.subscribe((state) => {
+      this.indexingState = state;
+    });
+    this.indexingBatchSub = this.historyIndexService.batchResults$.subscribe((results) => {
+      this.mergeIndexResults(results);
+    });
     this.fileSub = this.FileHandleService.getselectedFileDataListener()
       .subscribe((selectedFileData: {
         selectedFileContent: BurpExport | undefined;
         viewState?: WorkspaceViewState;
       }) => {
         if (!selectedFileData.selectedFileContent) {
+          this.historyIndexService.cancel();
           this.dataSource = new MatTableDataSource();
           this.selectedFileContent = selectedFileData.selectedFileContent;
           this.clickedRow = undefined;
@@ -240,6 +279,7 @@ export class MainComponent implements OnInit, OnDestroy {
           return
         }
         this.clearRequestEdits();
+        this.historyIndexService.cancel();
         this.selectedFileContent = selectedFileData.selectedFileContent
         this.elementDataGen(this.selectedFileContent)
         this.buildSiteMapTree();
@@ -252,6 +292,7 @@ export class MainComponent implements OnInit, OnDestroy {
         this.dataSource.filterPredicate = this.createFilterPredicate();
         this.dataSource.sort = this.sort;
         this.refreshTableFilter();
+        this.historyIndexService.startIndexing(this.ELEMENT_DATA);
         this.restoreSelectionFromViewState(selectedFileData.viewState);
       })
   }
@@ -268,30 +309,90 @@ export class MainComponent implements OnInit, OnDestroy {
     itemList.forEach((element: any) => {
       const comment = this.normalizeXmlValue(element.comment);
       this.originalComments.set(position, comment);
+      const metadata = {
+        position,
+        ip: element.host[0].$.ip,
+        host: element.protocol + '://' + element.host[0]._ + this.portAssign(element.protocol, element.port),
+        port: element.port,
+        protocol: element.protocol,
+        method: element.method,
+        status: element.status,
+        path: this.normalizeXmlValue(element.path),
+        responselength: element.responselength,
+        comment,
+        url: element.url,
+        time: this.normalizeXmlValue(element.time),
+        timeMs: this.parseBurpTime(element.time),
+        mimetype: element.mimetype,
+        extension: element.extension != 'null' ? element.extension : '',
+        title: '',
+      };
+      const metadataSearchIndex = buildMetadataSearchIndex(metadata);
       this.ELEMENT_DATA.push(
         {
-          position: position,
-          ip: element.host[0].$.ip,
-          host: element.protocol + '://' + element.host[0]._ + this.portAssign(element.protocol, element.port),
-          port: element.port,
-          protocol: element.protocol,
-          method: element.method,
-          status: element.status,
-          path: this.normalizeXmlValue(element.path),
-          responselength: element.responselength,
-          comment,
-          url: element.url,
-          time: this.normalizeXmlValue(element.time),
-          timeMs: this.parseBurpTime(element.time),
-          mimetype: element.mimetype,
-          extension: element.extension != 'null' ? element.extension : '',
-          request: this.splitHeaderBody(this.atobReqRes(element.request)),
-          response: this.splitHeaderBody(this.atobReqRes(element.response)),
-          title: this.extractTitleFromHttpResponse(this.atobReqRes(element.response)),
+          ...metadata,
+          metadataSearchIndex,
+          searchIndex: metadataSearchIndex,
+          rawRequestPayload: extractRawPayload(element.request),
+          rawResponsePayload: extractRawPayload(element.response),
+          bodyIndexed: false,
         }
       )
       position += 1;
     });
+  }
+
+  private mergeIndexResults(results: IndexedRowResult[]): void {
+    let titlesUpdated = false;
+
+    results.forEach((result) => {
+      const row = this.ELEMENT_DATA.find((entry: { position: number }) => entry.position === result.position);
+      if (!row) {
+        return;
+      }
+
+      row.request = result.request;
+      row.response = result.response;
+      if (result.title) {
+        row.title = result.title;
+        titlesUpdated = true;
+      }
+      row.searchIndex = result.bodySearchText
+        ? `${row.metadataSearchIndex} ${result.bodySearchText}`
+        : row.metadataSearchIndex;
+      row.bodyIndexed = true;
+    });
+
+    if (titlesUpdated) {
+      this.dataSource.data = this.ELEMENT_DATA.slice();
+    }
+
+    if (this.globalSearchTerm) {
+      this.refreshTableFilter();
+    }
+  }
+
+  private ensureRowParsed(row: any): void {
+    if (row.request !== undefined && row.response !== undefined) {
+      return;
+    }
+
+    const indexed = indexRowBodies(row.rawRequestPayload, row.rawResponsePayload);
+    row.request = indexed.request;
+    row.response = indexed.response;
+    if (!row.title) {
+      row.title = indexed.title;
+    }
+
+    if (!row.bodyIndexed) {
+      row.searchIndex = indexed.bodySearchText
+        ? `${row.metadataSearchIndex} ${indexed.bodySearchText}`
+        : row.metadataSearchIndex;
+      row.bodyIndexed = true;
+      if (this.globalSearchTerm) {
+        this.refreshTableFilter();
+      }
+    }
   }
 
   drop(event: CdkDragDrop<string[]>) {
@@ -371,33 +472,6 @@ export class MainComponent implements OnInit, OnDestroy {
     document.body.classList.add('column-resizing');
   }
 
-  private splitHeaderBody(text: any): any {
-    // https://bobbyhadz.com/blog/javascript-split-string-only-on-first-instance-of-character
-    let [header, ...body] = text.split(/\n\s*\n/)
-    header = header.split(/\r\n/)
-
-    // https://stackoverflow.com/a/12482991
-    header.forEach((elem: string, index: string | number) => {
-      let [key, ...value] = elem.split(": ")
-      header[index] = [key, value.join("")]
-    }, header);
-
-    return [header, body.join("")]
-  }
-
-  private atobReqRes(query: any): string {
-    try {
-      if (query[0].$.base64 === 'true') {
-        return Base64.decode(query[0]._ ?? "");
-      }
-      return query[0]._ ?? "";
-    } catch (error) {
-      console.log(error);
-      console.log(query);
-    }
-    return ''
-  }
-
   private portAssign(protocol: any, port: any): string {
     if (protocol[0] === "https" && port[0] === "443") {
       return ''
@@ -408,19 +482,21 @@ export class MainComponent implements OnInit, OnDestroy {
     }
   }
 
-  private extractTitleFromHttpResponse(response: string): string {
-    const titleRegex = /<title>(.*?)<\/title>/i;
-    const match = response.match(titleRegex);
-    if (match && match.length > 1) {
-      return match[1];
-    }
-    return '';
+  applyFilter(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value ?? '';
+    this.clearSearchDebounce();
+    this.searchDebounceTimer = setTimeout(() => {
+      this.globalSearchTerm = filterValue.trim();
+      this.refreshTableFilter();
+      this.searchDebounceTimer = null;
+    }, this.SEARCH_DEBOUNCE_MS);
   }
 
-  applyFilter(event: Event) {
-    const filterValue = (event.target as HTMLInputElement).value ? (event.target as HTMLInputElement).value : "";
-    this.globalSearchTerm = filterValue.trim();
-    this.refreshTableFilter();
+  private clearSearchDebounce(): void {
+    if (this.searchDebounceTimer !== null) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
   }
 
   toggleTreeView() {
@@ -736,8 +812,8 @@ export class MainComponent implements OnInit, OnDestroy {
 
       if (this.globalSearchTerm) {
         const term = this.globalSearchTerm.toLowerCase();
-        const rowText = Object.values(data).join(' ').toLowerCase();
-        if (!rowText.includes(term)) {
+        const searchIndex = String(data.searchIndex ?? data.metadataSearchIndex ?? '');
+        if (!searchIndex.includes(term)) {
           return false;
         }
       }
@@ -1541,6 +1617,7 @@ export class MainComponent implements OnInit, OnDestroy {
         this.clearCompare();
       }
     }
+    this.ensureRowParsed(row);
     this.clickedRow = row;
     this.applyStoredRequestEdit(row);
     this.applyStoredCommentEdit(row);
@@ -1623,6 +1700,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private getRowRequestRaw(row: any): string {
+    this.ensureRowParsed(row);
     const editedRaw = this.FileHandleService.getRequestEdit(row.position);
     if (editedRaw) {
       return editedRaw;
@@ -1631,6 +1709,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private getRowResponseRaw(row: any): string {
+    this.ensureRowParsed(row);
     return this.httpDiffService.partsToRaw(row.response);
   }
 
@@ -2494,11 +2573,13 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   clearGlobalSearch(): void {
+    this.clearSearchDebounce();
     this.resetGlobalSearchTerm();
     this.refreshTableFilter();
   }
 
   private resetGlobalSearchTerm(): void {
+    this.clearSearchDebounce();
     this.globalSearchTerm = '';
     const searchInput = document.getElementById('search') as HTMLInputElement | null;
     if (searchInput) {

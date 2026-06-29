@@ -848,6 +848,26 @@ table.mat-mdc-table .mat-mdc-header-cell:not(:nth-child(1)) {
   opacity: 0.75;
 }
 
+.indexing-status {
+  flex-shrink: 0;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 30px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.indexing-progress {
+  height: 2px;
+  background: var(--bg-secondary);
+}
+
+.indexing-progress-bar {
+  height: 100%;
+  background: #1565c0;
+  transition: width 120ms linear;
+}
+
 .panel-search-row {
   display: flex;
   align-items: center;
@@ -994,6 +1014,18 @@ body.theme-is-dark .comment-edited-marker {
 body.theme-is-dark .comment-tag {
   background: var(--hover-bg);
   color: var(--text-primary);
+}
+
+body.theme-is-dark .indexing-status {
+  color: var(--text-secondary);
+}
+
+body.theme-is-dark .indexing-progress {
+  background: var(--bg-secondary);
+}
+
+body.theme-is-dark .indexing-progress-bar {
+  background: #64b5f6;
 }
 
 body.theme-is-dark .search-status {

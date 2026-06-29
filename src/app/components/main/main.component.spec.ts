@@ -11,6 +11,7 @@ import { FileHandleService } from '../../services/file-handle/file-handle.servic
 import { HttpDiffService } from '../../services/http-diff/http-diff.service';
 import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
+import { HistoryIndexService } from '../../services/history-index/history-index.service';
 import { InspectorPanelComponent } from '../inspector/inspector-panel.component';
 import { MainComponent } from './main.component';
 
@@ -52,6 +53,15 @@ describe('MainComponent', () => {
           },
         },
         { provide: MatSnackBar, useValue: snackBar },
+        {
+          provide: HistoryIndexService,
+          useValue: {
+            state$: of({ indexed: 0, total: 0, complete: true }),
+            batchResults$: of([]),
+            startIndexing: () => undefined,
+            cancel: () => undefined,
+          },
+        },
         HttpDiffService,
         WorkspaceService,
       ],
@@ -230,10 +240,61 @@ describe('MainComponent', () => {
     expect(component.requestDiffLines.length).toBe(0);
   });
 
+  it('filters table rows using prebuilt search index', () => {
+    component.ELEMENT_DATA = [
+      {
+        position: 1,
+        host: 'https://a.test',
+        method: 'GET',
+        path: '/one',
+        status: '200',
+        ip: '1.1.1.1',
+        metadataSearchIndex: '1 1.1.1.1 https://a.test get /one 200',
+        searchIndex: '1 1.1.1.1 https://a.test get /one 200 secret-body-token',
+      },
+      {
+        position: 2,
+        host: 'https://b.test',
+        method: 'POST',
+        path: '/two',
+        status: '404',
+        ip: '2.2.2.2',
+        metadataSearchIndex: '2 2.2.2.2 https://b.test post /two 404',
+        searchIndex: '2 2.2.2.2 https://b.test post /two 404',
+      },
+    ];
+    component.dataSource = new MatTableDataSource(component.ELEMENT_DATA);
+    (component as any).setupFilterPredicate();
+
+    component.globalSearchTerm = 'secret-body-token';
+    (component as any).refreshTableFilter();
+
+    expect(component.dataSource.filteredData.length).toBe(1);
+    expect((component.dataSource.filteredData[0] as { position: number }).position).toBe(1);
+  });
+
   it('filters table rows from context menu action', () => {
     component.ELEMENT_DATA = [
-      { position: 1, host: 'https://a.test', method: 'GET', path: '/one', status: '200', ip: '1.1.1.1' },
-      { position: 2, host: 'https://b.test', method: 'POST', path: '/two', status: '404', ip: '2.2.2.2' },
+      {
+        position: 1,
+        host: 'https://a.test',
+        method: 'GET',
+        path: '/one',
+        status: '200',
+        ip: '1.1.1.1',
+        metadataSearchIndex: '1 https://a.test get /one 200',
+        searchIndex: '1 https://a.test get /one 200',
+      },
+      {
+        position: 2,
+        host: 'https://b.test',
+        method: 'POST',
+        path: '/two',
+        status: '404',
+        ip: '2.2.2.2',
+        metadataSearchIndex: '2 https://b.test post /two 404',
+        searchIndex: '2 https://b.test post /two 404',
+      },
     ];
     component.dataSource = new MatTableDataSource(component.ELEMENT_DATA);
     (component as any).setupFilterPredicate();
