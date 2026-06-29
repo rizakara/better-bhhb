@@ -391,6 +391,12 @@ body.column-resizing {
 }
 
 :host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
+  opacity: 0;
+}
+
+:host ::ng-deep .history-table .mat-sort-header:hover .mat-sort-header-container:not(.mat-sort-header-sorted) .mat-sort-header-arrow,
+:host ::ng-deep .history-table .mat-sort-header.cdk-keyboard-focused .mat-sort-header-container:not(.mat-sort-header-sorted) .mat-sort-header-arrow,
+:host ::ng-deep .history-table .mat-sort-header.cdk-program-focused .mat-sort-header-container:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
   opacity: 0.54;
 }
 
@@ -398,7 +404,7 @@ body.column-resizing {
   opacity: 1;
 }
 
-:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container.mat-sort-header-descending .mat-sort-header-arrow {
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container.mat-sort-header-sorted.mat-sort-header-descending .mat-sort-header-arrow {
   transform: rotate(180deg);
 }
 
