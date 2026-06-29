@@ -19,7 +19,16 @@ import {
   ImportDuplicateDialogResult,
 } from '../../components/header/import-duplicate-dialog.component';
 import { WorkspaceService } from '../workspace/workspace.service';
-import { WorkspaceTabData, WorkspaceViewState } from '../workspace/workspace-view-state';
+import {
+  WORKSPACE_BUNDLE_FORMAT_VERSION,
+  WorkspaceBundle,
+  WorkspaceBundlePayload,
+  WorkspaceCollectionBundle,
+  WorkspaceTabData,
+  WorkspaceViewState,
+} from '../workspace/workspace-view-state';
+
+const APP_VERSION = '1.2.0';
 
 export interface StatusBreakdown {
   success: number;
@@ -386,6 +395,7 @@ export class FileHandleService {
 
   private async promptForImportDestination(
     newFileCount: number,
+    options?: Pick<ImportDestinationDialogData, 'title' | 'intro'>,
   ): Promise<ImportDestinationDialogResult | null> {
     await this.ensureSessionRestored();
     this.syncActiveWorkspaceTab();
@@ -396,6 +406,8 @@ export class FileHandleService {
       panelClass: 'bhhb-dialog',
       data: {
         newFileCount,
+        title: options?.title,
+        intro: options?.intro,
         workspaces: this.workspaceService.getTabs().map((tab) => ({
           id: tab.id,
           label: tab.label,
@@ -483,6 +495,48 @@ export class FileHandleService {
     await this.fileSessionStorage.clear();
     this.workspaceService.updateActiveTabFromFile(undefined, undefined, { resetViewState: true });
     this.emitSelectedFileData();
+  }
+
+  async exportActiveWorkspace(): Promise<void> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+
+    const tab = this.workspaceService.getActiveTab();
+    if (!tab) {
+      throw new Error('No active workspace to export.');
+    }
+
+    const bundle = this.buildWorkspaceBundle(tab);
+    await this.saveWorkspaceBundle(bundle, this.suggestWorkspaceExportName(tab.label));
+  }
+
+  async exportAllWorkspaces(): Promise<void> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+
+    const tabs = this.workspaceService.getTabs();
+    if (!tabs.length) {
+      throw new Error('No workspaces to export.');
+    }
+
+    const bundle = this.buildWorkspaceCollectionBundle(tabs);
+    await this.saveWorkspaceBundle(bundle, 'workspaces.bhhb-workspace.json');
+  }
+
+  async importWorkspace(event: Event): Promise<void> {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.importing.next(true);
+    try {
+      await this.importWorkspaceFile(file);
+    } finally {
+      this.importing.next(false);
+      this.resetFileInput(target);
+    }
   }
 
   async saveAs(scope: 'all' | 'filtered' = 'all'): Promise<void> {
@@ -861,6 +915,251 @@ export class FileHandleService {
     const rawName = (this.selectedFileName ?? 'burp-export').trim();
     const withoutExtension = rawName.replace(/\.xml$/i, '');
     return `${withoutExtension}-filtered-${visibleCount}.xml`;
+  }
+
+  private async importWorkspaceFile(file: File): Promise<void> {
+    await this.ensureSessionRestored();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      throw new Error(`Could not parse ${file.name}. Make sure it is a workspace export file.`);
+    }
+
+    if (this.isWorkspaceCollectionBundle(parsed)) {
+      await this.importWorkspaceCollection(parsed);
+      return;
+    }
+
+    if (this.isWorkspaceBundle(parsed)) {
+      await this.importSingleWorkspace(parsed);
+      return;
+    }
+
+    throw new Error(`Unrecognized workspace file format in ${file.name}.`);
+  }
+
+  private async importSingleWorkspace(bundle: WorkspaceBundle): Promise<void> {
+    const destination = await this.promptForImportDestination(1, {
+      title: 'Import workspace',
+      intro: 'Choose which workspace to import into.',
+    });
+    if (!destination || !(await this.prepareImportTarget(destination))) {
+      return;
+    }
+
+    await this.applyImportedWorkspace(bundle.workspace, destination.mode);
+    await this.persistCurrentSession();
+  }
+
+  private async importWorkspaceCollection(bundle: WorkspaceCollectionBundle): Promise<void> {
+    await this.ensureSessionRestored();
+    this.syncActiveWorkspaceTab();
+
+    if (!bundle.workspaces.length) {
+      throw new Error('Workspace file contains no workspaces.');
+    }
+
+    const importedTabIds: string[] = [];
+    for (const payload of bundle.workspaces) {
+      const tab = this.workspaceService.createTab(payload.labelCustomized ? payload.label : undefined);
+      this.workspaceService.updateTab(tab.id, this.workspacePayloadToTabUpdate(payload));
+      importedTabIds.push(tab.id);
+    }
+
+    const activeIndex = bundle.activeTabIndex ?? 0;
+    const targetTabId = importedTabIds[Math.min(Math.max(activeIndex, 0), importedTabIds.length - 1)];
+    await this.activateWorkspaceTab(targetTabId);
+    await this.persistCurrentSession();
+  }
+
+  private async applyImportedWorkspace(
+    payload: WorkspaceBundlePayload,
+    mode: 'merge' | 'replace',
+  ): Promise<void> {
+    const activeTabId = this.workspaceService.getActiveTabId();
+    if (!activeTabId) {
+      return;
+    }
+
+    if (mode === 'replace' || !this.selectedFileContent) {
+      this.selectedFileName = payload.fileName;
+      this.selectedFileContent = payload.content;
+      this.loadEdits(payload.requestEdits ?? {}, payload.commentEdits ?? {});
+      this.workspaceService.updateTab(activeTabId, {
+        ...this.workspacePayloadToTabUpdate(payload),
+        viewState: payload.viewState,
+        resetViewState: !payload.viewState,
+      });
+      this.emitSelectedFileData(payload.viewState);
+    } else {
+      let mergedContent = this.selectedFileContent;
+      let mergedFileName = this.selectedFileName;
+      if (payload.content) {
+        const merged = await this.mergeExports([this.selectedFileContent, payload.content]);
+        if (!merged) {
+          return;
+        }
+        mergedContent = merged;
+        mergedFileName = this.formatMergedFileName([
+          this.selectedFileName!,
+          payload.fileName ?? 'imported workspace',
+        ]);
+      }
+
+      const mergedRequestEdits = {
+        ...this.serializeEdits(this.requestEdits),
+        ...payload.requestEdits,
+      };
+      const mergedCommentEdits = {
+        ...this.serializeEdits(this.commentEdits),
+        ...payload.commentEdits,
+      };
+
+      this.selectedFileName = mergedFileName;
+      this.selectedFileContent = mergedContent;
+      this.loadEdits(mergedRequestEdits, mergedCommentEdits);
+      this.workspaceService.updateTab(activeTabId, {
+        fileName: mergedFileName,
+        content: mergedContent,
+        requestEdits: mergedRequestEdits,
+        commentEdits: mergedCommentEdits,
+      });
+
+      const tab = this.workspaceService.getActiveTab();
+      this.emitSelectedFileData(tab?.viewState);
+    }
+
+    if (payload.labelCustomized && payload.label) {
+      this.workspaceService.renameTab(activeTabId, payload.label);
+    }
+  }
+
+  private buildWorkspaceBundle(tab: WorkspaceTabData): WorkspaceBundle {
+    return {
+      formatVersion: WORKSPACE_BUNDLE_FORMAT_VERSION,
+      kind: 'workspace',
+      exportedAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      workspace: this.tabToWorkspacePayload(tab),
+    };
+  }
+
+  private buildWorkspaceCollectionBundle(tabs: WorkspaceTabData[]): WorkspaceCollectionBundle {
+    const activeTabId = this.workspaceService.getActiveTabId();
+    const activeTabIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+
+    return {
+      formatVersion: WORKSPACE_BUNDLE_FORMAT_VERSION,
+      kind: 'collection',
+      exportedAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      activeTabIndex: activeTabIndex >= 0 ? activeTabIndex : 0,
+      workspaces: tabs.map((tab) => this.tabToWorkspacePayload(tab)),
+    };
+  }
+
+  private tabToWorkspacePayload(tab: WorkspaceTabData): WorkspaceBundlePayload {
+    return {
+      label: tab.label,
+      labelCustomized: tab.labelCustomized,
+      fileName: tab.fileName,
+      content: tab.content,
+      requestEdits: { ...tab.requestEdits },
+      commentEdits: { ...tab.commentEdits },
+      viewState: tab.viewState ? { ...tab.viewState } : undefined,
+    };
+  }
+
+  private workspacePayloadToTabUpdate(payload: WorkspaceBundlePayload): {
+    fileName?: string;
+    content?: BurpExport;
+    requestEdits: Record<number, string>;
+    commentEdits: Record<number, string>;
+    label?: string;
+    labelCustomized?: boolean;
+  } {
+    return {
+      fileName: payload.fileName,
+      content: payload.content,
+      requestEdits: { ...payload.requestEdits },
+      commentEdits: { ...payload.commentEdits },
+      label: payload.labelCustomized ? payload.label : undefined,
+      labelCustomized: payload.labelCustomized,
+    };
+  }
+
+  private isWorkspaceBundle(data: unknown): data is WorkspaceBundle {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    const bundle = data as Partial<WorkspaceBundle>;
+    return bundle.formatVersion === WORKSPACE_BUNDLE_FORMAT_VERSION
+      && bundle.kind === 'workspace'
+      && !!bundle.workspace
+      && typeof bundle.workspace === 'object';
+  }
+
+  private isWorkspaceCollectionBundle(data: unknown): data is WorkspaceCollectionBundle {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    const bundle = data as Partial<WorkspaceCollectionBundle>;
+    return bundle.formatVersion === WORKSPACE_BUNDLE_FORMAT_VERSION
+      && bundle.kind === 'collection'
+      && Array.isArray(bundle.workspaces);
+  }
+
+  private async saveWorkspaceBundle(
+    bundle: WorkspaceBundle | WorkspaceCollectionBundle,
+    suggestedName: string,
+  ): Promise<void> {
+    const json = JSON.stringify(bundle, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const savedWithPicker = await this.tryShowWorkspaceSaveFilePicker(blob, suggestedName);
+    if (!savedWithPicker) {
+      this.downloadBlob(blob, suggestedName);
+    }
+  }
+
+  private suggestWorkspaceExportName(label: string): string {
+    const sanitized = label.trim().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace';
+    return `${sanitized}.bhhb-workspace.json`;
+  }
+
+  private async tryShowWorkspaceSaveFilePicker(blob: Blob, suggestedName: string): Promise<boolean> {
+    const showSaveFilePicker = (window as Window & {
+      showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+    }).showSaveFilePicker;
+
+    if (!showSaveFilePicker) {
+      return false;
+    }
+
+    try {
+      const handle = await showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'Better-BHHB workspace',
+          accept: {
+            'application/json': ['.json', '.bhhb-workspace.json'],
+          },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return true;
+      }
+      console.warn('Native save dialog unavailable, falling back to download.', error);
+      return false;
+    }
   }
 
   private async tryShowSaveFilePicker(blob: Blob, suggestedName: string): Promise<boolean> {

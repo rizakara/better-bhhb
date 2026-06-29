@@ -91,4 +91,22 @@ describe('WorkspaceService', () => {
     expect(service.getTabs().length).toBe(1);
     expect(service.getActiveTabId()).toBe(service.getTabs()[0].id);
   });
+
+  it('updates a tab by id without activating it', () => {
+    service.ensureInitialTab();
+    const second = service.createTab('staging');
+    const updated = service.updateTab(second.id, {
+      fileName: 'staging.xml',
+      content: { items: { '$': { burpVersion: '1', exportTime: 'now' }, item: [] } },
+      requestEdits: { 1: 'GET / HTTP/1.1\r\n\r\n' },
+      commentEdits: { 1: 'review' },
+      label: 'staging audit',
+      labelCustomized: true,
+    });
+
+    expect(updated?.label).toBe('staging audit');
+    expect(updated?.fileName).toBe('staging.xml');
+    expect(service.getActiveTabId()).not.toBe(second.id);
+    expect(service.getTabs().find((tab) => tab.id === second.id)?.requestEdits[1]).toContain('GET /');
+  });
 });

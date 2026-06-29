@@ -6,6 +6,12 @@ import { FileHandleService } from './file-handle.service';
 import { FileSessionStorageService } from './file-session-storage.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { BurpExport } from './file-handle.service';
+import {
+  WORKSPACE_BUNDLE_FORMAT_VERSION,
+  WorkspaceBundle,
+  WorkspaceCollectionBundle,
+  WorkspaceViewState,
+} from '../workspace/workspace-view-state';
 
 function makeBurpItem(pathSuffix: string, time = 'Mon Jan 01 12:00:00 UTC 2024') {
   return {
@@ -344,5 +350,106 @@ describe('FileHandleService', () => {
     const savedSession = storage.save.calls.mostRecent().args[0];
     expect(savedSession.fileName).toBe('first.xml + second.xml');
     expect(savedSession.content.items.item.length).toBe(2);
+  });
+
+  it('imports a single workspace bundle into the active workspace', async () => {
+    storage.save.and.resolveTo(null);
+    const viewState = {
+      globalSearchTerm: 'token',
+      columnFilters: {},
+      columnFilterOptions: {},
+      activeFilterColumn: '',
+      ipFilterMode: 'values' as const,
+      ipRangeStart: '',
+      ipRangeEnd: '',
+      ipSubnet: '',
+      columnTextFilterModes: {},
+      columnTextFilters: {},
+      columnTextFilterBlocked: {},
+      timeFilterMode: 'none' as const,
+      timeAbsoluteStart: '',
+      timeAbsoluteEnd: '',
+      dataTimeMinMs: null,
+      dataTimeMaxMs: null,
+      treeViewOpen: false,
+      treeFilter: null,
+      selectedTreeNodeId: null,
+      selectedRowPosition: 2,
+      compareRowPosition: null,
+      diffMode: false,
+      diffLayout: 'unified' as const,
+      replayMode: false,
+      requestSearch: '',
+      responseSearch: '',
+      wrapRequest: false,
+      wrapResponse: false,
+      inspectorTab: 'attributes' as const,
+      inspectorOpen: true,
+    } satisfies WorkspaceViewState;
+    const bundle: WorkspaceBundle = {
+      formatVersion: WORKSPACE_BUNDLE_FORMAT_VERSION,
+      kind: 'workspace',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      appVersion: '1.2.0',
+      workspace: {
+        label: 'prod audit',
+        labelCustomized: true,
+        fileName: 'prod.xml',
+        content: makeBurpExport([makeBurpItem('prod')]),
+        requestEdits: { 1: 'GET /edited HTTP/1.1\r\n\r\n' },
+        commentEdits: { 1: 'flagged' },
+        viewState,
+      },
+    };
+    const file = new File([JSON.stringify(bundle)], 'prod.bhhb-workspace.json', { type: 'application/json' });
+    const input = { files: [file], value: 'prod.bhhb-workspace.json' } as unknown as HTMLInputElement;
+
+    await service.importWorkspace({ target: input } as unknown as Event);
+
+    const activeTab = workspaceService.getActiveTab();
+    expect(activeTab?.label).toBe('prod audit');
+    expect(activeTab?.fileName).toBe('prod.xml');
+    expect(activeTab?.viewState?.globalSearchTerm).toBe('token');
+    expect(activeTab?.requestEdits[1]).toContain('/edited');
+    expect(activeTab?.commentEdits[1]).toBe('flagged');
+    expect(storage.save).toHaveBeenCalled();
+  });
+
+  it('imports a workspace collection as new tabs', async () => {
+    storage.save.and.resolveTo(null);
+    const bundle: WorkspaceCollectionBundle = {
+      formatVersion: WORKSPACE_BUNDLE_FORMAT_VERSION,
+      kind: 'collection',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      appVersion: '1.2.0',
+      activeTabIndex: 1,
+      workspaces: [
+        {
+          label: 'Workspace 1',
+          fileName: 'first.xml',
+          content: makeBurpExport([makeBurpItem('first')]),
+          requestEdits: {},
+          commentEdits: {},
+        },
+        {
+          label: 'Workspace 2',
+          labelCustomized: true,
+          fileName: 'second.xml',
+          content: makeBurpExport([makeBurpItem('second')]),
+          requestEdits: {},
+          commentEdits: {},
+        },
+      ],
+    };
+    const file = new File([JSON.stringify(bundle)], 'workspaces.bhhb-workspace.json', { type: 'application/json' });
+    const input = { files: [file], value: 'workspaces.bhhb-workspace.json' } as unknown as HTMLInputElement;
+
+    await service.importWorkspace({ target: input } as unknown as Event);
+
+    const tabs = workspaceService.getTabs();
+    expect(tabs.length).toBe(3);
+    expect(workspaceService.getActiveTab()?.label).toBe('Workspace 2');
+    expect(tabs.some((tab) => tab.fileName === 'first.xml')).toBeTrue();
+    expect(tabs.some((tab) => tab.fileName === 'second.xml')).toBeTrue();
   });
 });

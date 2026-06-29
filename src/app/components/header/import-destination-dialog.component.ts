@@ -12,6 +12,8 @@ export interface ImportDestinationOption {
 export interface ImportDestinationDialogData {
   workspaces: ImportDestinationOption[];
   newFileCount: number;
+  title?: string;
+  intro?: string;
 }
 
 export interface ImportDestinationDialogResult {
@@ -24,13 +26,16 @@ export interface ImportDestinationDialogResult {
   standalone: false,
   template: `
     <h2 mat-dialog-title>
-      Import files
+      {{ data.title ?? 'Import files' }}
       <button type="button" class="dialog-close-x" mat-dialog-close aria-label="Close">×</button>
     </h2>
     <mat-dialog-content>
-      <p class="import-intro">
-        Adding <strong>{{ data.newFileCount }}</strong> new file(s). Choose which workspace to import into.
-      </p>
+      <p class="import-intro" *ngIf="data.intro; else defaultImportIntro">{{ data.intro }}</p>
+      <ng-template #defaultImportIntro>
+        <p class="import-intro">
+          Adding <strong>{{ data.newFileCount }}</strong> new file(s). Choose which workspace to import into.
+        </p>
+      </ng-template>
 
       <div class="workspace-options" role="radiogroup" aria-label="Import destination">
         <button type="button" class="workspace-option"

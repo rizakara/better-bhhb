@@ -28,6 +28,7 @@ export class HeaderComponent implements OnInit {
   ) { }
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('workspaceInput') workspaceInput!: ElementRef<HTMLInputElement>;
   @ViewChild('workspaceRenameInput') workspaceRenameInput?: ElementRef<HTMLInputElement>;
 
   fileSub!: Subscription
@@ -152,6 +153,42 @@ export class HeaderComponent implements OnInit {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to save file.');
     });
+  }
+
+  exportActiveWorkspace(): void {
+    void this.FileHandleService.exportActiveWorkspace().catch((err) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to export workspace.');
+    });
+  }
+
+  exportAllWorkspaces(): void {
+    void this.FileHandleService.exportAllWorkspaces().catch((err) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to export workspaces.');
+    });
+  }
+
+  openWorkspacePicker(): void {
+    this.workspaceInput.nativeElement.click();
+  }
+
+  importWorkspace(event: Event): void {
+    this.isLoading = true;
+    void this.FileHandleService.importWorkspace(event)
+      .catch((err) => {
+        console.error(err);
+        alert(err instanceof Error ? err.message : 'Failed to import workspace.');
+      })
+      .finally(() => {
+        this.isLoading = false;
+      });
   }
 
   fileRemoved(): void {

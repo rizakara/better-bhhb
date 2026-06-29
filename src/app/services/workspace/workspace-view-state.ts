@@ -41,3 +41,32 @@ export interface WorkspaceTabData {
   commentEdits: Record<number, string>;
   viewState?: WorkspaceViewState;
 }
+
+export const WORKSPACE_BUNDLE_FORMAT_VERSION = 1;
+
+export interface WorkspaceBundlePayload {
+  label: string;
+  labelCustomized?: boolean;
+  fileName?: string;
+  content?: import('../file-handle/file-handle.service').BurpExport;
+  requestEdits: Record<number, string>;
+  commentEdits: Record<number, string>;
+  viewState?: WorkspaceViewState;
+}
+
+export interface WorkspaceBundle {
+  formatVersion: typeof WORKSPACE_BUNDLE_FORMAT_VERSION;
+  kind: 'workspace';
+  exportedAt: string;
+  appVersion: string;
+  workspace: WorkspaceBundlePayload;
+}
+
+export interface WorkspaceCollectionBundle {
+  formatVersion: typeof WORKSPACE_BUNDLE_FORMAT_VERSION;
+  kind: 'collection';
+  exportedAt: string;
+  appVersion: string;
+  activeTabIndex?: number;
+  workspaces: WorkspaceBundlePayload[];
+}

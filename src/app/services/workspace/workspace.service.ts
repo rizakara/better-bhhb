@@ -158,6 +158,50 @@ export class WorkspaceService {
     tab.viewState = viewState;
   }
 
+  updateTab(
+    tabId: string,
+    data: {
+      fileName?: string;
+      content?: BurpExport;
+      requestEdits?: Record<number, string>;
+      commentEdits?: Record<number, string>;
+      viewState?: WorkspaceViewState;
+      resetViewState?: boolean;
+      label?: string;
+      labelCustomized?: boolean;
+    },
+  ): WorkspaceTabData | null {
+    const tab = this.tabs.find((candidate) => candidate.id === tabId);
+    if (!tab) {
+      return null;
+    }
+
+    if (data.fileName !== undefined) {
+      tab.fileName = data.fileName;
+    }
+    if (data.content !== undefined) {
+      tab.content = data.content;
+    }
+    if (data.requestEdits !== undefined) {
+      tab.requestEdits = { ...data.requestEdits };
+    }
+    if (data.commentEdits !== undefined) {
+      tab.commentEdits = { ...data.commentEdits };
+    }
+    if (data.resetViewState) {
+      tab.viewState = undefined;
+    } else if (data.viewState !== undefined) {
+      tab.viewState = data.viewState;
+    }
+    if (data.label !== undefined) {
+      tab.label = data.label;
+      tab.labelCustomized = data.labelCustomized ?? true;
+    }
+
+    this.emitTabChanges();
+    return this.cloneTab(tab);
+  }
+
   restoreTab(
     fileName: string,
     content: BurpExport,
