@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit, QueryList, ViewChild, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
 import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
 import {
   HttpHeaderRow,
@@ -223,6 +223,7 @@ export class MainComponent implements OnInit {
 
   @ViewChild(MatSort, { static: false }) sort!: MatSort;
   @ViewChild('rowContextMenuTrigger', { static: false }) rowContextMenuTrigger!: MatMenuTrigger;
+  @ViewChildren(MatMenuTrigger) private menuTriggers!: QueryList<MatMenuTrigger>;
 
   elementDataGen(content: any) {
     this.ELEMENT_DATA = []
@@ -2449,8 +2450,8 @@ export class MainComponent implements OnInit {
     }
   }
 
-  get activeFilterChips(): Array<{ id: string; label: string; clear: () => void }> {
-    const chips: Array<{ id: string; label: string; clear: () => void }> = [];
+  get activeFilterChips(): Array<{ id: string; label: string }> {
+    const chips: Array<{ id: string; label: string }> = [];
 
     // Global search
     const term = this.globalSearchTerm.trim();
@@ -2459,7 +2460,6 @@ export class MainComponent implements OnInit {
       chips.push({
         id: 'search',
         label: `Search: "${short}"`,
-        clear: () => this.clearGlobalSearch()
       });
     }
 
@@ -2472,7 +2472,6 @@ export class MainComponent implements OnInit {
       chips.push({
         id: 'tree',
         label: `Tree: ${desc}`,
-        clear: () => this.clearTreeFilter()
       });
     }
 
@@ -2483,13 +2482,11 @@ export class MainComponent implements OnInit {
       chips.push({
         id: 'time',
         label: `Time: ${start} — ${end}`,
-        clear: () => this.clearTimeFilter()
       });
     } else if (this.timeFilterMode === 'blocked') {
       chips.push({
         id: 'time',
         label: `Time: none`,
-        clear: () => this.clearTimeFilter()
       });
     }
 
@@ -2498,13 +2495,11 @@ export class MainComponent implements OnInit {
       chips.push({
         id: 'ip',
         label: `IP: ${this.ipRangeStart.trim()}–${this.ipRangeEnd.trim()}`,
-        clear: () => this.clearIpAdvancedFilter()
       });
     } else if (this.ipFilterMode === 'subnet' && this.ipSubnet.trim()) {
       chips.push({
         id: 'ip',
         label: `IP: ${this.ipSubnet.trim()}`,
-        clear: () => this.clearIpAdvancedFilter()
       });
     } else {
       const ipSel = this.columnFilters['ip'];
@@ -2513,7 +2508,6 @@ export class MainComponent implements OnInit {
         chips.push({
           id: 'ip',
           label: `IP: ${count} selected`,
-          clear: () => { this.columnFilters['ip'] = null; this.refreshTableFilter(); }
         });
       }
     }
@@ -2530,7 +2524,6 @@ export class MainComponent implements OnInit {
           chips.push({
             id: `col:${column}`,
             label: `${colLabel}: (none)`,
-            clear: () => this.selectAllColumnFilter(column)
           });
         } else {
           const q = this.getColumnTextFilter(column).trim();
@@ -2539,7 +2532,6 @@ export class MainComponent implements OnInit {
             chips.push({
               id: `col:${column}`,
               label: `${colLabel} contains "${short}"`,
-              clear: () => this.selectAllColumnFilter(column)
             });
           }
         }
@@ -2558,13 +2550,52 @@ export class MainComponent implements OnInit {
           chips.push({
             id: `col:${column}`,
             label: `${colLabel}: ${valDisplay}`,
-            clear: () => this.selectAllColumnFilter(column)
           });
         }
       }
     }
 
     return chips;
+  }
+
+  trackFilterChip(_index: number, chip: { id: string }): string {
+    return chip.id;
+  }
+
+  clearFilterChip(chipId: string, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    this.closeOpenFilterMenus();
+
+    switch (chipId) {
+      case 'search':
+        this.clearGlobalSearch();
+        return;
+      case 'tree':
+        this.clearTreeFilter();
+        return;
+      case 'time':
+        this.clearTimeFilter();
+        return;
+      case 'ip':
+        this.selectAllColumnFilter('ip');
+        return;
+      default:
+        if (chipId.startsWith('col:')) {
+          const column = chipId.slice(4);
+          if (this.filterableColumns.includes(column)) {
+            this.selectAllColumnFilter(column);
+          }
+        }
+    }
+  }
+
+  private closeOpenFilterMenus(): void {
+    this.menuTriggers?.forEach((trigger) => {
+      if (trigger.menuOpen) {
+        trigger.closeMenu();
+      }
+    });
   }
 
   private getColumnDisplayLabel(key: string): string {

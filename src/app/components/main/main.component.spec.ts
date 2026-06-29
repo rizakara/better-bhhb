@@ -317,6 +317,33 @@ describe('MainComponent', () => {
     expect(component.contextMenuPosition).toEqual({ x: 12, y: 34 });
   });
 
+  it('clears active filter chips by id', () => {
+    component.globalSearchTerm = 'token';
+    component.columnFilters['host'] = new Set(['https://example.com']);
+    component.columnFilters['status'] = new Set(['200']);
+    component.columnTextFilterModes['path'] = 'text';
+    component.columnTextFilters['path'] = '/api';
+    component.timeFilterMode = 'blocked';
+
+    component.clearFilterChip('search');
+    expect(component.globalSearchTerm).toBe('');
+    expect(component.activeFilterChips.some((chip) => chip.id === 'search')).toBeFalse();
+
+    component.clearFilterChip('col:host');
+    expect(component.columnFilters['host']).toBeNull();
+
+    component.clearFilterChip('col:path');
+    expect(component.getColumnTextFilterMode('path')).toBe('values');
+    expect(component.getColumnTextFilter('path')).toBe('');
+
+    component.clearFilterChip('time');
+    expect(component.timeFilterMode).toBe('none');
+
+    component.clearFilterChip('col:status');
+    expect(component.columnFilters['status']).toBeNull();
+    expect(component.activeFilterChips.length).toBe(0);
+  });
+
   it('captures and restores workspace filter state', () => {
     component.globalSearchTerm = 'token';
     component.columnFilters['host'] = new Set(['https://example.com']);

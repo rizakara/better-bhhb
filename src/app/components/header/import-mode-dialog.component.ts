@@ -70,13 +70,15 @@ export interface ImportModeDialogData {
     .dialog-close-x:hover {
       opacity: 1;
     }
-    ::ng-deep .mat-dialog-container {
+    ::ng-deep .mat-dialog-container,
+    ::ng-deep .mat-mdc-dialog-container {
       box-shadow: unset;
       border: 1px solid var(--border-color);
       background: var(--bg-primary);
       color: inherit;
     }
-    body.theme-is-dark ::ng-deep .mat-dialog-container {
+    body.theme-is-dark ::ng-deep .mat-dialog-container,
+    body.theme-is-dark ::ng-deep .mat-mdc-dialog-container {
       background-color: var(--bg-primary);
       color: inherit;
     }

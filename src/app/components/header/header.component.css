@@ -9,10 +9,22 @@
   flex: 1 1 auto;
 }
 
-mat-toolbar {
+.mat-toolbar,
+.mat-mdc-toolbar {
   height: 40px;
-  background: var(--bg-primary);
-  color: inherit;
+  min-height: 40px;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.mat-toolbar .mat-mdc-icon-button.mat-mdc-button-base,
+.mat-mdc-toolbar .mat-mdc-icon-button.mat-mdc-button-base {
+  --mat-icon-button-state-layer-size: 32px;
+  --mat-icon-button-icon-size: 24px;
+  --mdc-icon-button-state-layer-size: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 svg {
@@ -123,12 +135,14 @@ svg {
   background: var(--hover-bg);
 }
 
-::ng-deep .mat-progress-bar-fill::after {
-  background-color: currentColor
+::ng-deep .mat-progress-bar-fill::after,
+::ng-deep .mat-mdc-progress-bar .mdc-linear-progress__bar-inner {
+  background-color: currentColor;
 }
 
 ::ng-deep .mat-progress-bar-background,
-::ng-deep .mat-progress-bar-buffer {
+::ng-deep .mat-progress-bar-buffer,
+::ng-deep .mat-mdc-progress-bar .mdc-linear-progress__buffer-bar {
   background-color: var(--progress-buffer);
 }
 
@@ -153,11 +167,13 @@ body.theme-is-dark .theme-selected {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-body.theme-is-dark mat-toolbar {
-  background: var(--bg-primary);
+body.theme-is-dark .mat-toolbar,
+body.theme-is-dark .mat-mdc-toolbar {
+  background: var(--bg-primary) !important;
 }
 
 body.theme-is-dark ::ng-deep .mat-progress-bar-background,
-body.theme-is-dark ::ng-deep .mat-progress-bar-buffer {
+body.theme-is-dark ::ng-deep .mat-progress-bar-buffer,
+body.theme-is-dark ::ng-deep .mat-mdc-progress-bar .mdc-linear-progress__buffer-bar {
   background-color: var(--progress-buffer);
 }

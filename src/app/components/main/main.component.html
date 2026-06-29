@@ -79,11 +79,11 @@
 
                     <div class="active-filters" *ngIf="activeFilterChips.length > 0">
                         <div class="filter-chips">
-                            <span class="filter-chip" *ngFor="let chip of activeFilterChips" [title]="chip.label">
+                            <span class="filter-chip" *ngFor="let chip of activeFilterChips; trackBy: trackFilterChip" [title]="chip.label">
                                 <span class="chip-label">{{ chip.label }}</span>
                                 <button type="button"
                                         class="chip-clear"
-                                        (click)="chip.clear()"
+                                        (click)="clearFilterChip(chip.id, $event)"
                                         [attr.aria-label]="'Clear ' + chip.label + ' filter'">
                                     ×
                                 </button>
@@ -98,6 +98,7 @@
                         </button>
                     </div>
 
+                    <div class="table-container">
                     <table mat-table class="history-table" [dataSource]="dataSource" matSort cdkDropList
                         cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)"
                         (contextmenu)="onHistoryTableContextMenu($event)">
@@ -170,6 +171,7 @@
                             [class.row-is-compare]="compareRow == row"
                             [class.row-is-compare-base]="comparePinRow?.position === row.position"></tr>
                     </table>
+                    </div>
 
                     <div class="context-menu-anchor" [style.left.px]="contextMenuPosition.x"
                         [style.top.px]="contextMenuPosition.y" [matMenuTriggerFor]="rowContextMenu"
@@ -346,7 +348,7 @@
                         </div>
                     </mat-menu>
 
-                    <mat-menu #columnFilterMenu="matMenu" class="column-filter-menu-panel">
+                    <mat-menu #columnFilterMenu="matMenu" class="column-filter-menu-panel" [hasBackdrop]="false">
                         <div class="column-filter-toolbar" (click)="$event.stopPropagation()">
                             <span class="column-filter-title">{{ activeFilterColumnLabel }}</span>
                             <button type="button" mat-button (click)="selectAllColumnFilter(activeFilterColumn)">All</button>

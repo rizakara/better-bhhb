@@ -22,6 +22,8 @@
 
 .main-split {
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .treeview-open-btn {
@@ -217,21 +219,37 @@
   display: none;
 }
 
-table {
+.history-table {
   width: 100%;
+  min-width: max-content;
 }
 
-.mat-row:hover {
+.history-table.mat-mdc-table {
+  --mat-table-header-container-height: auto;
+  --mat-table-header-headline-size: 13px;
+  --mat-table-header-headline-line-height: 1.35;
+  --mat-table-row-item-container-height: 25px;
+  --mat-table-row-item-label-text-size: 13px;
+  --mat-table-row-item-label-text-line-height: 25px;
+}
+
+.mat-row:hover,
+.mat-mdc-row:hover {
   background-color: var(--hover-bg);
 }
 
 tr.mat-row,
-tr.mat-footer-row {
+tr.mat-footer-row,
+tr.mat-mdc-row,
+tr.mat-mdc-footer-row {
   height: 25px;
 }
 
-tr.mat-header-row {
-  height: 36px;
+tr.mat-header-row,
+tr.mat-mdc-header-row,
+.history-table tr.mat-mdc-header-row {
+  height: auto;
+  min-height: 36px;
 }
 
 /* Base table theming using CSS variables so all color themes are followed */
@@ -245,7 +263,8 @@ table.mat-mdc-table {
 
 .mat-header-row,
 tr.mat-header-row,
-.mdc-data-table__header-row {
+.mdc-data-table__header-row,
+tr.mat-mdc-header-row {
   background: var(--bg-primary);
 }
 
@@ -253,16 +272,31 @@ tr.mat-header-row,
 .mat-footer-row,
 tr.mat-row,
 tr.mat-footer-row,
-.mdc-data-table__row {
+.mdc-data-table__row,
+tr.mat-mdc-row,
+tr.mat-mdc-footer-row {
   background: var(--bg-primary);
 }
 
 .mat-header-cell,
 th.mat-header-cell,
 .mdc-data-table__header-cell,
-.mat-mdc-header-cell {
+.mat-mdc-header-cell,
+th.mat-mdc-header-cell {
   color: var(--text-muted) !important;
   background: var(--bg-primary) !important;
+}
+
+.history-table .mat-mdc-header-cell,
+.history-table th.mat-mdc-header-cell {
+  height: auto !important;
+  min-height: 36px;
+  line-height: 1.35 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  overflow: hidden;
 }
 
 .mat-cell,
@@ -270,15 +304,19 @@ th.mat-header-cell,
 td.mat-cell,
 td.mat-footer-cell,
 .mdc-data-table__cell,
-.mat-mdc-cell {
+.mat-mdc-cell,
+td.mat-mdc-cell {
   color: var(--text-primary) !important;
 }
 
 .column-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  isolation: isolate;
 }
 
 .column-header > span[mat-sort-header] {
@@ -286,31 +324,67 @@ td.mat-footer-cell,
   align-items: center;
   flex: 1 1 auto;
   min-width: 0;
+  max-width: calc(100% - 26px);
+  overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .column-header .mat-sort-header-container {
   flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
+  overflow: visible;
 }
 
-:host ::ng-deep .mat-sort-header:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
-  opacity: 0.54 !important;
-  transform: translateY(0) !important;
-  vertical-align: middle;
+/* MDC puts sorted/descending state on .mat-sort-header-container, not the host */
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container {
+  min-width: 0;
+  overflow: visible;
 }
 
-/* When sorted, keep the arrow visible and aligned */
-:host ::ng-deep .mat-sort-header.mat-sort-header-sorted .mat-sort-header-arrow {
-  vertical-align: middle;
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-content {
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-arrow {
+  flex-shrink: 0;
+  height: 16px;
+  width: 16px;
+  color: var(--text-muted);
+}
+
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-arrow svg {
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+}
+
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container:not(.mat-sort-header-sorted) .mat-sort-header-arrow {
+  opacity: 0.54;
+}
+
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container.mat-sort-header-sorted .mat-sort-header-arrow {
+  opacity: 1;
+}
+
+:host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container.mat-sort-header-descending .mat-sort-header-arrow {
+  transform: rotate(180deg);
 }
 
 .column-filter-button {
-  width: 20px;
-  height: 20px;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
   line-height: 1;
-  padding: 0;
+  padding: 0 !important;
+  margin: 0;
   flex-shrink: 0;
   color: inherit;
   opacity: 0.54;
@@ -318,6 +392,19 @@ td.mat-footer-cell,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 0;
+  overflow: visible;
+  --mat-icon-button-state-layer-size: 20px;
+  --mat-icon-button-icon-size: 16px;
+  --mat-icon-button-touch-target-size: 20px;
+  --mat-icon-button-touch-target-display: none;
+  --mdc-icon-button-state-layer-size: 20px;
+}
+
+:host ::ng-deep .column-filter-button.mat-mdc-icon-button .mat-mdc-button-touch-target {
+  width: 20px;
+  height: 20px;
 }
 
 .column-filter-button mat-icon {
@@ -334,7 +421,10 @@ td.mat-footer-cell,
 
 .history-table .mat-cell,
 .history-table .mat-header-cell,
-.history-table .mat-row {
+.history-table .mat-row,
+.history-table .mat-mdc-cell,
+.history-table .mat-mdc-header-cell,
+.history-table .mat-mdc-row {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -347,36 +437,41 @@ td.mat-footer-cell,
 }
 
 .mat-table .mat-cell,
-.mat-table .mat-header-cell {
+.mat-table .mat-header-cell,
+table.mat-mdc-table .mat-mdc-cell,
+table.mat-mdc-table .mat-mdc-header-cell {
   border-right: 1px solid var(--border-color);
 }
 
-/* Table row separators (horizontal lines) - base uses theme var for light */
 .mat-table tr,
 .mat-table td,
-.mat-table th {
+.mat-table th,
+table.mat-mdc-table tr,
+table.mat-mdc-table td,
+table.mat-mdc-table th {
   border-bottom: 1px solid var(--border-color);
 }
 
-/* Selected row highlight - strong enough to see during arrow key navigation */
 tr.row-is-clicked,
 .mat-row.row-is-clicked,
+.mat-mdc-row.row-is-clicked,
 tr.row-is-clicked:hover,
-.mat-row.row-is-clicked:hover {
+.mat-row.row-is-clicked:hover,
+.mat-mdc-row.row-is-clicked:hover {
   background-color: var(--selected-bg) !important;
 }
 
-/* Apply highlight directly to cells too (Material tables often paint bg on td) */
 .row-is-clicked td,
 .row-is-clicked .mat-cell,
 .row-is-clicked .mat-footer-cell,
+.row-is-clicked .mat-mdc-cell,
 .row-is-clicked th {
   background-color: var(--selected-bg) !important;
 }
 
-/* Left accent indicator for the active/selected row */
 .row-is-clicked td:first-child,
-.row-is-clicked .mat-cell:first-child {
+.row-is-clicked .mat-cell:first-child,
+.row-is-clicked .mat-mdc-cell:first-child {
   box-shadow: inset 4px 0 0 var(--text-muted);
 }
 
@@ -384,6 +479,13 @@ as-split>as-split-area {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.table-toolbar,
+.active-filters {
+  flex-shrink: 0;
 }
 
 as-split>as-split-area .panel-header {
@@ -523,7 +625,7 @@ as-split>as-split-area .panel-header button {
 
 .comment-tag {
   display: inline-block;
-  max-width: 10rem;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -539,27 +641,32 @@ as-split>as-split-area .panel-header button {
   font-style: italic;
 }
 
-.mat-column-comment {
-  max-width: 14rem;
+/* Data columns: max ~35 characters wide; overflow hidden with ellipsis */
+.history-table .mat-mdc-header-cell[class*='mat-column-']:not(.mat-column-position),
+.history-table .mat-mdc-cell[class*='mat-column-']:not(.mat-column-position) {
+  max-width: 35ch;
+}
+
+.history-table .mat-column-position {
+  max-width: 5ch;
+}
+
+.history-table td.mat-mdc-cell,
+.history-table td.mat-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-table .comment-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-spacer {
   flex: 1 1 auto;
-}
-
-*>.as-split-area {
-  overflow-x: auto;
-}
-
-.mat-column-time {
-  white-space: nowrap;
-}
-
-.mat-column-path {
-  max-width: 25rem;
-  white-space: nowrap;
-  overflow-x: hidden;
-  text-overflow: ellipsis;
 }
 
 :host ::ng-deep .as-split-gutter {
@@ -567,12 +674,16 @@ as-split>as-split-area .panel-header button {
 }
 
 .mat-table .mat-cell:not(:nth-child(1)),
-.mat-table .mat-header-cell:not(:nth-child(1)) {
+.mat-table .mat-header-cell:not(:nth-child(1)),
+table.mat-mdc-table .mat-mdc-cell:not(:nth-child(1)),
+table.mat-mdc-table .mat-mdc-header-cell:not(:nth-child(1)) {
   padding: 0 10px;
 }
 
 .table-container {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   overflow: auto;
 }
 
@@ -596,6 +707,8 @@ as-split>as-split-area .panel-header button {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
 }
 
 .filter-chips {
@@ -628,12 +741,18 @@ as-split>as-split-area .panel-header button {
 }
 
 .chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   background: transparent;
   border: 0;
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1;
-  padding: 0 3px;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0 2px;
   cursor: pointer;
   border-radius: 50%;
 }
@@ -769,14 +888,18 @@ body.theme-is-dark :host ::ng-deep .site-map-tree .tree-children > .tree-mat-nod
    No need to force transparent here; vars provide correct bg per theme. */
 
 body.theme-is-dark .mat-table .mat-cell,
-body.theme-is-dark .mat-table .mat-header-cell {
+body.theme-is-dark .mat-table .mat-header-cell,
+body.theme-is-dark table.mat-mdc-table .mat-mdc-cell,
+body.theme-is-dark table.mat-mdc-table .mat-mdc-header-cell {
   border-right: 1px solid var(--border-color);
 }
 
-/* Use default dark theme separator color (rgba white 0.12) for table row lines in all dark themes */
 body.theme-is-dark .mat-table tr,
 body.theme-is-dark .mat-table td,
-body.theme-is-dark .mat-table th {
+body.theme-is-dark .mat-table th,
+body.theme-is-dark table.mat-mdc-table tr,
+body.theme-is-dark table.mat-mdc-table td,
+body.theme-is-dark table.mat-mdc-table th {
   border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 

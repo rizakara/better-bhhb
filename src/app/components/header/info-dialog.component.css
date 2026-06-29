@@ -1,11 +1,13 @@
-::ng-deep .mat-dialog-container {
+::ng-deep .mat-dialog-container,
+::ng-deep .mat-mdc-dialog-container {
     box-shadow: unset;
     border: 1px solid var(--border-color);
     background: var(--bg-primary);
     color: inherit;
 }
 
-::ng-deep .mat-dialog-container button {
+::ng-deep .mat-dialog-container button,
+::ng-deep .mat-mdc-dialog-container button {
     border: 1px solid var(--border-color) !important;
 }
 
@@ -58,11 +60,13 @@ ul {
     overflow: visible !important;
 }
 
-body.theme-is-dark ::ng-deep .mat-dialog-container {
+body.theme-is-dark ::ng-deep .mat-dialog-container,
+body.theme-is-dark ::ng-deep .mat-mdc-dialog-container {
   background-color: var(--bg-primary);
   color: inherit;
 }
 
-body.theme-is-dark ::ng-deep .mat-dialog-container button {
+body.theme-is-dark ::ng-deep .mat-dialog-container button,
+body.theme-is-dark ::ng-deep .mat-mdc-dialog-container button {
   border: 1px solid var(--border-color) !important;
 }

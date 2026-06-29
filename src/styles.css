@@ -235,6 +235,105 @@ body {
   color: var(--text-primary);
 }
 
+/* ============================================
+   Angular Material MDC token bridge
+   Prebuilt themes set light surfaces; remap them
+   to the app's theme variables on every palette.
+   ============================================ */
+body {
+  --mat-toolbar-container-background-color: var(--bg-primary);
+  --mat-toolbar-container-text-color: var(--text-primary);
+  --mat-table-background-color: var(--bg-primary);
+  --mat-table-header-headline-color: var(--text-muted);
+  --mat-table-row-item-label-text-color: var(--text-primary);
+  --mat-table-row-item-outline-color: var(--border-color);
+  --mat-table-row-item-container-height: 25px;
+  --mat-table-header-container-height: 36px;
+  --mat-table-footer-container-height: 25px;
+  --mat-table-header-headline-size: 13px;
+  --mat-table-header-headline-line-height: 36px;
+  --mat-table-header-headline-weight: 400;
+  --mat-table-header-headline-tracking: normal;
+  --mat-table-row-item-label-text-size: 13px;
+  --mat-table-row-item-label-text-line-height: 25px;
+  --mat-table-row-item-label-text-weight: 400;
+  --mat-table-row-item-label-text-tracking: normal;
+  --mat-dialog-container-color: var(--bg-primary);
+  --mat-dialog-subhead-color: var(--text-primary);
+  --mat-dialog-supporting-text-color: var(--text-secondary);
+  --mat-menu-container-color: var(--menu-bg);
+  --mat-menu-item-label-text-color: var(--menu-text);
+  --mat-menu-item-icon-color: var(--menu-text);
+  --mat-menu-divider-color: var(--border-color);
+  --mat-menu-item-label-text-size: 13px;
+  --mat-menu-item-label-text-line-height: 36px;
+  --mat-checkbox-label-text-color: var(--text-primary);
+  --mat-sort-arrow-color: var(--text-muted);
+  --mat-progress-bar-active-indicator-color: #177fc5;
+  --mat-progress-bar-track-color: var(--progress-buffer);
+}
+
+.mat-toolbar,
+.mat-mdc-toolbar {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* MDC migration: icons/svg defaulted to baseline alignment and sit too low */
+.mat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.mat-mdc-icon-button,
+.mat-icon-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.mat-mdc-icon-button .mat-icon,
+.mat-icon-button .mat-icon,
+.mat-mdc-icon-button svg,
+.mat-mdc-icon-button img,
+.mat-icon-button svg,
+.mat-icon-button img {
+  display: block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.mat-toolbar .mat-mdc-icon-button.mat-mdc-button-base,
+.mat-mdc-toolbar .mat-mdc-icon-button.mat-mdc-button-base {
+  --mat-icon-button-state-layer-size: 32px;
+  --mat-icon-button-icon-size: 24px;
+  --mdc-icon-button-state-layer-size: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.mat-mdc-table,
+table.mat-mdc-table,
+table.history-table {
+  --mat-table-row-item-container-height: 25px;
+  --mat-table-header-container-height: 36px;
+  --mat-table-footer-container-height: 25px;
+  --mat-table-header-headline-size: 13px;
+  --mat-table-header-headline-line-height: 36px;
+  --mat-table-header-headline-weight: 400;
+  --mat-table-header-headline-tracking: normal;
+  --mat-table-row-item-label-text-size: 13px;
+  --mat-table-row-item-label-text-line-height: 25px;
+  --mat-table-row-item-label-text-weight: 400;
+  --mat-table-row-item-label-text-tracking: normal;
+}
+
 .app-logo {
   vertical-align: middle;
 }
@@ -264,7 +363,15 @@ app-root {
   font-size: 13px;
   line-height: 36px;
   height: 36px;
+  min-height: 36px;
   color: inherit !important;
+}
+
+.mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-item .mat-mdc-menu-item-text {
+  line-height: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mat-menu-panel.import-menu-panel .mat-menu-item:hover:not([disabled]),
@@ -284,6 +391,19 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 }
 
 .mat-menu-panel.row-context-menu-panel,
+.mat-mdc-menu-panel.row-context-menu-panel,
+.mat-menu-panel.row-context-copy-submenu,
+.mat-mdc-menu-panel.row-context-copy-submenu,
+.mat-menu-panel.row-context-compare-submenu,
+.mat-mdc-menu-panel.row-context-compare-submenu {
+  --mat-menu-item-leading-spacing: 16px;
+  --mat-menu-item-trailing-spacing: 16px;
+  --mat-menu-item-label-text-line-height: 36px;
+  --mat-menu-divider-bottom-spacing: 0;
+  --mat-menu-divider-top-spacing: 0;
+}
+
+.mat-menu-panel.row-context-menu-panel,
 .mat-mdc-menu-panel.row-context-menu-panel {
   min-width: 240px !important;
   max-width: 360px;
@@ -295,60 +415,109 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 
 .mat-menu-panel.row-context-menu-panel .mat-menu-content,
 .mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-content {
-  padding: 4px 0 !important;
+  padding: 0 0 4px !important;
   background: transparent !important;
 }
 
-.mat-menu-panel.row-context-menu-panel .row-context-menu-header {
+/* Header / hint blocks are plain divs — reset MDC menu-content typography */
+.mat-menu-panel.row-context-menu-panel .row-context-menu-header,
+.mat-mdc-menu-panel.row-context-menu-panel .row-context-menu-header {
+  display: block;
+  box-sizing: border-box;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
   font-size: 11px;
   font-weight: 600;
-  padding: 6px 16px 4px;
+  letter-spacing: normal;
+  padding: 8px 16px 6px;
+  margin: 0;
   color: var(--text-muted);
   pointer-events: none;
   line-height: 1.35;
   word-break: break-all;
 }
 
-.mat-menu-panel.row-context-menu-panel .mat-menu-item {
+.mat-mdc-menu-panel.row-context-menu-panel .row-context-menu-header + .mat-divider {
+  margin: 0;
+}
+
+.mat-menu-panel.row-context-menu-panel .mat-menu-item,
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item,
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item,
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item {
   font-size: 13px;
   line-height: 36px;
   height: 36px;
+  min-height: 36px;
   color: inherit !important;
+  overflow: hidden;
+}
+
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item .mat-mdc-menu-item-text,
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item .mat-mdc-menu-item-text,
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item .mat-mdc-menu-item-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 36px;
 }
 
-.mat-menu-panel.row-context-menu-panel .mat-menu-item:hover:not([disabled]) {
+.mat-menu-panel.row-context-menu-panel .mat-menu-item:hover:not([disabled]),
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item:hover:not([disabled]) {
   background-color: var(--hover-bg) !important;
 }
 
-.mat-menu-panel.row-context-menu-panel .mat-divider {
+.mat-menu-panel.row-context-menu-panel .mat-divider,
+.mat-mdc-menu-panel.row-context-menu-panel .mat-divider,
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-divider,
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-divider {
   border-top-color: var(--border-color);
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
-body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
+body.theme-is-dark .mat-menu-panel.row-context-menu-panel,
+body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   box-shadow: var(--shadow-dark);
 }
 
 .mat-menu-panel.row-context-copy-submenu,
-.mat-menu-panel.row-context-compare-submenu {
+.mat-menu-panel.row-context-compare-submenu,
+.mat-mdc-menu-panel.row-context-copy-submenu,
+.mat-mdc-menu-panel.row-context-compare-submenu {
   min-width: 280px !important;
   max-width: 420px;
 }
 
-.mat-menu-panel.row-context-compare-submenu .mat-menu-item {
+.mat-menu-panel.row-context-compare-submenu .mat-menu-item,
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item .mat-mdc-menu-item-text {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+  width: 100%;
+  white-space: nowrap;
 }
 
-.mat-menu-panel.row-context-compare-submenu .row-context-menu-hint {
+.mat-menu-panel.row-context-compare-submenu .row-context-menu-hint,
+.mat-mdc-menu-panel.row-context-compare-submenu .row-context-menu-hint {
+  display: block;
+  box-sizing: border-box;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: normal;
   line-height: 1.35;
   padding: 4px 16px 6px;
+  margin: 0;
   color: var(--text-muted);
   pointer-events: none;
 }
@@ -358,30 +527,61 @@ body.theme-is-dark .mat-menu-panel.row-context-menu-panel {
   padding-right: 32px;
 }
 
-.mat-menu-panel.row-context-copy-submenu .mat-menu-item {
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item-submenu-trigger {
+  padding-right: var(--mat-menu-item-trailing-spacing, 16px);
+}
+
+.mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-submenu-icon {
+  width: 10px;
+  height: 10px;
+  padding-left: 8px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.mat-menu-panel.row-context-copy-submenu .mat-menu-item,
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item .mat-mdc-menu-item-text {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+  width: 100%;
+  white-space: nowrap;
 }
 
-.mat-menu-panel.row-context-copy-submenu .row-context-copy-label {
+.mat-menu-panel.row-context-copy-submenu .row-context-copy-label,
+.mat-mdc-menu-panel.row-context-copy-submenu .row-context-copy-label,
+.mat-mdc-menu-panel.row-context-compare-submenu .row-context-copy-label {
   flex: 0 0 auto;
 }
 
-.mat-menu-panel.row-context-copy-submenu .row-context-copy-preview {
+.mat-menu-panel.row-context-copy-submenu .row-context-copy-preview,
+.mat-mdc-menu-panel.row-context-copy-submenu .row-context-copy-preview,
+.mat-mdc-menu-panel.row-context-compare-submenu .row-context-copy-preview {
   flex: 1 1 auto;
   min-width: 0;
   text-align: right;
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.35;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mat-menu-panel.row-context-copy-submenu .mat-menu-item[disabled] .row-context-copy-preview {
+.mat-menu-panel.row-context-copy-submenu .mat-menu-item[disabled] .row-context-copy-preview,
+.mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item[disabled] .row-context-copy-preview {
   opacity: 0.55;
 }
 
@@ -509,7 +709,8 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   box-shadow: var(--shadow-dark) !important;
 }
 
-.bhhb-dialog .mat-dialog-title {
+.bhhb-dialog .mat-dialog-title,
+.bhhb-dialog .mat-mdc-dialog-title {
   margin: 0;
   padding: 16px 24px 8px;
   font-size: 18px;
@@ -518,18 +719,38 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   border-bottom: 1px solid var(--border-color);
 }
 
-.bhhb-dialog .mat-dialog-content {
+.bhhb-dialog .mat-dialog-content,
+.bhhb-dialog .mat-mdc-dialog-content {
   margin: 0;
   padding: 16px 24px;
   color: var(--text-primary);
   max-height: min(70vh, 560px);
 }
 
-.bhhb-dialog .mat-dialog-actions {
+.bhhb-dialog .mat-dialog-actions,
+.bhhb-dialog .mat-mdc-dialog-actions {
   margin: 0;
   padding: 12px 16px 16px;
   border-top: 1px solid var(--border-color);
   min-height: auto;
+}
+
+.bhhb-dialog .mat-button,
+.bhhb-dialog .mat-flat-button,
+.bhhb-dialog .mat-stroked-button,
+.bhhb-dialog .mat-mdc-button,
+.bhhb-dialog .mat-mdc-unelevated-button,
+.bhhb-dialog .mat-mdc-outlined-button {
+  --mat-button-text-label-text-color: var(--text-primary);
+  --mat-button-text-state-layer-color: var(--text-primary);
+  --mat-button-text-disabled-label-text-color: var(--text-muted);
+  --mat-button-text-disabled-state-layer-color: var(--text-muted);
+  --mat-button-protected-label-text-color: var(--text-primary);
+  --mat-button-protected-state-layer-color: var(--text-primary);
+  --mat-button-outlined-label-text-color: var(--text-primary);
+  --mat-button-outlined-state-layer-color: var(--text-primary);
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
 }
 
 .bhhb-dialog .mat-dialog-actions .mat-button,
@@ -539,13 +760,34 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
 .bhhb-dialog .mat-dialog-actions .mat-mdc-unelevated-button,
 .bhhb-dialog .mat-dialog-actions .mat-mdc-outlined-button {
   border: 1px solid var(--border-color) !important;
-  color: inherit !important;
+  color: var(--text-primary) !important;
+}
+
+.bhhb-dialog .mat-button.mat-primary,
+.bhhb-dialog .mat-mdc-button.mat-primary {
+  --mat-button-text-label-text-color: #177fc5;
+  --mat-button-text-state-layer-color: #177fc5;
+  border-color: #177fc5 !important;
+  color: #177fc5 !important;
 }
 
 .bhhb-dialog .mat-dialog-actions .mat-button.mat-primary,
 .bhhb-dialog .mat-dialog-actions .mat-mdc-button.mat-primary {
   border-color: #177fc5 !important;
   color: #177fc5 !important;
+}
+
+.bhhb-dialog .mat-mdc-button .mdc-button__label,
+.bhhb-dialog .mat-mdc-unelevated-button .mdc-button__label,
+.bhhb-dialog .mat-mdc-outlined-button .mdc-button__label {
+  color: inherit;
+}
+
+.bhhb-dialog .mat-mdc-icon-button,
+.bhhb-dialog .mat-icon-button {
+  --mat-icon-button-icon-color: var(--text-muted);
+  --mat-icon-button-state-layer-color: var(--text-muted);
+  color: var(--text-muted);
 }
 
 .bhhb-dialog .import-dialog-actions {
@@ -593,11 +835,13 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   stroke: var(--bg-primary) !important;
 }
 
-.bhhb-dialog .mat-progress-bar-buffer {
+.bhhb-dialog .mat-progress-bar-buffer,
+.bhhb-dialog .mat-mdc-progress-bar .mdc-linear-progress__buffer-bar {
   background-color: var(--progress-buffer) !important;
 }
 
-.bhhb-dialog .mat-progress-bar-fill::after {
+.bhhb-dialog .mat-progress-bar-fill::after,
+.bhhb-dialog .mat-mdc-progress-bar .mdc-linear-progress__bar-inner {
   background-color: #177fc5 !important;
 }
 
@@ -610,64 +854,122 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   stroke: #1d1e20 !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel,
-.mat-mdc-menu-panel.column-filter-menu-panel {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel {
   min-width: 220px !important;
   max-width: 360px !important;
   background: var(--menu-bg) !important;
   color: var(--menu-text) !important;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-light);
+  --mat-menu-container-color: var(--menu-bg);
+  --mat-menu-item-label-text-color: var(--menu-text);
+  --mat-menu-divider-color: var(--border-color);
+  /* MDC tokens cannot use "inherit" — it resolves the same property name, not color */
+  --mat-checkbox-label-text-color: var(--menu-text);
+  --mat-button-text-label-text-color: var(--menu-text);
+  --mat-button-text-state-layer-color: var(--menu-text);
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-menu-content,
-.mat-mdc-menu-panel.column-filter-menu-panel .mat-mdc-menu-content {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel {
+  box-shadow: var(--shadow-dark);
+}
+
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-menu-content,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-menu-content {
   padding: 0 !important;
   background: transparent !important;
+  color: var(--menu-text);
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: normal;
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-toolbar {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-toolbar {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 8px 12px 4px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-title {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-title {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-toolbar .mat-button {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-toolbar .mat-button,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-toolbar .mat-mdc-button,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-apply,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-clear,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-apply,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-clear {
+  --mat-button-text-label-text-color: var(--menu-text);
+  --mat-button-text-state-layer-color: var(--menu-text);
+  --mat-button-text-touch-target-size: 28px;
+  --mat-button-text-label-text-size: 12px;
   min-width: auto;
   padding: 0 8px;
+  height: 28px;
   line-height: 28px;
   font-size: 12px;
-  color: inherit;
+  color: var(--menu-text) !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-divider {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-button .mdc-button__label {
+  color: var(--menu-text) !important;
+}
+
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-apply,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-clear,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-apply,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-clear {
+  padding: 0;
+  line-height: 24px;
+  height: 24px;
+  align-self: flex-start;
+}
+
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-divider {
   border-top-color: var(--border-color);
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-options {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-options {
   max-height: 280px;
   overflow-y: auto;
   padding: 4px 0 8px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-option {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-option {
   padding: 0 12px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .column-filter-option .mat-checkbox {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-option .mat-checkbox,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-option .mat-mdc-checkbox {
   width: 100%;
+  --mat-checkbox-state-layer-size: 28px;
+  --mat-checkbox-touch-target-display: none;
+  --mat-checkbox-label-text-color: var(--menu-text);
+  --mat-checkbox-selected-icon-color: var(--text-primary);
+  --mat-checkbox-selected-focus-icon-color: var(--text-primary);
+  --mat-checkbox-selected-hover-icon-color: var(--text-primary);
+  --mat-checkbox-selected-pressed-icon-color: var(--text-primary);
+  --mat-checkbox-selected-checkmark-color: var(--bg-primary);
+  --mat-checkbox-unselected-icon-color: var(--text-muted);
+  --mat-checkbox-unselected-focus-icon-color: var(--text-muted);
+  --mat-checkbox-unselected-hover-icon-color: var(--text-muted);
+  --mat-checkbox-unselected-pressed-icon-color: var(--text-muted);
+  --mat-checkbox-selected-focus-state-layer-color: var(--hover-bg);
+  --mat-checkbox-selected-hover-state-layer-color: var(--hover-bg);
+  --mat-checkbox-selected-pressed-state-layer-color: var(--hover-bg);
+  --mat-checkbox-unselected-focus-state-layer-color: var(--hover-bg);
+  --mat-checkbox-unselected-hover-state-layer-color: var(--hover-bg);
+  --mat-checkbox-unselected-pressed-state-layer-color: var(--hover-bg);
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-label,
-.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-label {
-  color: inherit !important;
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-label,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox .mdc-label {
+  color: var(--menu-text) !important;
   font-size: 13px;
   line-height: 20px;
   white-space: nowrap;
@@ -675,66 +977,84 @@ body.theme-is-dark .bhhb-dialog .mat-checkbox-checkmark-path {
   text-overflow: ellipsis;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame,
-.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-frame,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
   border-color: var(--text-muted) !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background,
-.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-indeterminate .mat-checkbox-background,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
   background-color: var(--text-primary) !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-checkmark-path {
   stroke: var(--bg-primary) !important;
 }
 
-.mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
-.mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
   background-color: var(--hover-bg);
 }
 
 /* Dark theme checkbox adjustments */
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-option .mat-mdc-checkbox {
+  --mat-checkbox-selected-icon-color: #e0e0e0;
+  --mat-checkbox-selected-focus-icon-color: #e0e0e0;
+  --mat-checkbox-selected-hover-icon-color: #e0e0e0;
+  --mat-checkbox-selected-pressed-icon-color: #e0e0e0;
+  --mat-checkbox-selected-checkmark-color: #1d1e20;
+  --mat-checkbox-unselected-icon-color: rgba(255, 255, 255, 0.54);
+  --mat-checkbox-unselected-focus-icon-color: rgba(255, 255, 255, 0.54);
+  --mat-checkbox-unselected-hover-icon-color: rgba(255, 255, 255, 0.54);
+  --mat-checkbox-unselected-pressed-icon-color: rgba(255, 255, 255, 0.54);
+}
+
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-checked .mat-checkbox-background,
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox.mdc-checkbox--selected .mdc-checkbox__background {
   background-color: #e0e0e0 !important;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-checkmark-path {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-checkmark-path {
   stroke: #1d1e20 !important;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox-frame,
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-frame,
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox .mdc-checkbox__outline {
   border-color: rgba(255, 255, 255, 0.54) !important;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox:not(.mat-checkbox-disabled) .mat-checkbox-ripple .mat-ripple-element,
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox:not(.mat-mdc-checkbox-disabled) .mat-ripple-element {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-advanced {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-advanced,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .path-filter-advanced,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-advanced {
+  color: var(--menu-text);
+}
+
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-advanced {
   padding: 8px 12px 4px;
   font-family: sans-serif;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-section-title {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-section-title {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 6px;
   opacity: 0.7;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-mode {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-mode {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 8px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-mode-option {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-mode-option {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -742,20 +1062,20 @@ body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:no
   cursor: pointer;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-fields {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-fields {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 6px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-range {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-range {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-input {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-input {
   flex: 1;
   min-width: 0;
   height: 28px;
@@ -763,101 +1083,81 @@ body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .mat-mdc-checkbox:no
   border: 1px solid var(--border-color-strong);
   border-radius: 4px;
   background: transparent;
-  color: inherit;
+  color: var(--menu-text);
   font-size: 13px;
   font-family: monospace;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-input-wide {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-input-wide {
   width: 100%;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-separator {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-separator {
   flex-shrink: 0;
   opacity: 0.7;
 }
 
-.mat-menu-panel.column-filter-menu-panel .ip-filter-apply,
-.mat-menu-panel.column-filter-menu-panel .ip-filter-clear {
-  min-width: auto;
-  padding: 0;
-  line-height: 24px;
-  font-size: 12px;
-  align-self: flex-start;
-}
-
-.mat-menu-panel.column-filter-menu-panel .ip-filter-error {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-error {
   font-size: 12px;
   color: #c62828;
   margin-bottom: 4px;
 }
 
-/* ip filter input border already uses var for all themes */
-
-.mat-menu-panel.column-filter-menu-panel .path-filter-advanced {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .path-filter-advanced {
   padding: 8px 12px 4px;
   font-family: sans-serif;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .ip-filter-error {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-error {
   color: #ef9a9a;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-advanced {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-advanced {
   padding: 8px 12px 4px;
   font-family: sans-serif;
   min-width: 280px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-range-label {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-range-label {
   font-size: 12px;
   opacity: 0.75;
   margin-bottom: 8px;
   line-height: 1.4;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-fields {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-fields {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 6px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-label {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-label {
   font-size: 12px;
   opacity: 0.8;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-input {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-input {
   height: 30px;
   padding: 0 8px;
   border: 1px solid var(--border-color-strong);
   border-radius: 4px;
   background: transparent;
-  color: inherit;
+  color: var(--menu-text);
   font-size: 13px;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-input-wide {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-input-wide {
   width: 100%;
 }
 
-.mat-menu-panel.column-filter-menu-panel .time-filter-apply,
-.mat-menu-panel.column-filter-menu-panel .time-filter-clear {
-  min-width: auto;
-  padding: 0;
-  line-height: 24px;
-  font-size: 12px;
-  align-self: flex-start;
-}
-
-.mat-menu-panel.column-filter-menu-panel .time-filter-error {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-error {
   font-size: 12px;
   color: #c62828;
   margin-bottom: 4px;
 }
 
-body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .time-filter-error {
+body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-error {
   color: #ef9a9a;
 }
 
@@ -903,5 +1203,7 @@ body.theme-is-dark .mat-menu-panel.column-filter-menu-panel .time-filter-error {
   font-size: 13px;
   opacity: 0.75;
 }
+
+
 
 
