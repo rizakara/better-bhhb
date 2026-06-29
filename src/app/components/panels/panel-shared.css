@@ -45,6 +45,7 @@
   flex: 1;
   min-height: 0;
   font-family: monospace;
+  font-size: var(--fs-mono);
   white-space: pre;
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -64,7 +65,7 @@
   justify-content: center;
   background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   pointer-events: none;
 }
 
@@ -82,7 +83,7 @@
   border-bottom: 0;
   height: 30px;
   padding-inline-start: 10px;
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   flex: 1;
   min-width: 0;
   background: transparent;
@@ -101,7 +102,7 @@
 .search-status {
   flex-shrink: 0;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-family: sans-serif;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -109,14 +110,14 @@
 
 .diff-compare-label {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   color: var(--text-secondary);
 }
 
 .diff-content,
 .diff-sbs {
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--fs-mono-sm);
   line-height: 1.45;
 }
 
@@ -133,7 +134,7 @@
 }
 
 .diff-stats {
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   color: var(--text-secondary);
 }
 
@@ -187,7 +188,7 @@
 }
 
 .diff-sbs-header-row {
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   font-weight: 600;
   border-bottom: 1px solid var(--border-color);
 }
@@ -213,7 +214,7 @@
 .body-truncate-notice {
   margin: 0 0 8px;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-family: sans-serif;
   color: var(--text-secondary);
   background: var(--bg-secondary);
@@ -237,7 +238,7 @@
 
 .replay-hint {
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   line-height: 1.35;
   color: var(--text-secondary);
   border-top: 1px solid var(--border-color);
@@ -265,7 +266,7 @@
 }
 
 .edit-status {
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   color: var(--text-secondary);
   white-space: nowrap;
 }

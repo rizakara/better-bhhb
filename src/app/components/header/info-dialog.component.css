@@ -40,7 +40,7 @@ ul {
 .btn {
     word-wrap: break-word;
     padding: 5px 16px;
-    font-size: 14px;
+    font-size: calc(14px * var(--font-scale));
     font-weight: 500;
     border-radius: 6px;
     appearance: none;

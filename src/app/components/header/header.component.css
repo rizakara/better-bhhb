@@ -74,7 +74,7 @@ svg {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-weight: 500;
   color: var(--text-primary);
   text-align: left;
@@ -97,7 +97,7 @@ svg {
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-weight: 500;
   padding: 0;
 }
@@ -123,7 +123,7 @@ svg {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   line-height: 1;
   flex: 0 0 auto;
   opacity: 0.55;
@@ -151,19 +151,117 @@ svg {
 }
 
 .theme-menu-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   font-weight: 600;
   padding: 2px 16px 4px;
   opacity: 0.6;
   pointer-events: none;
 }
 
-.theme-selected {
+::ng-deep .mat-mdc-menu-panel.display-menu-panel {
+  min-width: 220px !important;
+  max-width: 240px;
+  overflow-x: hidden;
+}
+
+.display-menu-body {
+  padding: 8px 12px 10px;
+  box-sizing: border-box;
+}
+
+.display-menu-title {
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.display-control + .display-control {
+  margin-top: 10px;
+}
+
+.display-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: calc(12px * var(--font-scale));
+  margin-bottom: 2px;
+}
+
+.display-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--input-bg);
+  padding: 2px;
+}
+
+.display-step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: calc(15px * var(--font-scale));
+  line-height: 1;
+  cursor: pointer;
+}
+
+.display-step-btn:hover {
+  background: var(--hover-bg);
+}
+
+.display-step-btn:active {
+  background: var(--selected-bg);
+}
+
+.display-step-value {
+  flex: 1 1 auto;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: calc(12px * var(--font-scale));
+  color: var(--text-secondary);
+}
+
+.display-reset-button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: calc(12px * var(--font-scale));
+  cursor: pointer;
+}
+
+.display-reset-button:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.theme-selected,
+.display-selected {
   font-weight: 600;
   background-color: rgba(0, 0, 0, 0.06) !important;
 }
 
-body.theme-is-dark .theme-selected {
+body.theme-is-dark .theme-selected,
+body.theme-is-dark .display-selected {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 

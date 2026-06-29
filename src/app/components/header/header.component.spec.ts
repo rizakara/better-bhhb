@@ -6,6 +6,7 @@ import { AngularMaterialModule } from '../../modules/angular-material/angular-ma
 import { BurpImportService } from '../../services/burp-import/burp-import.service';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
 import { ThemeService } from '../../services/theme/theme.service';
+import { DisplayPreferencesService } from '../../services/display/display-preferences.service';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceTabData } from '../../services/workspace/workspace-view-state';
 import { HeaderComponent } from './header.component';
@@ -47,6 +48,18 @@ describe('HeaderComponent', () => {
             lightThemes: [],
             currentTheme: { id: 'dark', name: 'Dark' },
             setTheme: () => undefined,
+          },
+        },
+        {
+          provide: DisplayPreferencesService,
+          useValue: {
+            preferences: { uiFontPercent: 100, rowDensityPercent: 100, monoFontPercent: 100 },
+            preferences$: of({ uiFontPercent: 100, rowDensityPercent: 100, monoFontPercent: 100 }),
+            formatPercent: (value: number) => `${value}%`,
+            setUiFontPercent: () => undefined,
+            setRowDensityPercent: () => undefined,
+            setMonoFontPercent: () => undefined,
+            resetToDefaults: () => undefined,
           },
         },
         {

@@ -55,6 +55,29 @@
       if (themeId === 'dark') {
         document.body.classList.add('dark-theme');
       }
+
+      var fontScale = 1;
+      var rowScale = 1;
+      var monoScale = 1;
+      var legacyFont = { small: 0.9, default: 1, large: 1.12, 'extra-large': 1.25 };
+      var legacyRow = { compact: 0.88, default: 1, comfortable: 1.2 };
+      try {
+        var displayRaw = localStorage.getItem('bhhb-display-preferences');
+        if (displayRaw) {
+          var displayPrefs = JSON.parse(displayRaw);
+          if (typeof displayPrefs.uiFontPercent === 'number') {
+            fontScale = displayPrefs.uiFontPercent / 100;
+            rowScale = (displayPrefs.rowDensityPercent || 100) / 100;
+            monoScale = (displayPrefs.monoFontPercent || 100) / 100;
+          } else if (displayPrefs.fontSize) {
+            fontScale = legacyFont[displayPrefs.fontSize] || 1;
+            rowScale = legacyRow[displayPrefs.rowDensity] || 1;
+          }
+        }
+      } catch (e) {}
+      document.documentElement.style.setProperty('--font-scale', String(fontScale));
+      document.documentElement.style.setProperty('--row-scale', String(rowScale));
+      document.documentElement.style.setProperty('--mono-scale', String(monoScale));
     })();
   </script>
   <app-root></app-root>

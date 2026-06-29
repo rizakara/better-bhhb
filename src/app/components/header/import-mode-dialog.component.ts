@@ -57,7 +57,7 @@ export interface ImportModeDialogData {
       width: 22px;
       height: 22px;
       line-height: 20px;
-      font-size: 18px;
+      font-size: var(--fs-lg);
       font-weight: 600;
       border: none;
       background: transparent;

@@ -135,11 +135,11 @@ export interface ImportDestinationDialogResult {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 13px;
+      font-size: var(--fs-base);
     }
 
     .workspace-option-badge {
-      font-size: 10px;
+      font-size: calc(10px * var(--font-scale));
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -147,7 +147,7 @@ export interface ImportDestinationDialogResult {
     }
 
     .workspace-option-meta {
-      font-size: 11px;
+      font-size: var(--fs-xs);
       color: var(--text-muted);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -160,7 +160,7 @@ export interface ImportDestinationDialogResult {
 
     .import-mode-hint {
       margin: 14px 0 0;
-      font-size: 13px;
+      font-size: var(--fs-base);
       color: var(--text-secondary);
     }
 
@@ -180,7 +180,7 @@ export interface ImportDestinationDialogResult {
       width: 22px;
       height: 22px;
       line-height: 20px;
-      font-size: 18px;
+      font-size: var(--fs-lg);
       font-weight: 600;
       border: none;
       background: transparent;

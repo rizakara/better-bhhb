@@ -58,7 +58,7 @@
   border-radius: 4px;
   color: var(--text-primary);
   background-color: var(--bg-primary);
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   padding: 4px 8px;
   white-space: nowrap;
 }
@@ -71,7 +71,7 @@
 
 .inspector-content {
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   white-space: normal;
 }
 
@@ -96,7 +96,7 @@
   background: var(--bg-secondary);
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   z-index: 1;
 }
 
@@ -104,14 +104,14 @@
   width: 34%;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
 }
 
 .inspector-key {
   width: 34%;
   color: #1565c0;
   font-family: monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
 }
 
 .inspector-empty {

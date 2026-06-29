@@ -4,6 +4,24 @@ html,
 body {
   height: 100%;
 }
+
+html {
+  --font-scale: 1;
+  --row-scale: 1;
+  --mono-scale: 1;
+  --fs-xs: calc(11px * var(--font-scale));
+  --fs-sm: calc(12px * var(--font-scale));
+  --fs-base: calc(13px * var(--font-scale));
+  --fs-md: calc(15px * var(--font-scale));
+  --fs-lg: calc(18px * var(--font-scale));
+  --fs-xl: calc(20px * var(--font-scale));
+  --fs-mono: calc(16px * var(--mono-scale));
+  --fs-mono-sm: calc(12px * var(--mono-scale));
+  --row-compact: calc(25px * var(--row-scale));
+  --row-header: calc(36px * var(--row-scale));
+  --row-menu: calc(36px * var(--row-scale));
+}
+
 body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
@@ -247,15 +265,15 @@ body {
   --mat-table-header-headline-color: var(--text-muted);
   --mat-table-row-item-label-text-color: var(--text-primary);
   --mat-table-row-item-outline-color: var(--border-color);
-  --mat-table-row-item-container-height: 25px;
-  --mat-table-header-container-height: 36px;
-  --mat-table-footer-container-height: 25px;
-  --mat-table-header-headline-size: 13px;
-  --mat-table-header-headline-line-height: 36px;
+  --mat-table-row-item-container-height: var(--row-compact);
+  --mat-table-header-container-height: var(--row-header);
+  --mat-table-footer-container-height: var(--row-compact);
+  --mat-table-header-headline-size: var(--fs-base);
+  --mat-table-header-headline-line-height: var(--row-header);
   --mat-table-header-headline-weight: 400;
   --mat-table-header-headline-tracking: normal;
-  --mat-table-row-item-label-text-size: 13px;
-  --mat-table-row-item-label-text-line-height: 25px;
+  --mat-table-row-item-label-text-size: var(--fs-base);
+  --mat-table-row-item-label-text-line-height: var(--row-compact);
   --mat-table-row-item-label-text-weight: 400;
   --mat-table-row-item-label-text-tracking: normal;
   --mat-dialog-container-color: var(--bg-primary);
@@ -265,8 +283,8 @@ body {
   --mat-menu-item-label-text-color: var(--menu-text);
   --mat-menu-item-icon-color: var(--menu-text);
   --mat-menu-divider-color: var(--border-color);
-  --mat-menu-item-label-text-size: 13px;
-  --mat-menu-item-label-text-line-height: 36px;
+  --mat-menu-item-label-text-size: var(--fs-base);
+  --mat-menu-item-label-text-line-height: var(--row-menu);
   --mat-checkbox-label-text-color: var(--text-primary);
   --mat-sort-arrow-color: var(--text-muted);
   --mat-progress-bar-active-indicator-color: #177fc5;
@@ -321,15 +339,15 @@ body {
 .mat-mdc-table,
 table.mat-mdc-table,
 table.history-table {
-  --mat-table-row-item-container-height: 25px;
-  --mat-table-header-container-height: 36px;
-  --mat-table-footer-container-height: 25px;
-  --mat-table-header-headline-size: 13px;
-  --mat-table-header-headline-line-height: 36px;
+  --mat-table-row-item-container-height: var(--row-compact);
+  --mat-table-header-container-height: var(--row-header);
+  --mat-table-footer-container-height: var(--row-compact);
+  --mat-table-header-headline-size: var(--fs-base);
+  --mat-table-header-headline-line-height: var(--row-header);
   --mat-table-header-headline-weight: 400;
   --mat-table-header-headline-tracking: normal;
-  --mat-table-row-item-label-text-size: 13px;
-  --mat-table-row-item-label-text-line-height: 25px;
+  --mat-table-row-item-label-text-size: var(--fs-base);
+  --mat-table-row-item-label-text-line-height: var(--row-compact);
   --mat-table-row-item-label-text-weight: 400;
   --mat-table-row-item-label-text-tracking: normal;
 }
@@ -360,15 +378,15 @@ app-root {
 
 .mat-menu-panel.import-menu-panel .mat-menu-item,
 .mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-item {
-  font-size: 13px;
-  line-height: 36px;
-  height: 36px;
-  min-height: 36px;
+  font-size: var(--fs-base);
+  line-height: var(--row-menu);
+  height: var(--row-menu);
+  min-height: var(--row-menu);
   color: inherit !important;
 }
 
 .mat-mdc-menu-panel.import-menu-panel .mat-mdc-menu-item .mat-mdc-menu-item-text {
-  line-height: 36px;
+  line-height: var(--row-menu);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -398,7 +416,7 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 .mat-mdc-menu-panel.row-context-compare-submenu {
   --mat-menu-item-leading-spacing: 16px;
   --mat-menu-item-trailing-spacing: 16px;
-  --mat-menu-item-label-text-line-height: 36px;
+  --mat-menu-item-label-text-line-height: var(--row-menu);
   --mat-menu-divider-bottom-spacing: 0;
   --mat-menu-divider-top-spacing: 0;
 }
@@ -425,7 +443,7 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
   display: block;
   box-sizing: border-box;
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: normal;
   padding: 8px 16px 6px;
@@ -444,10 +462,10 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
 .mat-mdc-menu-panel.row-context-menu-panel .mat-mdc-menu-item,
 .mat-mdc-menu-panel.row-context-copy-submenu .mat-mdc-menu-item,
 .mat-mdc-menu-panel.row-context-compare-submenu .mat-mdc-menu-item {
-  font-size: 13px;
-  line-height: 36px;
-  height: 36px;
-  min-height: 36px;
+  font-size: var(--fs-base);
+  line-height: var(--row-menu);
+  height: var(--row-menu);
+  min-height: var(--row-menu);
   color: inherit !important;
   overflow: hidden;
 }
@@ -458,7 +476,7 @@ body.theme-is-dark .mat-mdc-menu-panel.import-menu-panel {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 36px;
+  line-height: var(--row-menu);
 }
 
 .mat-menu-panel.row-context-menu-panel .mat-menu-item:hover:not([disabled]),
@@ -512,7 +530,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   display: block;
   box-sizing: border-box;
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   letter-spacing: normal;
   line-height: 1.35;
@@ -570,7 +588,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   flex: 1 1 auto;
   min-width: 0;
   text-align: right;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   letter-spacing: normal;
   line-height: 1.35;
@@ -592,7 +610,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-header {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   padding: 6px 16px 4px;
   color: var(--text-muted);
@@ -636,7 +654,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
 :is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-check {
   flex: 0 0 16px;
   width: 16px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1;
   color: transparent;
   visibility: hidden;
@@ -666,7 +684,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-meta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -691,7 +709,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1;
   flex: 0 0 auto;
 }
@@ -727,7 +745,7 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
 .bhhb-dialog .mat-mdc-dialog-title {
   margin: 0;
   padding: 16px 24px 8px;
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
@@ -900,7 +918,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
   background: transparent !important;
   color: var(--menu-text);
   font-family: Roboto, "Helvetica Neue", sans-serif;
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.4;
   letter-spacing: normal;
 }
@@ -914,7 +932,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .column-filter-title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 600;
 }
 
@@ -927,12 +945,12 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
   --mat-button-text-label-text-color: var(--menu-text);
   --mat-button-text-state-layer-color: var(--menu-text);
   --mat-button-text-touch-target-size: 28px;
-  --mat-button-text-label-text-size: 12px;
+  --mat-button-text-label-text-size: var(--fs-sm);
   min-width: auto;
   padding: 0 8px;
   height: 28px;
   line-height: 28px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--menu-text) !important;
 }
 
@@ -990,7 +1008,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-checkbox-label,
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .mat-mdc-checkbox .mdc-label {
   color: var(--menu-text) !important;
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
@@ -1061,7 +1079,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-section-title {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   margin-bottom: 6px;
   opacity: 0.7;
@@ -1078,7 +1096,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   cursor: pointer;
 }
 
@@ -1104,7 +1122,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
   border-radius: 4px;
   background: transparent;
   color: var(--menu-text);
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-family: monospace;
 }
 
@@ -1118,7 +1136,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .ip-filter-error {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: #c62828;
   margin-bottom: 4px;
 }
@@ -1139,7 +1157,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-range-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   opacity: 0.75;
   margin-bottom: 8px;
   line-height: 1.4;
@@ -1153,7 +1171,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   opacity: 0.8;
 }
 
@@ -1164,7 +1182,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
   border-radius: 4px;
   background: transparent;
   color: var(--menu-text);
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-input-wide {
@@ -1172,7 +1190,7 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-panel .time-filter-error {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: #c62828;
   margin-bottom: 4px;
 }
@@ -1208,19 +1226,19 @@ body.theme-is-dark :is(.mat-menu-panel, .mat-mdc-menu-panel).column-filter-menu-
 }
 
 .file-drop-icon {
-  font-size: 42px;
+  font-size: calc(42px * var(--font-scale));
   line-height: 1;
   margin-bottom: 8px;
 }
 
 .file-drop-title {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .file-drop-subtitle {
-  font-size: 13px;
+  font-size: var(--fs-base);
   opacity: 0.75;
 }
 

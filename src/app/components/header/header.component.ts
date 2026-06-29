@@ -1,6 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ExportFilterState, FileHandleService } from "../../services/file-handle/file-handle.service"
 import { Theme, ThemeService } from "../../services/theme/theme.service";
+import { DisplayPreferencesService } from '../../services/display/display-preferences.service';
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -24,6 +25,7 @@ export class HeaderComponent implements OnInit {
     private workspaceService: WorkspaceService,
     public dialog: MatDialog,
     public themeService: ThemeService,
+    public displayPreferencesService: DisplayPreferencesService,
     private snackBar: MatSnackBar,
   ) { }
 
@@ -53,6 +55,7 @@ export class HeaderComponent implements OnInit {
   burpImportMessage = '';
   burpImportStatus: 'idle' | 'listening' | 'loading' | 'success' | 'error' = 'idle';
   private lastBurpImportNotice = '';
+  displayPreferences$ = this.displayPreferencesService.preferences$;
   workspaceTabs: WorkspaceTabData[] = [];
   activeWorkspaceTabId: string | null = null;
   renamingTabId: string | null = null;
@@ -298,6 +301,24 @@ export class HeaderComponent implements OnInit {
       event.preventDefault();
       this.cancelRenamingTab();
     }
+  }
+
+  adjustUiFont(delta: number): void {
+    this.displayPreferencesService.setUiFontPercent(
+      this.displayPreferencesService.preferences.uiFontPercent + delta,
+    );
+  }
+
+  adjustRowDensity(delta: number): void {
+    this.displayPreferencesService.setRowDensityPercent(
+      this.displayPreferencesService.preferences.rowDensityPercent + delta,
+    );
+  }
+
+  adjustMonoFont(delta: number): void {
+    this.displayPreferencesService.setMonoFontPercent(
+      this.displayPreferencesService.preferences.monoFontPercent + delta,
+    );
   }
 
   getWorkspaceTabTitle(tab: WorkspaceTabData): string {

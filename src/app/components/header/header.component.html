@@ -33,6 +33,62 @@
                 </button>
             </div>
         </mat-menu>
+        <button mat-icon-button aria-label="Display" [matMenuTriggerFor]="displayMenu" matTooltip="Display">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                <path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3l-4-4-4 4z"/>
+            </svg>
+        </button>
+        <mat-menu #displayMenu="matMenu" class="import-menu-panel display-menu-panel">
+            <ng-container *ngIf="displayPreferences$ | async as displayPrefs">
+                <div class="display-menu-body" (click)="$event.stopPropagation()">
+                    <div class="display-menu-title">Display</div>
+
+                    <div class="display-control">
+                        <div class="display-control-header">
+                            <span>UI font size</span>
+                        </div>
+                        <div class="display-stepper">
+                            <button type="button" class="display-step-btn" aria-label="Decrease UI font size"
+                                (click)="adjustUiFont(-1)">−</button>
+                            <span class="display-step-value">{{ displayPreferencesService.formatPercent(displayPrefs.uiFontPercent) }}</span>
+                            <button type="button" class="display-step-btn" aria-label="Increase UI font size"
+                                (click)="adjustUiFont(1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="display-control">
+                        <div class="display-control-header">
+                            <span>Row density</span>
+                        </div>
+                        <div class="display-stepper">
+                            <button type="button" class="display-step-btn" aria-label="Decrease row density"
+                                (click)="adjustRowDensity(-1)">−</button>
+                            <span class="display-step-value">{{ displayPreferencesService.formatPercent(displayPrefs.rowDensityPercent) }}</span>
+                            <button type="button" class="display-step-btn" aria-label="Increase row density"
+                                (click)="adjustRowDensity(1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="display-control">
+                        <div class="display-control-header">
+                            <span>Monospace text</span>
+                        </div>
+                        <div class="display-stepper">
+                            <button type="button" class="display-step-btn" aria-label="Decrease monospace text size"
+                                (click)="adjustMonoFont(-1)">−</button>
+                            <span class="display-step-value">{{ displayPreferencesService.formatPercent(displayPrefs.monoFontPercent) }}</span>
+                            <button type="button" class="display-step-btn" aria-label="Increase monospace text size"
+                                (click)="adjustMonoFont(1)">+</button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="display-reset-button"
+                        (click)="displayPreferencesService.resetToDefaults()">
+                        Reset to defaults
+                    </button>
+                </div>
+            </ng-container>
+        </mat-menu>
         <div class="workspace-rename-inline workspace-control" *ngIf="renamingTabId; else workspaceSelector">
             <svg class="workspace-selector-icon" xmlns="http://www.w3.org/2000/svg" height="18px"
                 viewBox="0 -960 960 960" width="18px" fill="currentColor" aria-hidden="true">
