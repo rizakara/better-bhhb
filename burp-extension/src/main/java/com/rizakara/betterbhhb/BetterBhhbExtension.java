@@ -2,6 +2,7 @@ package com.rizakara.betterbhhb;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.proxy.ProxyHttpRequestResponse;
 import burp.api.montoya.ui.UserInterface;
@@ -64,7 +65,34 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         } else if (isIntruderResultsInvocation(event)) {
             List<HttpRequestResponse> selected = event.selectedRequestResponses();
             log.debug("Context menu: intruder selection=" + selected.size());
-            menuItems.add(createSendSelectedIntruderMenuItem(selected, "context-menu"));
+            menuItems.add(createSendSelectedHttpMenuItem(
+                    selected,
+                    "context-menu",
+                    "intruder results",
+                    "intruder-send-selected"
+            ));
+            menuItems.add(new JPopupMenu.Separator());
+        } else if (isSiteMapInvocation(event)) {
+            List<HttpRequestResponse> selected = event.selectedRequestResponses();
+            List<HttpRequestResponse> all = api.siteMap().requestResponses();
+            log.debug("Context menu: sitemap selection=" + selected.size() + ", total=" + all.size());
+            menuItems.add(createSendSelectedHttpMenuItem(
+                    selected,
+                    "context-menu",
+                    "sitemap items",
+                    "sitemap-send-selected"
+            ));
+            menuItems.add(createSendAllHttpMenuItem(all, "context-menu", "sitemap items", "sitemap-send-all"));
+            menuItems.add(new JPopupMenu.Separator());
+        } else if (isLoggerInvocation(event)) {
+            List<HttpRequestResponse> selected = event.selectedRequestResponses();
+            log.debug("Context menu: logger selection=" + selected.size());
+            menuItems.add(createSendSelectedHttpMenuItem(
+                    selected,
+                    "context-menu",
+                    "logger items",
+                    "logger-send-selected"
+            ));
             menuItems.add(new JPopupMenu.Separator());
         }
 
@@ -73,17 +101,24 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
     }
 
     private void registerSuiteMenu() {
-        JMenuItem sendAll = new JMenuItem("Send all proxy history to PWA");
-        sendAll.addActionListener(actionEvent -> {
+        JMenuItem sendAllProxy = new JMenuItem("Send all proxy history to PWA");
+        sendAllProxy.addActionListener(actionEvent -> {
             log.debug("Top menu action clicked: Send all proxy history to PWA");
             sendAllProxyFromMenu();
+        });
+
+        JMenuItem sendAllSiteMap = new JMenuItem("Send all sitemap to PWA");
+        sendAllSiteMap.addActionListener(actionEvent -> {
+            log.debug("Top menu action clicked: Send all sitemap to PWA");
+            sendAllSiteMapFromMenu();
         });
 
         JMenuItem configurePwa = new JMenuItem("Configure PWA URL…");
         configurePwa.addActionListener(actionEvent -> openPwaSettingsDialog("menu", eventSource(actionEvent)));
 
         JMenu menu = new JMenu("Better-BHHB");
-        menu.add(sendAll);
+        menu.add(sendAllProxy);
+        menu.add(sendAllSiteMap);
         menu.add(configurePwa);
         api.userInterface().menuBar().registerMenu(menu);
         log.debug("Registered top-level Better-BHHB menu.");
@@ -99,6 +134,18 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         }
 
         sendProxyHistoryToPwaAsync(items, "menu-send-all");
+    }
+
+    private void sendAllSiteMapFromMenu() {
+        List<HttpRequestResponse> items = api.siteMap().requestResponses();
+        log.debug("Menu send-all requested. siteMap.requestResponses() size=" + items.size());
+
+        if (items.isEmpty()) {
+            showMessage("No sitemap items are available to export.", "Better-BHHB", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        sendRequestResponsesToPwaAsync(items, "menu-send-all", "sitemap");
     }
 
     private JMenuItem createSendSelectedProxyMenuItem(List<ProxyHttpRequestResponse> items, String source) {
@@ -132,21 +179,58 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         return menuItem;
     }
 
-    private JMenuItem createSendSelectedIntruderMenuItem(List<HttpRequestResponse> items, String source) {
+    private JMenuItem createSendSelectedHttpMenuItem(
+            List<HttpRequestResponse> items,
+            String source,
+            String itemLabel,
+            String actionSuffix
+    ) {
         String label = items.size() == 1
-                ? "Send selected intruder results to Better-BHHB PWA"
-                : "Send selected (" + items.size() + " intruder results) to Better-BHHB PWA";
+                ? "Send selected " + itemLabel + " to Better-BHHB PWA"
+                : "Send selected (" + items.size() + " " + itemLabel + ") to Better-BHHB PWA";
         if (items.isEmpty()) {
-            label = "Send selected intruder results to Better-BHHB PWA";
+            label = "Send selected " + itemLabel + " to Better-BHHB PWA";
         }
 
         JMenuItem menuItem = new JMenuItem(label);
         menuItem.setEnabled(!items.isEmpty());
         menuItem.addActionListener(actionEvent -> {
-            log.debug(source + " send-selected clicked for " + items.size() + " intruder result(s).");
-            sendRequestResponsesToPwaAsync(items, source + "-send-selected");
+            log.debug(source + " " + actionSuffix + " clicked for " + items.size() + " item(s).");
+            sendRequestResponsesToPwaAsync(items, source + "-" + actionSuffix, sourceKindFromLabel(itemLabel));
         });
         return menuItem;
+    }
+
+    private JMenuItem createSendAllHttpMenuItem(
+            List<HttpRequestResponse> items,
+            String source,
+            String itemLabel,
+            String actionSuffix
+    ) {
+        String label = items.isEmpty()
+                ? "Send all to Better-BHHB PWA"
+                : "Send all (" + items.size() + " " + itemLabel + ") to Better-BHHB PWA";
+
+        JMenuItem menuItem = new JMenuItem(label);
+        menuItem.setEnabled(!items.isEmpty());
+        menuItem.addActionListener(actionEvent -> {
+            log.debug(source + " " + actionSuffix + " clicked for " + items.size() + " item(s).");
+            sendRequestResponsesToPwaAsync(items, source + "-" + actionSuffix, "sitemap");
+        });
+        return menuItem;
+    }
+
+    private String sourceKindFromLabel(String itemLabel) {
+        if (itemLabel.startsWith("intruder")) {
+            return "intruder";
+        }
+        if (itemLabel.startsWith("logger")) {
+            return "logger";
+        }
+        if (itemLabel.startsWith("sitemap")) {
+            return "sitemap";
+        }
+        return "http";
     }
 
     private JMenuItem createSettingsMenuItem(String source) {
@@ -216,6 +300,17 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         return event.isFrom(InvocationType.INTRUDER_ATTACK_RESULTS);
     }
 
+    private boolean isSiteMapInvocation(ContextMenuEvent event) {
+        return event.isFrom(
+                InvocationType.SITE_MAP_TREE,
+                InvocationType.SITE_MAP_TABLE
+        );
+    }
+
+    private boolean isLoggerInvocation(ContextMenuEvent event) {
+        return event.isFromTool(ToolType.LOGGER);
+    }
+
     private void sendProxyHistoryToPwaAsync(List<ProxyHttpRequestResponse> items, String source) {
         if (items.isEmpty()) {
             showMessage("No proxy history items are available to export.", "Better-BHHB", JOptionPane.WARNING_MESSAGE);
@@ -225,17 +320,25 @@ public class BetterBhhbExtension implements BurpExtension, ContextMenuItemsProvi
         queueSend(source, items.size(), () -> coordinator.sendProxyHistory(api, items));
     }
 
-    private void sendRequestResponsesToPwaAsync(List<HttpRequestResponse> items, String source) {
+    private void sendRequestResponsesToPwaAsync(List<HttpRequestResponse> items, String source, String kind) {
         if (items.isEmpty()) {
-            showMessage(
-                    "No intruder results are selected.\nSelect rows in the attack results table (Ctrl+A for all), then try again.",
-                    "Better-BHHB",
-                    JOptionPane.WARNING_MESSAGE
-            );
+            showMessage(emptySelectionMessage(kind), "Better-BHHB", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         queueSend(source, items.size(), () -> coordinator.sendRequestResponses(api, items));
+    }
+
+    private String emptySelectionMessage(String kind) {
+        return switch (kind) {
+            case "intruder" ->
+                    "No intruder results are selected.\nSelect rows in the attack results table (Ctrl+A for all), then try again.";
+            case "sitemap" ->
+                    "No sitemap items are selected.\nSelect rows in the sitemap table or tree (Ctrl+A for all), then try again.";
+            case "logger" ->
+                    "No logger items are selected.\nSelect rows in the Logger table (Ctrl+A for all), then try again.";
+            default -> "No items are selected.\nSelect rows (Ctrl+A for all), then try again.";
+        };
     }
 
     private void queueSend(String source, int itemCount, ThrowingRunnable sendTask) {
