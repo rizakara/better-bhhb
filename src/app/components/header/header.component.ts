@@ -166,6 +166,10 @@ export class HeaderComponent implements OnInit {
   }
 
   exportAllWorkspaces(): void {
+    if (this.workspaceTabs.length < 2) {
+      return;
+    }
+
     void this.FileHandleService.exportAllWorkspaces().catch((err) => {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;

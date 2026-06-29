@@ -1,8 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { MatDialog } from '@angular/material/dialog';
+import { MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
+import { QueryList } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 
@@ -55,6 +58,7 @@ describe('MainComponent', () => {
         },
         { provide: RequestReplayService, useValue: requestReplayService },
         { provide: MatSnackBar, useValue: snackBar },
+        { provide: MatDialog, useValue: { openDialogs: [] } },
         {
           provide: HistoryIndexService,
           useValue: {
@@ -514,6 +518,46 @@ describe('MainComponent', () => {
 
     expect(component.requestBodyTruncated).toBeFalse();
     expect(component.requestHighlightedBody.length).toBe(largeBody.length);
+  });
+
+  it('escape closes treeview before clearing row selection', () => {
+    component.treeViewOpen = true;
+    component.clickedRow = { position: 1, request: [[], ''], response: [[], ''], comment: '' };
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (component as unknown as { onEscapeCapture(event: KeyboardEvent): void }).onEscapeCapture(event);
+
+    expect(component.treeViewOpen).toBeFalse();
+    expect(component.clickedRow).toBeDefined();
+  });
+
+  it('escape leaves row selection when a dialog is open', () => {
+    (component as unknown as { dialog: MatDialog }).dialog = { openDialogs: [{}] } as MatDialog;
+    component.clickedRow = { position: 1, request: [[], ''], response: [[], ''], comment: '' };
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    spyOn(event, 'stopImmediatePropagation');
+    (component as unknown as { onEscapeCapture(event: KeyboardEvent): void }).onEscapeCapture(event);
+
+    expect(component.clickedRow).toBeDefined();
+    expect(event.stopImmediatePropagation).not.toHaveBeenCalled();
+  });
+
+  it('escape closes an open menu before clearing row selection', () => {
+    const closeMenu = jasmine.createSpy('closeMenu');
+    const trigger = { menuOpen: true, closeMenu } as unknown as MatMenuTrigger;
+    (component as unknown as { menuTriggers: QueryList<MatMenuTrigger> }).menuTriggers = {
+      some: (predicate: (item: MatMenuTrigger) => boolean) => [trigger].some(predicate),
+      forEach: (fn: (item: MatMenuTrigger) => void) => [trigger].forEach(fn),
+    } as QueryList<MatMenuTrigger>;
+
+    component.clickedRow = { position: 1, request: [[], ''], response: [[], ''], comment: '' };
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    (component as unknown as { onEscapeCapture(event: KeyboardEvent): void }).onEscapeCapture(event);
+
+    expect(closeMenu).toHaveBeenCalled();
+    expect(component.clickedRow).toBeDefined();
   });
 
   it('captures and restores workspace filter state', () => {

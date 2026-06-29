@@ -20,6 +20,7 @@ import { IndexedRowResult } from '../../services/history-index/history-index.typ
 import { HistoryRowParseService } from '../../services/history-index/history-row-parse.service';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -116,6 +117,7 @@ export class MainComponent implements OnInit, OnDestroy {
     private historyIndexService: HistoryIndexService,
     private historyRowParseService: HistoryRowParseService,
     private snackBar: MatSnackBar,
+    private dialog: MatDialog,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -139,6 +141,19 @@ export class MainComponent implements OnInit, OnDestroy {
   private resizeStartWidth = 0;
   private resizeMoveListener: ((event: MouseEvent) => void) | null = null;
   private resizeEndListener: (() => void) | null = null;
+  private readonly onEscapeCapture = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    if (this.isDialogOpen()) {
+      return;
+    }
+    if (this.handleEscapeKey(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    }
+  };
   readonly filterableColumnDefs = [
     { key: 'host', label: 'Host' },
     { key: 'method', label: 'Method' },
@@ -261,6 +276,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('keydown', this.onEscapeCapture, true);
     this.endColumnResize();
     this.clearSearchDebounce();
     this.clearFooterSyncDebounce();
@@ -283,6 +299,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    document.addEventListener('keydown', this.onEscapeCapture, true);
     this.loadColumnLayout();
     this.setupFilterPredicate();
     this.workspaceService.registerViewStateProvider(() => this.captureViewState());
@@ -2718,12 +2735,30 @@ export class MainComponent implements OnInit, OnDestroy {
     this.touchView();
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isAnyMenuOpen()) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    if (target.closest(
+      '.mat-mdc-menu-panel, .mat-menu-panel, [mat-menu-trigger-for], [matMenuTriggerFor], .column-filter-button, .column-visibility-button',
+    )) {
+      return;
+    }
+
+    this.closeOpenFilterMenus();
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleGlobalKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      if (this.handleEscapeKey(event)) {
-        return;
-      }
+      return;
     }
 
     if (this.shouldIgnoreKeyboardShortcut(event)) {
@@ -2819,6 +2854,12 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private handleEscapeKey(event: KeyboardEvent): boolean {
+    if (this.isAnyMenuOpen()) {
+      event.preventDefault();
+      this.closeOpenFilterMenus();
+      return true;
+    }
+
     if (this.editingCommentPosition !== null) {
       event.preventDefault();
       const editingRow = this.findRowByPosition(this.editingCommentPosition);
@@ -2843,6 +2884,13 @@ export class MainComponent implements OnInit, OnDestroy {
     if (this.comparePinRow) {
       event.preventDefault();
       this.clearContextMenuCompareBase();
+      return true;
+    }
+
+    if (this.treeViewOpen) {
+      event.preventDefault();
+      this.toggleTreeView();
+      this.touchView();
       return true;
     }
 
@@ -3151,6 +3199,24 @@ export class MainComponent implements OnInit, OnDestroy {
           }
         }
     }
+  }
+
+  private isDialogOpen(): boolean {
+    if (this.dialog.openDialogs.length > 0) {
+      return true;
+    }
+    return !!document.querySelector(
+      '.cdk-overlay-container .mat-mdc-dialog-container, .cdk-overlay-container .mat-dialog-container',
+    );
+  }
+
+  private isAnyMenuOpen(): boolean {
+    if (this.menuTriggers?.some((trigger) => trigger.menuOpen)) {
+      return true;
+    }
+    return !!document.querySelector(
+      '.cdk-overlay-container .mat-mdc-menu-panel, .cdk-overlay-container .mat-menu-panel',
+    );
   }
 
   private closeOpenFilterMenus(): void {

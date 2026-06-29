@@ -8,7 +8,14 @@
 
 :host {
   display: block;
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-primary);
+}
+
+.session-history-content {
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .session-history-intro {
@@ -39,6 +46,12 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.session-history-toolbar .mat-checkbox,
+.session-history-toolbar .mat-mdc-checkbox {
+  --mat-checkbox-state-layer-size: 28px;
+  --mat-checkbox-touch-target-display: none;
+}
+
 .session-history-selection-count {
   font-size: 12px;
   color: var(--text-muted);
@@ -47,17 +60,22 @@
 .session-history-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .session-history-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: 10px 12px 10px 8px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 6px 8px 6px 4px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-secondary);
   color: inherit;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -70,6 +88,8 @@
 
 .session-history-checkbox {
   flex: 0 0 auto;
+  --mat-checkbox-state-layer-size: 28px;
+  --mat-checkbox-touch-target-display: none;
 }
 
 .session-history-item-main {
@@ -78,15 +98,22 @@
 }
 
 .session-history-item-title {
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: var(--text-primary);
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .session-history-item-meta {
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .session-history-separator {
@@ -95,7 +122,24 @@
 
 .session-history-item .mat-icon-button,
 .session-history-item .mat-mdc-icon-button {
+  flex: 0 0 auto;
+  --mat-icon-button-state-layer-size: 28px;
+  --mat-icon-button-icon-size: 18px;
+  --mat-icon-button-touch-target-size: 28px;
+  --mat-icon-button-touch-target-display: none;
+  --mdc-icon-button-state-layer-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   color: var(--text-muted);
+}
+
+.session-history-item .mat-icon-button mat-icon,
+.session-history-item .mat-mdc-icon-button mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
 }
 
 .session-history-item .mat-icon-button:hover,

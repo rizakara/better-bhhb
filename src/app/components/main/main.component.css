@@ -60,19 +60,35 @@
 
 .tree-panel-header {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-height: 18px;
+  padding: 10px;
   font-size: 13px;
   font-weight: 600;
   border-bottom: 1px solid var(--border-color);
+  background-color: var(--label-bg);
+  color: var(--text-primary);
 }
 
 .tree-panel-close {
-  border: none;
-  background: none;
+  box-shadow: var(--shadow-light);
+  user-select: none;
   cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
   font-size: 18px;
   line-height: 1;
   padding: 0 4px;
-  color: inherit;
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .tree-scroll {

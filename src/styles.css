@@ -741,6 +741,12 @@ body.theme-is-dark .cdk-overlay-pane.bhhb-dialog .mat-mdc-dialog-container {
   max-height: min(70vh, 560px);
 }
 
+/* MDC zeroes top padding when content follows a title; restore gap below header divider */
+.bhhb-dialog .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content,
+.bhhb-dialog .mat-dialog-container .mat-dialog-title + .mat-dialog-content {
+  padding-top: 16px;
+}
+
 .bhhb-dialog .mat-dialog-actions,
 .bhhb-dialog .mat-mdc-dialog-actions {
   margin: 0;
