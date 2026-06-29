@@ -222,6 +222,7 @@
 .history-table {
   width: 100%;
   min-width: max-content;
+  table-layout: fixed;
 }
 
 .history-table.mat-mdc-table {
@@ -289,6 +290,7 @@ th.mat-mdc-header-cell {
 
 .history-table .mat-mdc-header-cell,
 .history-table th.mat-mdc-header-cell {
+  position: relative;
   height: auto !important;
   min-height: 36px;
   line-height: 1.35 !important;
@@ -325,7 +327,7 @@ td.mat-mdc-cell {
   flex: 1 1 auto;
   min-width: 0;
   max-width: calc(100% - 26px);
-  overflow: visible;
+  overflow: hidden;
   position: relative;
   z-index: 1;
 }
@@ -336,20 +338,43 @@ td.mat-mdc-cell {
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* MDC puts sorted/descending state on .mat-sort-header-container, not the host */
 :host ::ng-deep .history-table .mat-sort-header .mat-sort-header-container {
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 :host ::ng-deep .history-table .mat-sort-header .mat-sort-header-content {
-  white-space: normal;
-  overflow-wrap: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.35;
   min-width: 0;
+}
+
+.column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+}
+
+.column-resize-handle:hover,
+body.column-resizing .column-resize-handle {
+  background: var(--text-muted);
+  opacity: 0.35;
+}
+
+body.column-resizing {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 :host ::ng-deep .history-table .mat-sort-header .mat-sort-header-arrow {
@@ -641,21 +666,19 @@ as-split>as-split-area .panel-header button {
   font-style: italic;
 }
 
-/* Data columns: max ~35 characters wide; overflow hidden with ellipsis */
-.history-table .mat-mdc-header-cell[class*='mat-column-']:not(.mat-column-position),
-.history-table .mat-mdc-cell[class*='mat-column-']:not(.mat-column-position) {
-  max-width: 35ch;
-}
-
-.history-table .mat-column-position {
-  max-width: 5ch;
-}
-
 .history-table td.mat-mdc-cell,
 .history-table td.mat-cell {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .history-table .comment-text {

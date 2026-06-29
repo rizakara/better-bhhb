@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, OnInit, QueryList, ViewChild, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
 import { FileHandleService, BurpExport, StatusBreakdown } from '../../services/file-handle/file-handle.service'
 import {
   HttpHeaderRow,
@@ -44,9 +44,34 @@ const DEFAULT_COLUMN_ORDER = [
   'time',
 ];
 
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  position: 48,
+  host: 200,
+  method: 72,
+  path: 280,
+  status: 64,
+  responselength: 72,
+  mimetype: 140,
+  extension: 72,
+  title: 200,
+  comment: 160,
+  ip: 120,
+  time: 150,
+};
+
+const DEFAULT_COLUMN_WIDTH_LIMITS = { min: 48, max: 800 };
+const COLUMN_WIDTH_LIMITS: Record<string, { min: number; max: number }> = {
+  position: { min: 36, max: 80 },
+  method: { min: 56, max: 160 },
+  status: { min: 48, max: 120 },
+  responselength: { min: 56, max: 140 },
+  extension: { min: 48, max: 140 },
+};
+
 interface StoredColumnLayout {
   order?: string[];
   hidden?: string[];
+  widths?: Record<string, number>;
 }
 
 @Component({
@@ -56,7 +81,7 @@ interface StoredColumnLayout {
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class MainComponent implements OnInit {
+export class MainComponent implements OnInit, OnDestroy {
 
   constructor(
     private FileHandleService: FileHandleService,
@@ -73,6 +98,12 @@ export class MainComponent implements OnInit {
   private static readonly VALID_COLUMN_KEYS = new Set(DEFAULT_COLUMN_ORDER);
   columnOrder: string[] = [...DEFAULT_COLUMN_ORDER];
   hiddenColumns = new Set<string>();
+  columnWidths: Record<string, number> = { ...DEFAULT_COLUMN_WIDTHS };
+  private resizingColumn: string | null = null;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+  private resizeMoveListener: ((event: MouseEvent) => void) | null = null;
+  private resizeEndListener: (() => void) | null = null;
   readonly filterableColumnDefs = [
     { key: 'host', label: 'Host' },
     { key: 'method', label: 'Method' },
@@ -178,6 +209,10 @@ export class MainComponent implements OnInit {
 
   get hiddenColumnCount(): number {
     return this.hiddenColumns.size;
+  }
+
+  ngOnDestroy(): void {
+    this.endColumnResize();
   }
 
   ngOnInit(): void {
@@ -296,7 +331,44 @@ export class MainComponent implements OnInit {
   resetColumnLayout(): void {
     this.columnOrder = [...DEFAULT_COLUMN_ORDER];
     this.hiddenColumns.clear();
+    this.columnWidths = { ...DEFAULT_COLUMN_WIDTHS };
     this.persistColumnLayout();
+  }
+
+  getColumnWidthPx(key: string): number {
+    return this.columnWidths[key] ?? DEFAULT_COLUMN_WIDTHS[key] ?? 140;
+  }
+
+  startColumnResize(event: MouseEvent, columnKey: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.endColumnResize();
+    this.resizingColumn = columnKey;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = this.getColumnWidthPx(columnKey);
+
+    this.resizeMoveListener = (moveEvent: MouseEvent) => {
+      if (!this.resizingColumn) {
+        return;
+      }
+      const delta = moveEvent.clientX - this.resizeStartX;
+      const nextWidth = this.clampColumnWidth(this.resizingColumn, this.resizeStartWidth + delta);
+      this.columnWidths[this.resizingColumn] = nextWidth;
+      this.cdr.detectChanges();
+    };
+
+    this.resizeEndListener = () => {
+      const column = this.resizingColumn;
+      this.endColumnResize();
+      if (column) {
+        this.persistColumnLayout();
+      }
+    };
+
+    document.addEventListener('mousemove', this.resizeMoveListener);
+    document.addEventListener('mouseup', this.resizeEndListener);
+    document.body.classList.add('column-resizing');
   }
 
   private splitHeaderBody(text: any): any {
@@ -2652,6 +2724,15 @@ export class MainComponent implements OnInit {
           this.hiddenColumns.delete('position');
         }
       }
+
+      if (stored.widths && typeof stored.widths === 'object') {
+        Object.entries(stored.widths).forEach(([key, width]) => {
+          if (!validKeys.has(key) || typeof width !== 'number' || !Number.isFinite(width)) {
+            return;
+          }
+          this.columnWidths[key] = this.clampColumnWidth(key, width);
+        });
+      }
     } catch {
       // Ignore corrupt storage and keep defaults.
     }
@@ -2662,10 +2743,29 @@ export class MainComponent implements OnInit {
       localStorage.setItem(COLUMN_LAYOUT_STORAGE_KEY, JSON.stringify({
         order: this.columnOrder,
         hidden: Array.from(this.hiddenColumns),
+        widths: this.columnWidths,
       }));
     } catch {
       // Ignore quota errors.
     }
+  }
+
+  private clampColumnWidth(key: string, width: number): number {
+    const limits = COLUMN_WIDTH_LIMITS[key] ?? DEFAULT_COLUMN_WIDTH_LIMITS;
+    return Math.max(limits.min, Math.min(limits.max, Math.round(width)));
+  }
+
+  private endColumnResize(): void {
+    if (this.resizeMoveListener) {
+      document.removeEventListener('mousemove', this.resizeMoveListener);
+      this.resizeMoveListener = null;
+    }
+    if (this.resizeEndListener) {
+      document.removeEventListener('mouseup', this.resizeEndListener);
+      this.resizeEndListener = null;
+    }
+    this.resizingColumn = null;
+    document.body.classList.remove('column-resizing');
   }
 
   // --- File drop support (for receiving exports from Burp extension etc.) ---

@@ -136,6 +136,7 @@ describe('MainComponent', () => {
       previousIndex: 1,
       currentIndex: 3,
     } as CdkDragDrop<string[]>);
+    component.columnWidths['title'] = 420;
 
     component.resetColumnLayout();
 
@@ -154,6 +155,38 @@ describe('MainComponent', () => {
       'ip',
       'time',
     ]);
+    expect(component.getColumnWidthPx('title')).toBe(200);
+  });
+
+  it('persists column widths to localStorage', () => {
+    component.columnWidths['title'] = 320;
+    component.columnWidths['path'] = 400;
+    component['persistColumnLayout']();
+
+    const stored = JSON.parse(localStorage.getItem('bhhb-table-column-layout') ?? '{}');
+    expect(stored.widths.title).toBe(320);
+    expect(stored.widths.path).toBe(400);
+  });
+
+  it('restores column widths from localStorage', () => {
+    localStorage.setItem('bhhb-table-column-layout', JSON.stringify({
+      widths: { title: 360, path: 500 },
+    }));
+
+    fixture = TestBed.createComponent(MainComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.getColumnWidthPx('title')).toBe(360);
+    expect(component.getColumnWidthPx('path')).toBe(500);
+  });
+
+  it('clamps column width during resize', () => {
+    component.startColumnResize({ clientX: 100, preventDefault: () => undefined, stopPropagation: () => undefined } as MouseEvent, 'title');
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 900 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(component.getColumnWidthPx('title')).toBe(800);
   });
 
   it('enters diff mode when shift-clicking another row', () => {
