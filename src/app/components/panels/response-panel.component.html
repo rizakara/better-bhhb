@@ -1,0 +1,75 @@
+<div class="detail-loading" *ngIf="view.loading">Loading…</div>
+<div class="panel-header">
+    <div class="label">
+        <span>Response</span>
+        <span class="diff-compare-label" *ngIf="view.hasCompareRow">{{ view.compareSummaryLabel }}</span>
+        <span class="toolbar-spacer"></span>
+        <button type="button" [class.active]="view.diffMode" (click)="toggleDiff.emit()"
+            matTooltip="Shift+click another row to compare">Diff</button>
+        <button type="button" *ngIf="view.hasCompareRow" (click)="clearCompare.emit()">Clear</button>
+        <button type="button" [class.active]="view.wrap" (click)="wrapToggle.emit()">Wrap</button>
+    </div>
+    <div class="panel-search-row" *ngIf="!view.diffMode">
+        <input matInput type="search" #searchInputRef (input)="searchChange.emit($event)"
+            (keydown)="searchKeydown.emit($event)" placeholder="Search response" class="search panel-search">
+        <span class="search-status" *ngIf="view.searchTerm.trim()">
+            <span *ngIf="view.matchCount > 0">{{ view.matchIndex + 1 }} / {{ view.matchCount }}</span>
+            <span *ngIf="view.matchCount === 0">No results</span>
+        </span>
+    </div>
+    <div class="panel-search-row diff-stats-row" *ngIf="view.diffMode">
+        <span class="diff-stats">{{ view.diffStats }}</span>
+        <span class="toolbar-spacer"></span>
+        <button type="button" [class.active]="view.diffLayout === 'unified'"
+            (click)="diffLayoutChange.emit('unified')">Unified</button>
+        <button type="button" [class.active]="view.diffLayout === 'side-by-side'"
+            (click)="diffLayoutChange.emit('side-by-side')">Split</button>
+    </div>
+</div>
+<div id="response-content" class="content diff-content" [class.wrapy]="view.wrap"
+    *ngIf="view.diffMode && view.diffLayout === 'unified'">
+    <div class="diff-line" *ngFor="let line of view.diffLines"
+        [class.diff-line-delete]="line.type === 'delete'"
+        [class.diff-line-insert]="line.type === 'insert'">
+        <span class="diff-gutter">{{ line.type === 'delete' ? '-' : line.type === 'insert' ? '+' : ' ' }}</span>
+        <span class="diff-line-number" *ngIf="line.oldLineNumber">{{ line.oldLineNumber }}</span>
+        <span class="diff-line-number" *ngIf="!line.oldLineNumber">&nbsp;</span>
+        <span class="diff-line-number" *ngIf="line.newLineNumber">{{ line.newLineNumber }}</span>
+        <span class="diff-line-number" *ngIf="!line.newLineNumber">&nbsp;</span>
+        <span class="diff-line-text">{{ line.text }}</span>
+    </div>
+</div>
+<div id="response-content" class="content diff-sbs" [class.wrapy]="view.wrap"
+    *ngIf="view.diffMode && view.diffLayout === 'side-by-side'">
+    <div class="diff-sbs-row diff-sbs-header-row">
+        <div class="diff-sbs-cell">#{{ view.clickedPosition }}</div>
+        <div class="diff-sbs-cell">#{{ view.comparePosition }}</div>
+    </div>
+    <div class="diff-sbs-row" *ngFor="let row of view.sideBySideRows">
+        <div class="diff-sbs-cell" [class.diff-line-delete]="row.left.type === 'delete'">
+            <span class="diff-line-number">{{ row.left.lineNumber || '' }}</span>
+            <span class="diff-line-text">{{ row.left.text }}</span>
+        </div>
+        <div class="diff-sbs-cell" [class.diff-line-insert]="row.right.type === 'insert'">
+            <span class="diff-line-number">{{ row.right.lineNumber || '' }}</span>
+            <span class="diff-line-text">{{ row.right.text }}</span>
+        </div>
+    </div>
+</div>
+<div id="response-content" class="content" [class.wrapy]="view.wrap" *ngIf="!view.diffMode">
+    <div id="res_headers">
+        <div class="header_inner" *ngFor="let row of view.highlightedHeaders">
+            <span class="header_key" [innerHTML]="row.key"></span>
+            <span *ngIf="row.hasValue">:&nbsp;</span>
+            <span class="header_val" [innerHTML]="row.value"></span>
+        </div>
+    </div>
+    <br><br>
+    <div class="body-truncate-notice" *ngIf="view.bodyTruncated">
+        Showing first 64 KB —
+        <button type="button" class="body-expand-btn" (click)="expandBody.emit()">
+            Show full ({{ formatOmittedBodySize(view.bodyOmittedSize) }} more)
+        </button>
+    </div>
+    <div id="res_body" [innerHTML]="view.highlightedBody"></div>
+</div>

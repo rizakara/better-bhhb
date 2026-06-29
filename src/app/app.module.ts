@@ -12,6 +12,8 @@ import { ImportDuplicateDialogComponent } from './components/header/import-dupli
 import { SessionHistoryDialogComponent } from './components/header/session-history-dialog.component';
 import { MainComponent } from './components/main/main.component';
 import { InspectorPanelComponent } from './components/inspector/inspector-panel.component';
+import { RequestPanelComponent } from './components/panels/request-panel.component';
+import { ResponsePanelComponent } from './components/panels/response-panel.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
@@ -27,6 +29,8 @@ import { environment } from '../environments/environment';
     SessionHistoryDialogComponent,
     MainComponent,
     InspectorPanelComponent,
+    RequestPanelComponent,
+    ResponsePanelComponent,
     FooterComponent
   ],
   imports: [

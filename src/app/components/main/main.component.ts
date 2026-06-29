@@ -29,6 +29,16 @@ import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { WorkspaceViewState } from '../../services/workspace/workspace-view-state';
 import { InspectorTab } from '../inspector/inspector-panel.component';
+import { RequestPanelComponent } from '../panels/request-panel.component';
+import { ResponsePanelComponent } from '../panels/response-panel.component';
+import {
+  createEmptyInspectorPanelView,
+  createEmptyRequestPanelView,
+  createEmptyResponsePanelView,
+  InspectorPanelViewState,
+  RequestPanelViewState,
+  ResponsePanelViewState,
+} from '../panels/panel.types';
 
 interface SiteMapNode {
   id: string;
@@ -93,7 +103,7 @@ interface StoredColumnLayout {
     selector: 'app-main',
     templateUrl: './main.component.html',
     styleUrls: ['./main.component.css'],
-    changeDetection: ChangeDetectionStrategy.Eager,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
 export class MainComponent implements OnInit, OnDestroy {
@@ -219,6 +229,9 @@ export class MainComponent implements OnInit, OnDestroy {
   inspectorRequestCookies: ParsedCookie[] = [];
   inspectorRequestHeaders: HttpHeaderRow[] = [];
   inspectorResponseHeaders: HttpHeaderRow[] = [];
+  requestPanelView: RequestPanelViewState = createEmptyRequestPanelView();
+  responsePanelView: ResponsePanelViewState = createEmptyResponsePanelView();
+  inspectorPanelView: InspectorPanelViewState = createEmptyInspectorPanelView();
   private inspectorDataPosition: number | null = null;
   private inspectorTabsLoaded = new Set<InspectorTab>();
   treeViewOpen = false;
@@ -281,6 +294,7 @@ export class MainComponent implements OnInit, OnDestroy {
       });
     this.indexingStateSub = this.historyIndexService.state$.subscribe((state) => {
       this.indexingState = state;
+      this.touchView();
     });
     this.indexingBatchSub = this.historyIndexService.batchResults$.subscribe((results) => {
       this.mergeIndexResults(results);
@@ -300,6 +314,8 @@ export class MainComponent implements OnInit, OnDestroy {
           this.resetColumnFilters();
           this.resetTreeView();
           this.flushExportFilterState();
+          this.syncDetailPanelViews();
+          this.touchView();
           return
         }
         this.clearRequestEdits();
@@ -319,12 +335,19 @@ export class MainComponent implements OnInit, OnDestroy {
         this.refreshTableFilter();
         this.historyIndexService.startIndexing(this.ELEMENT_DATA);
         this.restoreSelectionFromViewState(selectedFileData.viewState);
+        this.touchView();
       })
   }
 
   @ViewChild(MatSort, { static: false }) sort!: MatSort;
   @ViewChild('rowContextMenuTrigger', { static: false }) rowContextMenuTrigger!: MatMenuTrigger;
+  @ViewChild(RequestPanelComponent, { static: false }) requestPanel?: RequestPanelComponent;
+  @ViewChild(ResponsePanelComponent, { static: false }) responsePanel?: ResponsePanelComponent;
   @ViewChildren(MatMenuTrigger) private menuTriggers!: QueryList<MatMenuTrigger>;
+
+  private touchView(): void {
+    this.cdr.markForCheck();
+  }
 
   trackHistoryRow(_index: number, row: any): number {
     return row.position;
@@ -397,6 +420,8 @@ export class MainComponent implements OnInit, OnDestroy {
     if (this.globalSearchTerm) {
       this.refreshTableFilter();
     }
+
+    this.touchView();
   }
 
   private ensureRowParsed(row: any): void {
@@ -515,7 +540,7 @@ export class MainComponent implements OnInit, OnDestroy {
       const delta = moveEvent.clientX - this.resizeStartX;
       const nextWidth = this.clampColumnWidth(this.resizingColumn, this.resizeStartWidth + delta);
       this.columnWidths[this.resizingColumn] = nextWidth;
-      this.cdr.detectChanges();
+      this.touchView();
     };
 
     this.resizeEndListener = () => {
@@ -548,6 +573,7 @@ export class MainComponent implements OnInit, OnDestroy {
       this.globalSearchTerm = filterValue.trim();
       this.refreshTableFilter();
       this.searchDebounceTimer = null;
+      this.touchView();
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
@@ -1288,6 +1314,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.footerSyncTimer = setTimeout(() => {
       this.syncFooterCounts();
       this.footerSyncTimer = null;
+      this.touchView();
     }, FOOTER_SYNC_DEBOUNCE_MS);
   }
 
@@ -1594,6 +1621,8 @@ export class MainComponent implements OnInit, OnDestroy {
     this.updateResponseHighlights();
     this.updateInspector();
     this.updateDiffView();
+    this.syncDetailPanelViews();
+    this.touchView();
     this.snackBar.open(
       `Comparing #${primary.position} with #${secondary.position}`,
       undefined,
@@ -1779,6 +1808,8 @@ export class MainComponent implements OnInit, OnDestroy {
 
     if (this.shouldDeferRowParse(row)) {
       this.detailPanelLoading = true;
+      this.syncDetailPanelViews();
+      this.touchView();
       queueMicrotask(() => {
         if (this.clickedRow?.position !== row.position) {
           return;
@@ -1800,37 +1831,47 @@ export class MainComponent implements OnInit, OnDestroy {
     this.updateResponseHighlights();
     this.updateInspector();
     this.updateDiffView();
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   setInspectorTab(tab: InspectorTab): void {
     this.inspectorTab = tab;
     this.ensureInspectorTabData(tab);
+    this.syncInspectorPanelView();
+    this.touchView();
   }
 
   expandRequestBody(): void {
     this.requestBodyExpanded = true;
     this.updateRequestHighlights();
+    this.syncRequestPanelView();
+    this.touchView();
   }
 
   expandResponseBody(): void {
     this.responseBodyExpanded = true;
     this.updateResponseHighlights();
-  }
-
-  formatOmittedBodySize(charCount: number): string {
-    if (charCount < 1024) {
-      return `${charCount} characters`;
-    }
-    const kb = charCount / 1024;
-    if (kb < 1024) {
-      return kb < 100 ? `${kb.toFixed(1)} KB` : `${Math.round(kb)} KB`;
-    }
-    const mb = kb / 1024;
-    return mb < 100 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+    this.syncResponsePanelView();
+    this.touchView();
   }
 
   toggleInspector(): void {
     this.inspectorOpen = !this.inspectorOpen;
+    this.syncRequestPanelView();
+    this.touchView();
+  }
+
+  toggleWrapRequest(): void {
+    this.wrapRequest = !this.wrapRequest;
+    this.syncRequestPanelView();
+    this.touchView();
+  }
+
+  toggleWrapResponse(): void {
+    this.wrapResponse = !this.wrapResponse;
+    this.syncResponsePanelView();
+    this.touchView();
   }
 
   toggleDiffMode(): void {
@@ -1847,6 +1888,8 @@ export class MainComponent implements OnInit, OnDestroy {
       this.setReplayMode(false);
     }
     this.updateDiffView();
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   clearCompare(): void {
@@ -1856,10 +1899,14 @@ export class MainComponent implements OnInit, OnDestroy {
     this.responseDiffLines = [];
     this.requestSideBySideRows = [];
     this.responseSideBySideRows = [];
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   setDiffLayout(layout: 'unified' | 'side-by-side'): void {
     this.diffLayout = layout;
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   get compareSummaryLabel(): string {
@@ -1895,6 +1942,8 @@ export class MainComponent implements OnInit, OnDestroy {
     this.responseDiffLines = this.httpDiffService.diffLines(leftResponse, rightResponse);
     this.requestSideBySideRows = this.httpDiffService.toSideBySide(this.requestDiffLines);
     this.responseSideBySideRows = this.httpDiffService.toSideBySide(this.responseDiffLines);
+    this.syncRequestPanelView();
+    this.syncResponsePanelView();
   }
 
   private getRowRequestRaw(row: any): string {
@@ -1985,6 +2034,8 @@ export class MainComponent implements OnInit, OnDestroy {
       this.diffMode = false;
       this.loadReplayRequest();
     }
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   showRequestView(): void {
@@ -1994,6 +2045,8 @@ export class MainComponent implements OnInit, OnDestroy {
     }
     this.diffMode = false;
     this.updateDiffView();
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   persistReplayRequest(): void {
@@ -2002,9 +2055,11 @@ export class MainComponent implements OnInit, OnDestroy {
     }
     if (this.replayRequestRaw === this.replayRequestBaseline) {
       this.FileHandleService.setRequestEdit(this.clickedRow.position, null);
-      return;
+    } else {
+      this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
     }
-    this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
+    this.syncRequestPanelView();
+    this.touchView();
   }
 
   resetReplayRequest(): void {
@@ -2020,6 +2075,8 @@ export class MainComponent implements OnInit, OnDestroy {
     this.invalidateInspectorRequestTabs();
     this.updateRequestHighlights();
     this.updateInspector();
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   async copyRequestAsCurl(): Promise<void> {
@@ -2111,6 +2168,8 @@ export class MainComponent implements OnInit, OnDestroy {
         this.invalidateInspectorRequestTabs();
         this.updateRequestHighlights();
         this.updateInspector();
+        this.syncDetailPanelViews();
+        this.touchView();
       }
       return true;
     }
@@ -2122,6 +2181,8 @@ export class MainComponent implements OnInit, OnDestroy {
       this.invalidateInspectorRequestTabs();
       this.updateRequestHighlights();
       this.updateInspector();
+      this.syncDetailPanelViews();
+      this.touchView();
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Invalid HTTP request';
@@ -2238,7 +2299,9 @@ export class MainComponent implements OnInit, OnDestroy {
     this.requestMatchCount = this.countPanelMatches(this.clickedRow?.request, this.requestSearch);
     this.requestMatchIndex = this.requestMatchCount > 0 ? 0 : -1;
     this.updateRequestHighlights();
+    this.syncRequestPanelView();
     this.scheduleScrollToMatch('request');
+    this.touchView();
   }
 
   onResponseSearch(event: Event) {
@@ -2246,7 +2309,9 @@ export class MainComponent implements OnInit, OnDestroy {
     this.responseMatchCount = this.countPanelMatches(this.clickedRow?.response, this.responseSearch);
     this.responseMatchIndex = this.responseMatchCount > 0 ? 0 : -1;
     this.updateResponseHighlights();
+    this.syncResponsePanelView();
     this.scheduleScrollToMatch('response');
+    this.touchView();
   }
 
   onRequestSearchKeydown(event: KeyboardEvent) {
@@ -2276,12 +2341,15 @@ export class MainComponent implements OnInit, OnDestroy {
     if (panel === 'request') {
       this.requestMatchIndex = (this.requestMatchIndex + direction + matchCount) % matchCount;
       this.updateRequestHighlights();
+      this.syncRequestPanelView();
     } else {
       this.responseMatchIndex = (this.responseMatchIndex + direction + matchCount) % matchCount;
       this.updateResponseHighlights();
+      this.syncResponsePanelView();
     }
 
     this.scheduleScrollToMatch(panel);
+    this.touchView();
   }
 
   private updateRequestHighlights() {
@@ -2448,6 +2516,73 @@ export class MainComponent implements OnInit, OnDestroy {
     }
   }
 
+  private syncDetailPanelViews(): void {
+    this.syncRequestPanelView();
+    this.syncResponsePanelView();
+    this.syncInspectorPanelView();
+  }
+
+  private syncRequestPanelView(): void {
+    this.requestPanelView = {
+      position: this.clickedRow?.position ?? 0,
+      loading: this.detailPanelLoading,
+      replayMode: this.replayMode,
+      diffMode: this.diffMode,
+      diffLayout: this.diffLayout,
+      wrap: this.wrapRequest,
+      inspectorOpen: this.inspectorOpen,
+      compareSummaryLabel: this.compareSummaryLabel,
+      hasCompareRow: !!this.compareRow,
+      comparePosition: this.compareRow?.position ?? null,
+      requestIsEdited: this.requestIsEdited,
+      replayRequestDirty: this.replayRequestDirty,
+      replayRequestRaw: this.replayRequestRaw,
+      searchTerm: this.requestSearch,
+      matchCount: this.requestMatchCount,
+      matchIndex: this.requestMatchIndex,
+      diffStats: this.requestDiffStats,
+      diffLines: this.requestDiffLines,
+      sideBySideRows: this.requestSideBySideRows,
+      highlightedHeaders: this.requestHighlightedHeaders,
+      highlightedBody: this.requestHighlightedBody,
+      bodyTruncated: this.requestBodyTruncated,
+      bodyOmittedSize: this.requestBodyOmittedSize,
+    };
+  }
+
+  private syncResponsePanelView(): void {
+    this.responsePanelView = {
+      loading: this.detailPanelLoading,
+      diffMode: this.diffMode,
+      diffLayout: this.diffLayout,
+      wrap: this.wrapResponse,
+      compareSummaryLabel: this.compareSummaryLabel,
+      hasCompareRow: !!this.compareRow,
+      clickedPosition: this.clickedRow?.position ?? null,
+      comparePosition: this.compareRow?.position ?? null,
+      searchTerm: this.responseSearch,
+      matchCount: this.responseMatchCount,
+      matchIndex: this.responseMatchIndex,
+      diffStats: this.responseDiffStats,
+      diffLines: this.responseDiffLines,
+      sideBySideRows: this.responseSideBySideRows,
+      highlightedHeaders: this.responseHighlightedHeaders,
+      highlightedBody: this.responseHighlightedBody,
+      bodyTruncated: this.responseBodyTruncated,
+      bodyOmittedSize: this.responseBodyOmittedSize,
+    };
+  }
+
+  private syncInspectorPanelView(): void {
+    this.inspectorPanelView = {
+      tab: this.inspectorTab,
+      attributes: this.inspectorAttributes,
+      requestCookies: this.inspectorRequestCookies,
+      requestHeaders: this.inspectorRequestHeaders,
+      responseHeaders: this.inspectorResponseHeaders,
+    };
+  }
+
   private countPanelMatches(panelContent: any, search: string): number {
     if (!panelContent) {
       return 0;
@@ -2517,7 +2652,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private scheduleScrollToMatch(panel: 'request' | 'response') {
-    this.cdr.detectChanges();
+    this.touchView();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => this.scrollToActiveMatch(panel));
     });
@@ -2579,14 +2714,8 @@ export class MainComponent implements OnInit, OnDestroy {
     this.responseSearch = '';
     this.resetRequestSearchState();
     this.resetResponseSearchState();
-    const requestSearchInput = document.getElementById('request-search') as HTMLInputElement | null;
-    const responseSearchInput = document.getElementById('response-search') as HTMLInputElement | null;
-    if (requestSearchInput) {
-      requestSearchInput.value = '';
-    }
-    if (responseSearchInput) {
-      responseSearchInput.value = '';
-    }
+    this.syncDetailPanelViews();
+    this.touchView();
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -2721,6 +2850,8 @@ export class MainComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.clickedRow = undefined;
       this.clearPanelSearches();
+      this.syncDetailPanelViews();
+      this.touchView();
       return true;
     }
 
@@ -2844,19 +2975,11 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private focusRequestSearch(): void {
-    requestAnimationFrame(() => {
-      const input = document.getElementById('request-search') as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    });
+    requestAnimationFrame(() => this.requestPanel?.focusSearch());
   }
 
   private focusResponseSearch(): void {
-    requestAnimationFrame(() => {
-      const input = document.getElementById('response-search') as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    });
+    requestAnimationFrame(() => this.responsePanel?.focusSearch());
   }
 
   clearGlobalSearch(): void {
@@ -3063,7 +3186,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private scrollRowIntoView(row: any): void {
-    this.cdr.detectChanges();
+    this.touchView();
     requestAnimationFrame(() => {
       const rowElement = document.querySelector(`tr.mat-row[data-row-position="${row.position}"], tr.mat-mdc-row[data-row-position="${row.position}"]`);
       rowElement?.scrollIntoView({ block: 'nearest' });
@@ -3145,6 +3268,7 @@ export class MainComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.dragCounter++;
       this.isDraggingFile = true;
+      this.touchView();
     }
   }
 
@@ -3165,6 +3289,7 @@ export class MainComponent implements OnInit, OnDestroy {
       if (this.dragCounter <= 0) {
         this.dragCounter = 0;
         this.isDraggingFile = false;
+        this.touchView();
       }
     }
   }
@@ -3177,6 +3302,7 @@ export class MainComponent implements OnInit, OnDestroy {
     event.preventDefault();
     this.dragCounter = 0;
     this.isDraggingFile = false;
+    this.touchView();
 
     const dt = event.dataTransfer;
     const files: File[] = dt ? Array.from(dt.files) : [];

@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
-import { HttpHeaderRow, ParsedCookie } from '../../services/request-replay/request-replay.service';
+import { InspectorPanelViewState } from '../panels/panel.types';
 
 export type InspectorTab = 'attributes' | 'cookies' | 'request-headers' | 'response-headers';
 
@@ -7,15 +7,11 @@ export type InspectorTab = 'attributes' | 'cookies' | 'request-headers' | 'respo
     selector: 'app-inspector-panel',
     templateUrl: './inspector-panel.component.html',
     styleUrls: ['./inspector-panel.component.css'],
-    changeDetection: ChangeDetectionStrategy.Eager,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
 export class InspectorPanelComponent {
-  @Input() tab: InspectorTab = 'attributes';
-  @Input() attributes: Array<{ name: string; value: string }> = [];
-  @Input() requestCookies: ParsedCookie[] = [];
-  @Input() requestHeaders: HttpHeaderRow[] = [];
-  @Input() responseHeaders: HttpHeaderRow[] = [];
+  @Input() view!: InspectorPanelViewState;
   @Output() tabChange = new EventEmitter<InspectorTab>();
   @Output() close = new EventEmitter<void>();
 

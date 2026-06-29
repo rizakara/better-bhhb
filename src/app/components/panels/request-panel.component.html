@@ -1,0 +1,93 @@
+<div class="detail-loading" *ngIf="view.loading">Loading…</div>
+<div class="panel-header">
+    <div class="label">
+        <span>Request #{{ view.position }}</span>
+        <span class="diff-compare-label" *ngIf="view.hasCompareRow">{{ view.compareSummaryLabel }}</span>
+        <span class="toolbar-spacer"></span>
+        <button type="button" [class.active]="!view.replayMode && !view.diffMode" (click)="showView.emit()">View</button>
+        <button type="button" [class.active]="view.replayMode" (click)="enableReplay.emit()"
+            matTooltip="Edit request and copy as cURL">Edit</button>
+        <button type="button" [class.active]="view.diffMode" (click)="toggleDiff.emit()"
+            matTooltip="Shift+click another row to compare">Diff</button>
+        <button type="button" *ngIf="view.hasCompareRow" (click)="clearCompare.emit()">Clear</button>
+        <button type="button" [class.active]="view.wrap" (click)="wrapToggle.emit()">Wrap</button>
+        <button type="button" [class.active]="view.inspectorOpen" (click)="toggleInspector.emit()"
+            matTooltip="Toggle inspector panel">Inspector</button>
+    </div>
+    <div class="panel-search-row request-toolbar">
+        <button type="button" (click)="copyCurl.emit()" matTooltip="Copy as cURL">cURL</button>
+        <button type="button" (click)="copyRaw.emit()" matTooltip="Copy raw HTTP request">Raw</button>
+        <button type="button" *ngIf="view.replayMode && view.replayRequestDirty" (click)="resetReplay.emit()">Reset</button>
+        <span class="toolbar-spacer"></span>
+        <span class="edit-status" *ngIf="view.requestIsEdited">Edited</span>
+    </div>
+    <div class="panel-search-row" *ngIf="!view.replayMode && !view.diffMode">
+        <input matInput type="search" #searchInputRef (input)="searchChange.emit($event)"
+            (keydown)="searchKeydown.emit($event)" placeholder="Search request" class="search panel-search">
+        <span class="search-status" *ngIf="view.searchTerm.trim()">
+            <span *ngIf="view.matchCount > 0">{{ view.matchIndex + 1 }} / {{ view.matchCount }}</span>
+            <span *ngIf="view.matchCount === 0">No results</span>
+        </span>
+    </div>
+    <div class="panel-search-row diff-stats-row" *ngIf="view.diffMode">
+        <span class="diff-stats">{{ view.diffStats }}</span>
+        <span class="toolbar-spacer"></span>
+        <button type="button" [class.active]="view.diffLayout === 'unified'"
+            (click)="diffLayoutChange.emit('unified')">Unified</button>
+        <button type="button" [class.active]="view.diffLayout === 'side-by-side'"
+            (click)="diffLayoutChange.emit('side-by-side')">Split</button>
+    </div>
+    <div class="replay-hint" *ngIf="view.replayMode">
+        Edit the request, then copy as cURL to replay in your terminal or Burp Repeater.
+    </div>
+</div>
+<textarea *ngIf="view.replayMode" class="content replay-editor" [class.wrapy]="view.wrap"
+    [ngModel]="view.replayRequestRaw" (ngModelChange)="replayRequestChange.emit($event)"
+    spellcheck="false" aria-label="Editable HTTP request"></textarea>
+<div id="request-content" class="content diff-content" [class.wrapy]="view.wrap"
+    *ngIf="!view.replayMode && view.diffMode && view.diffLayout === 'unified'">
+    <div class="diff-line" *ngFor="let line of view.diffLines"
+        [class.diff-line-delete]="line.type === 'delete'"
+        [class.diff-line-insert]="line.type === 'insert'">
+        <span class="diff-gutter">{{ line.type === 'delete' ? '-' : line.type === 'insert' ? '+' : ' ' }}</span>
+        <span class="diff-line-number" *ngIf="line.oldLineNumber">{{ line.oldLineNumber }}</span>
+        <span class="diff-line-number" *ngIf="!line.oldLineNumber">&nbsp;</span>
+        <span class="diff-line-number" *ngIf="line.newLineNumber">{{ line.newLineNumber }}</span>
+        <span class="diff-line-number" *ngIf="!line.newLineNumber">&nbsp;</span>
+        <span class="diff-line-text">{{ line.text }}</span>
+    </div>
+</div>
+<div id="request-content" class="content diff-sbs" [class.wrapy]="view.wrap"
+    *ngIf="!view.replayMode && view.diffMode && view.diffLayout === 'side-by-side'">
+    <div class="diff-sbs-row diff-sbs-header-row">
+        <div class="diff-sbs-cell">#{{ view.position }}</div>
+        <div class="diff-sbs-cell">#{{ view.comparePosition }}</div>
+    </div>
+    <div class="diff-sbs-row" *ngFor="let row of view.sideBySideRows">
+        <div class="diff-sbs-cell" [class.diff-line-delete]="row.left.type === 'delete'">
+            <span class="diff-line-number">{{ row.left.lineNumber || '' }}</span>
+            <span class="diff-line-text">{{ row.left.text }}</span>
+        </div>
+        <div class="diff-sbs-cell" [class.diff-line-insert]="row.right.type === 'insert'">
+            <span class="diff-line-number">{{ row.right.lineNumber || '' }}</span>
+            <span class="diff-line-text">{{ row.right.text }}</span>
+        </div>
+    </div>
+</div>
+<div id="request-content" class="content" [class.wrapy]="view.wrap" *ngIf="!view.replayMode && !view.diffMode">
+    <div id="req_headers">
+        <div *ngFor="let row of view.highlightedHeaders">
+            <span class="header_key" [innerHTML]="row.key"></span>
+            <span *ngIf="row.hasValue">:&nbsp;</span>
+            <span class="header_val" [innerHTML]="row.value"></span>
+        </div>
+    </div>
+    <br><br>
+    <div class="body-truncate-notice" *ngIf="view.bodyTruncated">
+        Showing first 64 KB —
+        <button type="button" class="body-expand-btn" (click)="expandBody.emit()">
+            Show full ({{ formatOmittedBodySize(view.bodyOmittedSize) }} more)
+        </button>
+    </div>
+    <div id="req_body" [innerHTML]="view.highlightedBody"></div>
+</div>

@@ -6,26 +6,26 @@
             <button type="button" (click)="onClose()" aria-label="Close inspector">×</button>
         </div>
         <div class="inspector-tabs">
-            <button type="button" [class.active]="tab === 'attributes'"
+            <button type="button" [class.active]="view.tab === 'attributes'"
                 (click)="setTab('attributes')">Request attributes</button>
-            <button type="button" [class.active]="tab === 'cookies'"
+            <button type="button" [class.active]="view.tab === 'cookies'"
                 (click)="setTab('cookies')">Request cookies</button>
-            <button type="button" [class.active]="tab === 'request-headers'"
+            <button type="button" [class.active]="view.tab === 'request-headers'"
                 (click)="setTab('request-headers')">Request headers</button>
-            <button type="button" [class.active]="tab === 'response-headers'"
+            <button type="button" [class.active]="view.tab === 'response-headers'"
                 (click)="setTab('response-headers')">Response headers</button>
         </div>
     </div>
     <div class="inspector-content content">
-        <table class="inspector-table" *ngIf="tab === 'attributes'">
+        <table class="inspector-table" *ngIf="view.tab === 'attributes'">
             <tbody>
-                <tr *ngFor="let row of attributes">
+                <tr *ngFor="let row of view.attributes">
                     <th>{{ row.name }}</th>
                     <td [title]="row.value">{{ row.value }}</td>
                 </tr>
             </tbody>
         </table>
-        <table class="inspector-table" *ngIf="tab === 'cookies'">
+        <table class="inspector-table" *ngIf="view.tab === 'cookies'">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -33,16 +33,16 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let cookie of requestCookies">
+                <tr *ngFor="let cookie of view.requestCookies">
                     <td class="inspector-key">{{ cookie.name }}</td>
                     <td [title]="cookie.value">{{ cookie.value }}</td>
                 </tr>
-                <tr *ngIf="requestCookies.length === 0">
+                <tr *ngIf="view.requestCookies.length === 0">
                     <td colspan="2" class="inspector-empty">No cookies</td>
                 </tr>
             </tbody>
         </table>
-        <table class="inspector-table" *ngIf="tab === 'request-headers'">
+        <table class="inspector-table" *ngIf="view.tab === 'request-headers'">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -50,16 +50,16 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let header of requestHeaders">
+                <tr *ngFor="let header of view.requestHeaders">
                     <td class="inspector-key">{{ header.key }}</td>
                     <td [title]="header.value">{{ header.value }}</td>
                 </tr>
-                <tr *ngIf="requestHeaders.length === 0">
+                <tr *ngIf="view.requestHeaders.length === 0">
                     <td colspan="2" class="inspector-empty">No headers</td>
                 </tr>
             </tbody>
         </table>
-        <table class="inspector-table" *ngIf="tab === 'response-headers'">
+        <table class="inspector-table" *ngIf="view.tab === 'response-headers'">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -67,11 +67,11 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let header of responseHeaders">
+                <tr *ngFor="let header of view.responseHeaders">
                     <td class="inspector-key">{{ header.key }}</td>
                     <td [title]="header.value">{{ header.value }}</td>
                 </tr>
-                <tr *ngIf="responseHeaders.length === 0">
+                <tr *ngIf="view.responseHeaders.length === 0">
                     <td colspan="2" class="inspector-empty">No headers</td>
                 </tr>
             </tbody>
