@@ -1,0 +1,71 @@
+name: Burp Extension Release
+
+on:
+  push:
+    tags:
+      - 'burp-extension-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: burp-extension-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: burp-extension
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            burp-extension/**/*.gradle*
+            burp-extension/**/gradle-wrapper.properties
+
+      - name: Resolve release version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#burp-extension-v}"
+          else
+            VERSION="$(grep -E "^version = " build.gradle | sed -E "s/^version = ['\"]([^'\"]+)['\"].*/\1/")"
+          fi
+
+          if [[ -z "$VERSION" ]]; then
+            echo "Release version could not be resolved" >&2
+            exit 1
+          fi
+
+          GRADLE_VERSION="$(grep -E "^version = " build.gradle | sed -E "s/^version = ['\"]([^'\"]+)['\"].*/\1/")"
+          if [[ "$VERSION" != "$GRADLE_VERSION" ]]; then
+            echo "Release version ($VERSION) does not match build.gradle ($GRADLE_VERSION)" >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=burp-extension-v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build extension JAR
+        run: ./scripts/build-release.sh
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Burp Extension v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            burp-extension/build/libs/better-bhhb-${{ steps.version.outputs.version }}.jar
+            burp-extension/build/libs/better-bhhb-${{ steps.version.outputs.version }}.jar.sha256
