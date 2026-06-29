@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
-import { StoredHistoryEntry } from '../../services/file-handle/file-session-storage.service';
+import { StoredHistoryMetadata } from '../../services/file-handle/file-session-storage.service';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
 
 @Component({
@@ -11,7 +11,7 @@ import { FileHandleService } from '../../services/file-handle/file-handle.servic
     standalone: false
 })
 export class SessionHistoryDialogComponent implements OnInit {
-  entries: StoredHistoryEntry[] = [];
+  entries: StoredHistoryMetadata[] = [];
   loading = true;
   opening = false;
   errorMessage = '';
@@ -51,11 +51,11 @@ export class SessionHistoryDialogComponent implements OnInit {
     }
   }
 
-  isSelected(entry: StoredHistoryEntry): boolean {
+  isSelected(entry: StoredHistoryMetadata): boolean {
     return this.selectedIds.has(entry.id);
   }
 
-  toggleEntry(entry: StoredHistoryEntry, checked: boolean): void {
+  toggleEntry(entry: StoredHistoryMetadata, checked: boolean): void {
     if (checked) {
       this.selectedIds.add(entry.id);
       return;
@@ -90,7 +90,7 @@ export class SessionHistoryDialogComponent implements OnInit {
     }
   }
 
-  async deleteEntry(entry: StoredHistoryEntry, event: MouseEvent): Promise<void> {
+  async deleteEntry(entry: StoredHistoryMetadata, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     try {
       await this.fileHandleService.deleteHistoryEntry(entry.id);

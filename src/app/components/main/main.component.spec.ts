@@ -429,7 +429,7 @@ describe('MainComponent', () => {
     expect(component.columnFilters['host']).toBeNull();
 
     component.clearFilterChip('col:path');
-    expect(component.getColumnTextFilterMode('path')).toBe('values');
+    expect(component.getColumnTextFilterMode('path')).toBe('text');
     expect(component.getColumnTextFilter('path')).toBe('');
 
     component.clearFilterChip('time');

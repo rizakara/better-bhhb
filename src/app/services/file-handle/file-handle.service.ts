@@ -3,7 +3,11 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import * as xml2js from 'xml2js';
 import { Base64 } from 'js-base64';
 import { MatDialog } from '@angular/material/dialog';
-import { FileSessionStorageService, StoredHistoryEntry } from './file-session-storage.service';
+import {
+  FileSessionStorageService,
+  StoredHistoryEntry,
+  StoredHistoryMetadata,
+} from './file-session-storage.service';
 import {
   ImportDestinationDialogComponent,
   ImportDestinationDialogData,
@@ -283,7 +287,7 @@ export class FileHandleService {
     }
   }
 
-  async listImportHistory(): Promise<StoredHistoryEntry[]> {
+  async listImportHistory(): Promise<StoredHistoryMetadata[]> {
     return this.fileSessionStorage.listHistory();
   }
 

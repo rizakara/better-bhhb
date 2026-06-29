@@ -2,9 +2,10 @@ import { Injectable } from '@angular/core';
 import { BurpExport } from './file-handle.service';
 
 const DB_NAME = 'bhhb-storage';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SESSIONS_STORE = 'sessions';
 const HISTORY_STORE = 'history';
+const HISTORY_CONTENT_STORE = 'history-content';
 const SESSION_KEY = 'last-opened-file';
 
 export interface StoredFileSession {
@@ -12,7 +13,7 @@ export interface StoredFileSession {
   content: BurpExport;
 }
 
-export interface StoredHistoryEntry {
+export interface StoredHistoryMetadata {
   id: string;
   fileName: string;
   importedAt: string;
@@ -20,6 +21,16 @@ export interface StoredHistoryEntry {
   burpVersion: string;
   exportTime: string;
   source: 'file' | 'burp-extension';
+}
+
+export interface StoredHistoryContent {
+  id: string;
+  content: BurpExport;
+  rawXml?: string;
+}
+
+/** Full history entry with content — returned only when opening a session. */
+export interface StoredHistoryEntry extends StoredHistoryMetadata {
   content: BurpExport;
   rawXml?: string;
 }
@@ -34,7 +45,7 @@ export class FileSessionStorageService {
   async save(
     session: StoredFileSession,
     options?: {
-      source?: StoredHistoryEntry['source'];
+      source?: StoredHistoryMetadata['source'];
       rawXml?: string;
       recordHistory?: boolean;
     }
@@ -48,11 +59,16 @@ export class FileSessionStorageService {
       return null;
     }
 
-    const entry = this.toHistoryEntry(session, options);
-    await this.runTransaction(db, HISTORY_STORE, 'readwrite', (store) => {
-      store.put(entry);
+    const metadata = this.toHistoryMetadata(session, options);
+    await this.runMultiStoreTransaction(db, [HISTORY_STORE, HISTORY_CONTENT_STORE], 'readwrite', (stores) => {
+      stores[HISTORY_STORE].put(metadata);
+      stores[HISTORY_CONTENT_STORE].put({
+        id: metadata.id,
+        content: session.content,
+        rawXml: options?.rawXml,
+      });
     });
-    return entry.id;
+    return metadata.id;
   }
 
   async load(): Promise<StoredFileSession | null> {
@@ -71,15 +87,15 @@ export class FileSessionStorageService {
     }
   }
 
-  async listHistory(): Promise<StoredHistoryEntry[]> {
+  async listHistory(): Promise<StoredHistoryMetadata[]> {
     try {
       const db = await this.openDb();
       await this.migrateLegacySessionIfNeeded(db);
-      const entries = await this.runTransaction<StoredHistoryEntry[]>(db, HISTORY_STORE, 'readonly', (store) => {
+      const entries = await this.runTransaction<StoredHistoryMetadata[]>(db, HISTORY_STORE, 'readonly', (store) => {
         return store.getAll();
       });
       return (entries ?? [])
-        .filter((entry) => !!entry?.id && !!entry?.content?.items)
+        .filter((entry) => !!entry?.id && typeof entry.itemCount === 'number')
         .sort((left, right) => right.importedAt.localeCompare(left.importedAt));
     } catch (error) {
       console.warn('Failed to list import history from storage.', error);
@@ -90,13 +106,39 @@ export class FileSessionStorageService {
   async loadHistoryEntry(id: string): Promise<StoredHistoryEntry | null> {
     try {
       const db = await this.openDb();
-      const entry = await this.runTransaction<StoredHistoryEntry | undefined>(db, HISTORY_STORE, 'readonly', (store) => {
-        return store.get(id);
-      });
-      if (!entry?.id || !entry.content?.items) {
+      const metadata = await this.runTransaction<StoredHistoryMetadata | StoredHistoryEntry | undefined>(
+        db,
+        HISTORY_STORE,
+        'readonly',
+        (store) => store.get(id),
+      );
+      if (!metadata?.id) {
         return null;
       }
-      return entry;
+
+      const content = await this.runTransaction<StoredHistoryContent | undefined>(
+        db,
+        HISTORY_CONTENT_STORE,
+        'readonly',
+        (store) => store.get(id),
+      );
+
+      const resolvedContent = content?.content ?? (metadata as StoredHistoryEntry).content;
+      if (!resolvedContent?.items) {
+        return null;
+      }
+
+      return {
+        id: metadata.id,
+        fileName: metadata.fileName,
+        importedAt: metadata.importedAt,
+        itemCount: metadata.itemCount,
+        burpVersion: metadata.burpVersion,
+        exportTime: metadata.exportTime,
+        source: metadata.source,
+        content: resolvedContent,
+        rawXml: content?.rawXml ?? (metadata as StoredHistoryEntry).rawXml,
+      };
     } catch (error) {
       console.warn(`Failed to load history entry ${id} from storage.`, error);
       return null;
@@ -106,8 +148,9 @@ export class FileSessionStorageService {
   async deleteHistoryEntry(id: string): Promise<void> {
     try {
       const db = await this.openDb();
-      await this.runTransaction(db, HISTORY_STORE, 'readwrite', (store) => {
-        store.delete(id);
+      await this.runMultiStoreTransaction(db, [HISTORY_STORE, HISTORY_CONTENT_STORE], 'readwrite', (stores) => {
+        stores[HISTORY_STORE].delete(id);
+        stores[HISTORY_CONTENT_STORE].delete(id);
       });
     } catch (error) {
       console.warn(`Failed to delete history entry ${id} from storage.`, error);
@@ -126,10 +169,10 @@ export class FileSessionStorageService {
     }
   }
 
-  private toHistoryEntry(
+  private toHistoryMetadata(
     session: StoredFileSession,
-    options?: { source?: StoredHistoryEntry['source']; rawXml?: string }
-  ): StoredHistoryEntry {
+    options?: { source?: StoredHistoryMetadata['source']; rawXml?: string }
+  ): StoredHistoryMetadata {
     const items = this.normalizeItems(session.content.items.item);
     const metadata = session.content.items.$ ?? {
       burpVersion: 'unknown',
@@ -144,8 +187,6 @@ export class FileSessionStorageService {
       burpVersion: metadata.burpVersion,
       exportTime: metadata.exportTime,
       source: options?.source ?? 'file',
-      content: session.content,
-      rawXml: options?.rawXml,
     };
   }
 
@@ -164,7 +205,7 @@ export class FileSessionStorageService {
       return;
     }
 
-    const existing = await this.runTransaction<StoredHistoryEntry[]>(db, HISTORY_STORE, 'readonly', (store) => {
+    const existing = await this.runTransaction<StoredHistoryMetadata[]>(db, HISTORY_STORE, 'readonly', (store) => {
       return store.getAll();
     });
     const alreadyMigrated = (existing ?? []).some((entry) => entry.fileName === session.fileName);
@@ -172,10 +213,7 @@ export class FileSessionStorageService {
       return;
     }
 
-    const entry = this.toHistoryEntry(session, { source: 'file' });
-    await this.runTransaction(db, HISTORY_STORE, 'readwrite', (store) => {
-      store.put(entry);
-    });
+    await this.save(session, { source: 'file' });
   }
 
   private createHistoryId(): string {
@@ -197,13 +235,21 @@ export class FileSessionStorageService {
       }
 
       const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result;
+        const transaction = request.transaction;
         if (!db.objectStoreNames.contains(SESSIONS_STORE)) {
           db.createObjectStore(SESSIONS_STORE);
         }
         if (!db.objectStoreNames.contains(HISTORY_STORE)) {
           db.createObjectStore(HISTORY_STORE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(HISTORY_CONTENT_STORE)) {
+          db.createObjectStore(HISTORY_CONTENT_STORE, { keyPath: 'id' });
+        }
+
+        if (event.oldVersion > 0 && event.oldVersion < 3 && transaction) {
+          this.migrateHistoryContentToSeparateStore(transaction);
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -211,6 +257,39 @@ export class FileSessionStorageService {
     });
 
     return this.dbPromise;
+  }
+
+  private migrateHistoryContentToSeparateStore(transaction: IDBTransaction): void {
+    const historyStore = transaction.objectStore(HISTORY_STORE);
+    const contentStore = transaction.objectStore(HISTORY_CONTENT_STORE);
+    const request = historyStore.getAll();
+
+    request.onsuccess = () => {
+      const entries = request.result as Array<StoredHistoryEntry | StoredHistoryMetadata>;
+      entries.forEach((entry) => {
+        if (!entry?.id) {
+          return;
+        }
+        const legacyEntry = entry as StoredHistoryEntry;
+        if (!legacyEntry.content?.items) {
+          return;
+        }
+        contentStore.put({
+          id: legacyEntry.id,
+          content: legacyEntry.content,
+          rawXml: legacyEntry.rawXml,
+        });
+        historyStore.put({
+          id: legacyEntry.id,
+          fileName: legacyEntry.fileName,
+          importedAt: legacyEntry.importedAt,
+          itemCount: legacyEntry.itemCount,
+          burpVersion: legacyEntry.burpVersion,
+          exportTime: legacyEntry.exportTime,
+          source: legacyEntry.source,
+        });
+      });
+    };
   }
 
   private runTransaction<T = void>(
@@ -229,8 +308,28 @@ export class FileSessionStorageService {
           resolve(undefined as unknown as T);
           return;
         }
-        resolve((request as IDBRequest<T>).result);
+        resolve(request.result);
       };
+      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB transaction failed.'));
+      transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB transaction aborted.'));
+    });
+  }
+
+  private runMultiStoreTransaction(
+    db: IDBDatabase,
+    storeNames: string[],
+    mode: IDBTransactionMode,
+    operation: (stores: Record<string, IDBObjectStore>) => void
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeNames, mode);
+      const stores: Record<string, IDBObjectStore> = {};
+      storeNames.forEach((name) => {
+        stores[name] = transaction.objectStore(name);
+      });
+      operation(stores);
+
+      transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB transaction failed.'));
       transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB transaction aborted.'));
     });

@@ -822,6 +822,33 @@ table.mat-mdc-table .mat-mdc-header-cell:not(:nth-child(1)) {
   opacity: 1;
 }
 
+.column-filter-search-row {
+  padding: 4px 8px 6px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.column-filter-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.column-filter-truncated-hint {
+  padding: 4px 10px 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 .column-visibility-button {
   flex-shrink: 0;
   width: 36px;

@@ -72,6 +72,8 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
 
 const DEFAULT_COLUMN_WIDTH_LIMITS = { min: 48, max: 800 };
 const LARGE_PAYLOAD_THRESHOLD = 512_000;
+const FOOTER_SYNC_DEBOUNCE_MS = 300;
+const COLUMN_FILTER_OPTIONS_CAP = 200;
 const COLUMN_WIDTH_LIMITS: Record<string, { min: number; max: number }> = {
   position: { min: 36, max: 80 },
   method: { min: 56, max: 160 },
@@ -107,6 +109,7 @@ export class MainComponent implements OnInit, OnDestroy {
   ) { }
 
   detailPanelLoading = false;
+  readonly columnFilterOptionsCap = COLUMN_FILTER_OPTIONS_CAP;
 
   fileSub!: Subscription
   beforeSaveSub!: Subscription
@@ -147,6 +150,7 @@ export class MainComponent implements OnInit, OnDestroy {
   ELEMENT_DATA: any = [];
   globalSearchTerm: string = '';
   columnFilterOptions: Record<string, string[]> = {};
+  columnFilterSearch: Record<string, string> = {};
   columnFilters: Record<string, Set<string> | null> = {};
   activeFilterColumn: string = '';
   ipFilterMode: 'values' | 'range' | 'subnet' = 'values';
@@ -156,9 +160,9 @@ export class MainComponent implements OnInit, OnDestroy {
   ipFilterError: string = '';
   readonly textFilterColumns = ['path', 'title', 'comment'];
   columnTextFilterModes: Record<string, 'values' | 'text'> = {
-    path: 'values',
-    title: 'values',
-    comment: 'values',
+    path: 'text',
+    title: 'text',
+    comment: 'text',
   };
   columnTextFilters: Record<string, string> = {
     path: '',
@@ -209,6 +213,8 @@ export class MainComponent implements OnInit, OnDestroy {
   inspectorRequestHeaders: HttpHeaderRow[] = [];
   inspectorResponseHeaders: HttpHeaderRow[] = [];
   treeViewOpen = false;
+  private siteMapTreeBuilt = false;
+  private footerSyncTimer: ReturnType<typeof setTimeout> | null = null;
   treeFilter: { host: string; pathPrefix: string } | null = null;
   selectedTreeNodeId: string | null = null;
   treeControl = new NestedTreeControl<SiteMapNode>((node) => node.children);
@@ -235,6 +241,7 @@ export class MainComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.endColumnResize();
     this.clearSearchDebounce();
+    this.clearFooterSyncDebounce();
     this.indexingStateSub?.unsubscribe();
     this.indexingBatchSub?.unsubscribe();
     this.historyIndexService.cancel();
@@ -261,6 +268,7 @@ export class MainComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.flushCurrentRequestEdit();
         this.flushAllCommentEdits();
+        this.flushExportFilterState();
       });
     this.indexingStateSub = this.historyIndexService.state$.subscribe((state) => {
       this.indexingState = state;
@@ -282,15 +290,15 @@ export class MainComponent implements OnInit, OnDestroy {
           this.clearRequestEdits();
           this.resetColumnFilters();
           this.resetTreeView();
-          this.syncExportFilterState();
+          this.flushExportFilterState();
           return
         }
         this.clearRequestEdits();
         this.historyIndexService.cancel();
         this.historyRowParseService.clear();
+        this.siteMapTreeBuilt = false;
         this.selectedFileContent = selectedFileData.selectedFileContent
         this.elementDataGen(this.selectedFileContent)
-        this.buildSiteMapTree();
         if (selectedFileData.viewState) {
           this.restoreViewState(selectedFileData.viewState);
         } else {
@@ -545,7 +553,20 @@ export class MainComponent implements OnInit, OnDestroy {
     this.treeViewOpen = !this.treeViewOpen;
     if (!this.treeViewOpen) {
       this.clearTreeFilter();
+      return;
     }
+    this.ensureSiteMapTree();
+  }
+
+  private ensureSiteMapTree(): void {
+    if (!this.hasData) {
+      return;
+    }
+    if (this.siteMapTreeBuilt) {
+      return;
+    }
+    this.buildSiteMapTree();
+    this.siteMapTreeBuilt = true;
   }
 
   hasTreeChild(_index: number, node: SiteMapNode): boolean {
@@ -568,6 +589,9 @@ export class MainComponent implements OnInit, OnDestroy {
     this.activeFilterColumn = column;
     if (column === 'time' && this.timeFilterMode === 'none') {
       this.initializeTimeAbsoluteDefaults();
+    }
+    if (this.showColumnFilterCheckboxes) {
+      this.ensureColumnFilterOptions(column);
     }
   }
 
@@ -604,7 +628,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   getColumnTextFilterMode(column: string): 'values' | 'text' {
-    return this.columnTextFilterModes[column] ?? 'values';
+    return this.columnTextFilterModes[column] ?? this.getDefaultTextFilterMode(column);
   }
 
   getColumnTextFilter(column: string): string {
@@ -714,11 +738,38 @@ export class MainComponent implements OnInit, OnDestroy {
     this.columnTextFilterBlocked[column] = false;
     if (mode === 'values') {
       this.columnTextFilters[column] = '';
+      this.ensureColumnFilterOptions(column);
     } else {
       // Entering text mode: discard previous values checkbox selection for this column
       this.columnFilters[column] = null;
     }
     this.refreshTableFilter();
+  }
+
+  getVisibleColumnFilterOptions(column: string): string[] {
+    const options = this.columnFilterOptions[column] ?? [];
+    const query = (this.columnFilterSearch[column] ?? '').trim().toLowerCase();
+    const filtered = query
+      ? options.filter((value) => String(value ?? '').toLowerCase().includes(query))
+      : options;
+    return filtered.slice(0, COLUMN_FILTER_OPTIONS_CAP);
+  }
+
+  get columnFilterOptionsTruncated(): boolean {
+    const column = this.activeFilterColumn;
+    if (!column) {
+      return false;
+    }
+    const options = this.columnFilterOptions[column] ?? [];
+    const query = (this.columnFilterSearch[column] ?? '').trim().toLowerCase();
+    const filtered = query
+      ? options.filter((value) => String(value ?? '').toLowerCase().includes(query))
+      : options;
+    return filtered.length > COLUMN_FILTER_OPTIONS_CAP;
+  }
+
+  onColumnFilterSearchInput(column: string, event: Event): void {
+    this.columnFilterSearch[column] = (event.target as HTMLInputElement).value;
   }
 
   onColumnTextInput(column: string, event: Event) {
@@ -899,18 +950,37 @@ export class MainComponent implements OnInit, OnDestroy {
       if (column === 'time') {
         return;
       }
-      const values = new Set<string>();
-      this.ELEMENT_DATA.forEach((row: any) => {
-        values.add(String(row[column] ?? ''));
-      });
-      this.columnFilterOptions[column] = Array.from(values).sort((left, right) =>
-        left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
-      );
+      if (this.isTextFilterColumn(column) && this.getColumnTextFilterMode(column) === 'text') {
+        this.columnFilterOptions[column] = [];
+        return;
+      }
+      this.buildColumnFilterOptions(column);
     });
+  }
+
+  private buildColumnFilterOptions(column: string): void {
+    const values = new Set<string>();
+    this.ELEMENT_DATA.forEach((row: any) => {
+      values.add(String(row[column] ?? ''));
+    });
+    this.columnFilterOptions[column] = Array.from(values).sort((left, right) =>
+      left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }
+
+  private ensureColumnFilterOptions(column: string): void {
+    if (!this.columnFilterOptions[column]?.length) {
+      this.buildColumnFilterOptions(column);
+    }
+  }
+
+  private getDefaultTextFilterMode(column: string): 'values' | 'text' {
+    return this.textFilterColumns.includes(column) ? 'text' : 'values';
   }
 
   private resetColumnFilters() {
     this.columnFilterOptions = {};
+    this.columnFilterSearch = {};
     this.filterableColumns.forEach((column) => {
       this.columnFilters[column] = null;
     });
@@ -922,7 +992,7 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private resetColumnTextFilter(column: string) {
-    this.columnTextFilterModes[column] = 'values';
+    this.columnTextFilterModes[column] = this.getDefaultTextFilterMode(column);
     this.columnTextFilters[column] = '';
     this.columnTextFilterBlocked[column] = false;
   }
@@ -1201,24 +1271,56 @@ export class MainComponent implements OnInit, OnDestroy {
 
   private refreshTableFilter() {
     this.dataSource.filter = `${this.globalSearchTerm}\u0000${performance.now()}`;
-    this.syncExportFilterState();
+    this.scheduleFooterSync();
   }
 
-  private syncExportFilterState(): void {
+  private scheduleFooterSync(): void {
+    this.clearFooterSyncDebounce();
+    this.footerSyncTimer = setTimeout(() => {
+      this.syncFooterCounts();
+      this.footerSyncTimer = null;
+    }, FOOTER_SYNC_DEBOUNCE_MS);
+  }
+
+  private clearFooterSyncDebounce(): void {
+    if (this.footerSyncTimer !== null) {
+      clearTimeout(this.footerSyncTimer);
+      this.footerSyncTimer = null;
+    }
+  }
+
+  private getFilteredRowsForExport(): Array<{ position: number; host: string; status: string }> {
+    return (this.dataSource.filteredData ?? []) as Array<{ position: number; host: string; status: string }>;
+  }
+
+  private syncFooterCounts(): void {
     const totalCount = this.ELEMENT_DATA.length;
-    const filteredRows = (this.dataSource.filteredData ?? []) as Array<{ position: number; host: string; status: string }>;
+    const filteredRows = this.getFilteredRowsForExport();
     const visibleCount = filteredRows.length;
-    const positions = filteredRows.map((row) => row.position);
-    const uniqueHosts = new Set(filteredRows.map((row) => row.host ?? '')).size;
-    const statusBreakdown = this.buildStatusBreakdown(filteredRows);
 
     this.FileHandleService.setExportFilterState({
       totalCount,
       visibleCount,
-      positions,
+      positions: [],
       isSubset: totalCount > 0 && visibleCount < totalCount,
-      uniqueHosts,
-      statusBreakdown,
+      uniqueHosts: new Set(filteredRows.map((row) => row.host ?? '')).size,
+      statusBreakdown: this.buildStatusBreakdown(filteredRows),
+    });
+  }
+
+  private flushExportFilterState(): void {
+    this.clearFooterSyncDebounce();
+    const totalCount = this.ELEMENT_DATA.length;
+    const filteredRows = this.getFilteredRowsForExport();
+    const visibleCount = filteredRows.length;
+
+    this.FileHandleService.setExportFilterState({
+      totalCount,
+      visibleCount,
+      positions: filteredRows.map((row) => row.position),
+      isSubset: totalCount > 0 && visibleCount < totalCount,
+      uniqueHosts: new Set(filteredRows.map((row) => row.host ?? '')).size,
+      statusBreakdown: this.buildStatusBreakdown(filteredRows),
     });
   }
 
@@ -1261,6 +1363,7 @@ export class MainComponent implements OnInit, OnDestroy {
 
   private resetTreeView() {
     this.treeViewOpen = false;
+    this.siteMapTreeBuilt = false;
     this.clearTreeFilter();
     this.treeDataSource.data = [];
   }
@@ -3060,6 +3163,10 @@ export class MainComponent implements OnInit, OnDestroy {
     const searchInput = document.getElementById('search') as HTMLInputElement | null;
     if (searchInput) {
       searchInput.value = this.globalSearchTerm;
+    }
+
+    if (this.treeViewOpen) {
+      this.ensureSiteMapTree();
     }
   }
 

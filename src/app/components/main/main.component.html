@@ -496,8 +496,17 @@
                         </div>
                         <div class="column-filter-options" *ngIf="showColumnFilterCheckboxes"
                             (click)="$event.stopPropagation()">
+                            <div class="column-filter-search-row">
+                                <input type="search" class="column-filter-search"
+                                    [placeholder]="'Search ' + activeFilterColumnLabel"
+                                    [value]="columnFilterSearch[activeFilterColumn] || ''"
+                                    (input)="onColumnFilterSearchInput(activeFilterColumn, $event)">
+                            </div>
+                            <div class="column-filter-truncated-hint" *ngIf="columnFilterOptionsTruncated">
+                                Showing first {{ columnFilterOptionsCap }} matches — narrow your search for more.
+                            </div>
                             <div class="column-filter-option"
-                                *ngFor="let value of columnFilterOptions[activeFilterColumn]">
+                                *ngFor="let value of getVisibleColumnFilterOptions(activeFilterColumn)">
                                 <mat-checkbox [checked]="isColumnValueSelected(activeFilterColumn, value)"
                                     (change)="toggleColumnFilter(activeFilterColumn, value, $event.checked)">
                                     <span [title]="value || '(empty)'">{{ formatFilterValue(value) }}</span>
