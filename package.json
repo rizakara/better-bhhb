@@ -9,6 +9,12 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
+  "browser": {
+    "timers": "timers-browserify",
+    "stream": "stream-browserify",
+    "buffer": "buffer",
+    "events": "events"
+  },
   "private": true,
   "homepage": "https://github.com/rizakara/better-bhhb#readme",
   "repository": {
@@ -32,6 +38,7 @@
     "@angular/service-worker": "~22.0.2",
     "@types/xml2js": "^0.4.9",
     "angular-split": "^18.0.0",
+    "events": "^3.3.0",
     "js-base64": "^3.7.5",
     "rxjs": "^7.8.1",
     "stream-browserify": "^3.0.0",
@@ -48,7 +55,7 @@
     "webpack-dev-server": "^5.2.5"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "~22.0.2",
+    "@angular/build": "~22.0.4",
     "@angular/cli": "~22.0.2",
     "@angular/compiler-cli": "~22.0.2",
     "@angular/pwa": "^22.0.2",

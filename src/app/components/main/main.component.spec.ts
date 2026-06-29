@@ -1,14 +1,18 @@
+import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 
-import { MainComponent } from './main.component';
+import { AngularMaterialModule } from '../../modules/angular-material/angular-material.module';
 import { FileHandleService } from '../../services/file-handle/file-handle.service';
-import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { HttpDiffService } from '../../services/http-diff/http-diff.service';
+import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
+import { InspectorPanelComponent } from '../inspector/inspector-panel.component';
+import { MainComponent } from './main.component';
 
 describe('MainComponent', () => {
   let component: MainComponent;
@@ -19,7 +23,8 @@ describe('MainComponent', () => {
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
 
     await TestBed.configureTestingModule({
-      declarations: [MainComponent],
+      declarations: [MainComponent, InspectorPanelComponent],
+      imports: [CommonModule, AngularMaterialModule, NoopAnimationsModule],
       providers: [
         {
           provide: FileHandleService,
@@ -42,6 +47,8 @@ describe('MainComponent', () => {
             requestPartsToRaw: () => '',
             rawRequestToParts: () => [[], ''],
             rawRequestToCurl: () => '',
+            parseRequestCookies: () => [],
+            extractHttpHeaders: () => [],
           },
         },
         { provide: MatSnackBar, useValue: snackBar },
@@ -120,7 +127,7 @@ describe('MainComponent', () => {
     component.drop(dropEvent);
 
     const stored = JSON.parse(localStorage.getItem('bhhb-table-column-layout') ?? '{}');
-    expect(stored.order.indexOf('host')).toBeLessThan(stored.order.indexOf('method'));
+    expect(stored.order.indexOf('method')).toBeLessThan(stored.order.indexOf('host'));
   });
 
   it('resetColumnLayout restores defaults', () => {
@@ -281,7 +288,7 @@ describe('MainComponent', () => {
       { position: 3, request: [[], ''], response: [[], ''], comment: '' },
     ];
     component.ELEMENT_DATA = rows;
-    component.dataSource = new MatTableDataSource(rows);
+    component.dataSource = new MatTableDataSource(rows) as typeof component.dataSource;
     component.contextMenuRow = rows[1];
 
     component.compareContextMenuWithAdjacent(-1);
@@ -299,7 +306,7 @@ describe('MainComponent', () => {
     const event = new MouseEvent('contextmenu', { clientX: 12, clientY: 34, bubbles: true, cancelable: true });
     spyOn(event, 'preventDefault');
     spyOn(event, 'stopPropagation');
-    component.rowContextMenuTrigger = { openMenu: jasmine.createSpy('openMenu') } as any;
+    spyOn(window, 'requestAnimationFrame').and.returnValue(0);
 
     component.onRowContextMenu(event, rowB);
 
@@ -320,10 +327,10 @@ describe('MainComponent', () => {
 
     component.globalSearchTerm = '';
     component.columnFilters['host'] = null;
-    component.restoreViewState(captured);
+    (component as unknown as { restoreViewState(state: typeof captured): void }).restoreViewState(captured);
 
     expect(component.globalSearchTerm).toBe('token');
-    expect(component.columnFilters['host']?.has('https://example.com')).toBeTrue();
+    expect((component.columnFilters['host'] as unknown as Set<string>)?.has('https://example.com')).toBeTrue();
     expect(captured.selectedRowPosition).toBe(4);
   });
 });

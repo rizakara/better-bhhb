@@ -5,6 +5,13 @@ import { BurpExport } from './file-handle.service';
 describe('FileSessionStorageService', () => {
   let service: FileSessionStorageService;
 
+  async function clearHistory(): Promise<void> {
+    const history = await service.listHistory();
+    for (const entry of history) {
+      await service.deleteHistoryEntry(entry.id);
+    }
+  }
+
   const sampleSession = {
     fileName: 'history.xml',
     content: {
@@ -18,9 +25,11 @@ describe('FileSessionStorageService', () => {
     } as BurpExport,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({});
     service = TestBed.inject(FileSessionStorageService);
+    await service.clear();
+    await clearHistory();
   });
 
   it('should be created', () => {

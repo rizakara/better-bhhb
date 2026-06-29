@@ -1,4 +1,4 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
+/* To learn more about this file see: https://angular.dev/reference/configs/file-structure#tsconfigappjson */
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -6,12 +6,11 @@
     "types": [],
     "skipLibCheck": true
   },
-  "files": [
-    "src/main.ts",
-    "src/polyfills.ts"
-  ],
   "include": [
-    "src/**/*.d.ts"
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
   ],
   "angularCompilerOptions": {
     "extendedDiagnostics": {

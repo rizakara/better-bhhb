@@ -8,10 +8,6 @@
     ],
     "skipLibCheck": true
   },
-  "files": [
-    "src/test.ts",
-    "src/polyfills.ts"
-  ],
   "include": [
     "src/**/*.spec.ts",
     "src/**/*.d.ts"
