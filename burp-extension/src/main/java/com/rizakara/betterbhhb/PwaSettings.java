@@ -3,6 +3,7 @@ package com.rizakara.betterbhhb;
 import burp.api.montoya.MontoyaApi;
 
 import java.net.URI;
+import java.util.Locale;
 
 final class PwaSettings {
     static final String PREF_KEY = "pwaUrl";
@@ -47,6 +48,68 @@ final class PwaSettings {
     }
 
     String normalize(String url) {
+        String trimmed = url.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("PWA URL cannot be empty.");
+        }
+        return trimmed.endsWith("/") ? trimmed : trimmed + "/";
+    }
+
+    static String toOrigin(String pwaUrl) {
+        URI uri = URI.create(normalizeStatic(pwaUrl));
+        String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("PWA URL must include a host: " + pwaUrl);
+        }
+
+        int port = uri.getPort();
+        int defaultPort = "https".equals(scheme) ? 443 : 80;
+        if (port == -1 || port == defaultPort) {
+            return scheme + "://" + host;
+        }
+        return scheme + "://" + host + ":" + port;
+    }
+
+    static boolean originMatches(String pwaUrl, String requestOrigin) {
+        if (requestOrigin == null || requestOrigin.isBlank() || "null".equalsIgnoreCase(requestOrigin)) {
+            return false;
+        }
+
+        String allowedOrigin = toOrigin(pwaUrl);
+        if (allowedOrigin.equals(requestOrigin)) {
+            return true;
+        }
+
+        return isLoopbackAlias(allowedOrigin, requestOrigin);
+    }
+
+    private static boolean isLoopbackAlias(String allowedOrigin, String requestOrigin) {
+        try {
+            URI allowed = URI.create(allowedOrigin);
+            URI request = URI.create(requestOrigin);
+            if (!allowed.getScheme().equalsIgnoreCase(request.getScheme())) {
+                return false;
+            }
+            if (allowed.getPort() != request.getPort()) {
+                return false;
+            }
+            return isLoopbackHost(allowed.getHost()) && isLoopbackHost(request.getHost());
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    private static boolean isLoopbackHost(String host) {
+        if (host == null) {
+            return false;
+        }
+        return "localhost".equalsIgnoreCase(host)
+                || "127.0.0.1".equals(host)
+                || "[::1]".equals(host);
+    }
+
+    private static String normalizeStatic(String url) {
         String trimmed = url.trim();
         if (trimmed.isEmpty()) {
             throw new IllegalArgumentException("PWA URL cannot be empty.");

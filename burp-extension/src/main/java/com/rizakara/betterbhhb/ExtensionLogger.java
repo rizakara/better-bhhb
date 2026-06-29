@@ -19,6 +19,10 @@ final class ExtensionLogger {
         api.logging().logToOutput(prefix("INFO") + message);
     }
 
+    void warn(String message) {
+        api.logging().logToOutput(prefix("WARN") + message);
+    }
+
     void debug(String message) {
         if (!DEBUG_ENABLED) {
             return;

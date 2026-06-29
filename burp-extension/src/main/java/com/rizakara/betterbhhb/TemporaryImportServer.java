@@ -10,6 +10,9 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,6 +30,7 @@ final class TemporaryImportServer implements AutoCloseable {
     private final ServerSocket serverSocket;
     private final int port;
     private final String pwaUrl;
+    private final String allowedOrigin;
     private final byte[] xmlPayload;
     private final ExtensionLogger log;
     private final AtomicBoolean fetched = new AtomicBoolean(false);
@@ -54,6 +58,7 @@ final class TemporaryImportServer implements AutoCloseable {
         this.serverSocket = serverSocket;
         this.port = port;
         this.pwaUrl = pwaUrl;
+        this.allowedOrigin = PwaSettings.toOrigin(pwaUrl);
         this.xmlPayload = xmlPayload;
         this.log = log;
         this.acceptThread = new Thread(this::acceptLoop, "better-bhhb-accept");
@@ -75,6 +80,7 @@ final class TemporaryImportServer implements AutoCloseable {
                 importServer.acceptThread.start();
                 ACTIVE_SERVER.set(importServer);
                 log.info("Import server listening on http://127.0.0.1:" + candidatePort);
+                log.info("CORS restricted to PWA origin: " + importServer.allowedOrigin);
                 return importServer;
             } catch (IOException exception) {
                 log.debug("Port " + candidatePort + " unavailable: " + exception.getMessage());
@@ -165,43 +171,66 @@ final class TemporaryImportServer implements AutoCloseable {
                 return;
             }
 
-            String method = parts[0].toUpperCase();
+            String method = parts[0].toUpperCase(Locale.ROOT);
             String path = extractPath(parts[1]);
-            skipHeaders(reader);
+            Map<String, String> headers = readHeaders(reader);
+            String origin = headers.get("origin");
 
-            log.debug(path + " " + method + " from " + socket.getRemoteSocketAddress());
+            log.debug(path + " " + method + " from " + socket.getRemoteSocketAddress()
+                    + (origin != null ? " origin=" + origin : ""));
 
             if ("OPTIONS".equals(method)) {
-                writeResponse(output, 204, "text/plain; charset=utf-8", new byte[0]);
+                handleOptions(output, path, origin);
                 return;
             }
 
             switch (path) {
-                case "/data" -> handleData(method, output, socket);
-                case "/import" -> handleImport(method, output, socket);
-                case "/fetched" -> handleFetched(method, output, socket);
-                case "/health" -> handleHealth(method, output, socket);
-                default -> writeResponse(output, 404, "text/plain; charset=utf-8", "Not found".getBytes(StandardCharsets.UTF_8));
+                case "/data" -> handleData(method, output, origin);
+                case "/import" -> handleImport(method, output);
+                case "/fetched" -> handleFetched(method, output, origin);
+                case "/health" -> handleHealth(method, output, origin);
+                default -> writeResponse(output, 404, "text/plain; charset=utf-8", "Not found".getBytes(StandardCharsets.UTF_8), null);
             }
         } catch (IOException exception) {
             log.debug("Client connection closed: " + exception.getMessage());
         }
     }
 
-    private void handleData(String method, OutputStream output, Socket socket) throws IOException {
+    private void handleOptions(OutputStream output, String path, String origin) throws IOException {
+        if (!isCorsProtectedPath(path)) {
+            writeResponse(output, 204, "text/plain; charset=utf-8", new byte[0], null);
+            return;
+        }
+
+        if (!isOriginAllowed(origin)) {
+            log.debug("Rejected CORS preflight for origin: " + describeOrigin(origin));
+            writeResponse(output, 403, "text/plain; charset=utf-8", "Forbidden".getBytes(StandardCharsets.UTF_8), null);
+            return;
+        }
+
+        writeResponse(output, 204, "text/plain; charset=utf-8", new byte[0], origin);
+    }
+
+    private void handleData(String method, OutputStream output, String origin) throws IOException {
         if (!"GET".equals(method)) {
-            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8));
+            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8), null);
+            return;
+        }
+        if (!isOriginAllowed(origin)) {
+            log.warn("/data rejected for unauthorized origin: " + describeOrigin(origin)
+                    + " (expected " + allowedOrigin + ")");
+            writeResponse(output, 403, "text/plain; charset=utf-8", "Forbidden".getBytes(StandardCharsets.UTF_8), null);
             return;
         }
         fetched.set(true);
-        log.info("/data served " + xmlPayload.length + " bytes to " + socket.getRemoteSocketAddress());
-        writeResponse(output, 200, "application/xml; charset=utf-8", xmlPayload);
+        log.info("/data served " + xmlPayload.length + " bytes to origin " + origin);
+        writeResponse(output, 200, "application/xml; charset=utf-8", xmlPayload, origin);
         scheduleShutdown(250);
     }
 
-    private void handleImport(String method, OutputStream output, Socket socket) throws IOException {
+    private void handleImport(String method, OutputStream output) throws IOException {
         if (!"GET".equals(method)) {
-            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8));
+            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8), null);
             return;
         }
         String redirectTarget = pwaUrl
@@ -227,27 +256,39 @@ final class TemporaryImportServer implements AutoCloseable {
                 </body>
                 </html>
                 """.formatted(redirectTarget, redirectTarget, jsonString(redirectTarget));
-        writeResponse(output, 200, "text/html; charset=utf-8", html.getBytes(StandardCharsets.UTF_8));
+        writeResponse(output, 200, "text/html; charset=utf-8", html.getBytes(StandardCharsets.UTF_8), null);
     }
 
-    private void handleFetched(String method, OutputStream output, Socket socket) throws IOException {
+    private void handleFetched(String method, OutputStream output, String origin) throws IOException {
         if (!"GET".equals(method) && !"POST".equals(method)) {
-            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8));
+            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8), null);
+            return;
+        }
+        if (!isOriginAllowed(origin)) {
+            log.warn("/fetched rejected for unauthorized origin: " + describeOrigin(origin)
+                    + " (expected " + allowedOrigin + ")");
+            writeResponse(output, 403, "text/plain; charset=utf-8", "Forbidden".getBytes(StandardCharsets.UTF_8), null);
             return;
         }
         fetched.set(true);
-        log.info("/fetched called — shutting down import server.");
-        writeResponse(output, 200, "text/plain; charset=utf-8", "ok".getBytes(StandardCharsets.UTF_8));
+        log.info("/fetched called from origin " + origin + " — shutting down import server.");
+        writeResponse(output, 200, "text/plain; charset=utf-8", "ok".getBytes(StandardCharsets.UTF_8), origin);
         scheduleShutdown(0);
     }
 
-    private void handleHealth(String method, OutputStream output, Socket socket) throws IOException {
+    private void handleHealth(String method, OutputStream output, String origin) throws IOException {
         if (!"GET".equals(method)) {
-            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8));
+            writeResponse(output, 405, "text/plain; charset=utf-8", "Method not allowed".getBytes(StandardCharsets.UTF_8), null);
+            return;
+        }
+        if (origin != null && !origin.isBlank() && !isOriginAllowed(origin)) {
+            log.debug("/health rejected for unauthorized origin: " + origin);
+            writeResponse(output, 403, "text/plain; charset=utf-8", "Forbidden".getBytes(StandardCharsets.UTF_8), null);
             return;
         }
         String body = "{\"ready\":true,\"port\":" + port + "}";
-        writeResponse(output, 200, "application/json; charset=utf-8", body.getBytes(StandardCharsets.UTF_8));
+        String corsOrigin = isOriginAllowed(origin) ? origin : null;
+        writeResponse(output, 200, "application/json; charset=utf-8", body.getBytes(StandardCharsets.UTF_8), corsOrigin);
     }
 
     private static String extractPath(String target) {
@@ -259,32 +300,64 @@ final class TemporaryImportServer implements AutoCloseable {
         }
     }
 
-    private static void skipHeaders(BufferedReader reader) throws IOException {
+    private static Map<String, String> readHeaders(BufferedReader reader) throws IOException {
+        Map<String, String> headers = new LinkedHashMap<>();
         String line;
         while ((line = reader.readLine()) != null && !line.isEmpty()) {
-            // discard request headers
+            int colonIndex = line.indexOf(':');
+            if (colonIndex <= 0) {
+                continue;
+            }
+            String name = line.substring(0, colonIndex).trim().toLowerCase(Locale.ROOT);
+            String value = line.substring(colonIndex + 1).trim();
+            headers.put(name, value);
         }
+        return headers;
     }
 
-    private static void writeResponse(OutputStream output, int status, String contentType, byte[] body) throws IOException {
+    private boolean isOriginAllowed(String origin) {
+        return PwaSettings.originMatches(pwaUrl, origin);
+    }
+
+    private static boolean isCorsProtectedPath(String path) {
+        return "/data".equals(path) || "/health".equals(path) || "/fetched".equals(path);
+    }
+
+    private static String describeOrigin(String origin) {
+        return origin == null || origin.isBlank() ? "<missing>" : origin;
+    }
+
+    private static void writeResponse(
+            OutputStream output,
+            int status,
+            String contentType,
+            byte[] body,
+            String corsOrigin
+    ) throws IOException {
         String statusText = switch (status) {
             case 200 -> "OK";
             case 204 -> "No Content";
+            case 403 -> "Forbidden";
             case 404 -> "Not Found";
             case 405 -> "Method Not Allowed";
             default -> "OK";
         };
 
-        String headers = "HTTP/1.1 " + status + " " + statusText + "\r\n"
-                + "Content-Type: " + contentType + "\r\n"
-                + "Access-Control-Allow-Origin: *\r\n"
-                + "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-                + "Access-Control-Allow-Headers: Content-Type\r\n"
-                + "Connection: close\r\n"
-                + "Cache-Control: no-store\r\n"
-                + "Content-Length: " + body.length + "\r\n"
-                + "\r\n";
-        output.write(headers.getBytes(StandardCharsets.US_ASCII));
+        StringBuilder headers = new StringBuilder();
+        headers.append("HTTP/1.1 ").append(status).append(' ').append(statusText).append("\r\n");
+        headers.append("Content-Type: ").append(contentType).append("\r\n");
+        if (corsOrigin != null && !corsOrigin.isBlank()) {
+            headers.append("Access-Control-Allow-Origin: ").append(corsOrigin).append("\r\n");
+            headers.append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
+            headers.append("Access-Control-Allow-Headers: Content-Type\r\n");
+            headers.append("Vary: Origin\r\n");
+        }
+        headers.append("Connection: close\r\n");
+        headers.append("Cache-Control: no-store\r\n");
+        headers.append("Content-Length: ").append(body.length).append("\r\n");
+        headers.append("\r\n");
+
+        output.write(headers.toString().getBytes(StandardCharsets.US_ASCII));
         if (body.length > 0) {
             output.write(body);
         }

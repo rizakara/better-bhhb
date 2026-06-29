@@ -14,11 +14,13 @@ final class PwaUrlSettingsDialog {
 
         String message = """
                 Enter the Better-BHHB address you keep open while testing.
+                Only this origin may fetch Burp exports from the local import server.
                 For local development use http://localhost:4200/
 
-                Current: %s
+                Allowed origin: %s
+                Current URL: %s
                 Leave blank and press Cancel to keep the current value.
-                """.formatted(settings.getPwaUrl());
+                """.formatted(PwaSettings.toOrigin(settings.getPwaUrl()), settings.getPwaUrl());
 
         JTextField urlField = new JTextField(settings.getPwaUrl(), 48);
         ui.applyThemeToComponent(urlField);
@@ -50,7 +52,8 @@ final class PwaUrlSettingsDialog {
             showThemedMessageDialog(
                     owner,
                     ui,
-                    "PWA URL saved:\n" + settings.getPwaUrl(),
+                    "PWA URL saved:\n" + settings.getPwaUrl()
+                            + "\nAllowed CORS origin:\n" + PwaSettings.toOrigin(settings.getPwaUrl()),
                     "Better-BHHB",
                     JOptionPane.INFORMATION_MESSAGE
             );

@@ -39,7 +39,8 @@ final class SendToPwaCoordinator {
         log.info("XML export complete in " + (System.currentTimeMillis() - exportStarted) + "ms, size="
                 + xml.length() + " chars (" + xml.getBytes().length + " bytes).");
 
-        log.debug("PWA target URL: " + settings.getPwaUrl());
+        log.info("PWA URL: " + settings.getPwaUrl());
+        log.info("Allowed CORS origin: " + PwaSettings.toOrigin(settings.getPwaUrl()));
         log.debug("Starting temporary localhost import server...");
         TemporaryImportServer importServer = TemporaryImportServer.start(settings.getPwaUrl(), xml, log);
         int port = importServer.port();
