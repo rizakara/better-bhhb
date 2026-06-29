@@ -586,13 +586,12 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
 }
 
 /* Workspace selector menu */
-.mat-menu-panel.workspace-menu-panel,
-.mat-mdc-menu-panel.workspace-menu-panel {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel {
   min-width: 260px !important;
   max-width: 340px;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-header {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-header {
   font-size: 11px;
   font-weight: 600;
   padding: 6px 16px 4px;
@@ -602,8 +601,8 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   letter-spacing: 0.04em;
 }
 
-.mat-menu-panel.workspace-menu-panel .mat-menu-item,
-.mat-mdc-menu-panel.workspace-menu-panel .mat-mdc-menu-item {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .mat-menu-item,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .mat-mdc-menu-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -615,26 +614,41 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   white-space: normal;
 }
 
-.mat-menu-panel.workspace-menu-panel .mat-menu-item.workspace-menu-active,
-.mat-mdc-menu-panel.workspace-menu-panel .mat-mdc-menu-item.workspace-menu-active {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .mat-mdc-menu-item .mat-mdc-menu-item-text {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: inherit;
+}
+
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .mat-menu-item.workspace-menu-active,
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .mat-mdc-menu-item.workspace-menu-active {
   background-color: var(--selected-bg) !important;
   font-weight: 600;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-check {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-check {
   flex: 0 0 16px;
   width: 16px;
   font-size: 12px;
   line-height: 1;
   color: transparent;
+  visibility: hidden;
   text-align: center;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-check.workspace-menu-check-visible {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-check.workspace-menu-check-visible {
   color: var(--text-primary);
+  visibility: visible;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-item-main {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-item-main {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -643,7 +657,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   gap: 1px;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-label {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -651,7 +665,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   color: var(--text-primary);
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-meta {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-meta {
   font-size: 11px;
   color: var(--text-muted);
   overflow: hidden;
@@ -660,12 +674,12 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   max-width: 100%;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-meta-empty {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-meta-empty {
   font-style: italic;
   opacity: 0.85;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-close {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -682,7 +696,7 @@ body.theme-is-dark .mat-mdc-menu-panel.row-context-menu-panel {
   flex: 0 0 auto;
 }
 
-.mat-menu-panel.workspace-menu-panel .workspace-menu-close:hover {
+:is(.mat-menu-panel, .mat-mdc-menu-panel).workspace-menu-panel .workspace-menu-close:hover {
   color: var(--text-primary);
   background: var(--hover-bg);
 }
