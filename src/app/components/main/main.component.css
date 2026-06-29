@@ -716,6 +716,23 @@ table.mat-mdc-table .mat-mdc-header-cell:not(:nth-child(1)) {
   overflow: auto;
 }
 
+.detail-panel {
+  position: relative;
+}
+
+.detail-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 13px;
+  pointer-events: none;
+}
+
 .header_key {
   color: #1565c0;
 }

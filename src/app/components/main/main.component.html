@@ -106,7 +106,8 @@
                     </div>
 
                     <div class="table-container">
-                    <table mat-table class="history-table" [dataSource]="dataSource" matSort cdkDropList
+                    <table mat-table class="history-table" [dataSource]="dataSource" [trackBy]="trackHistoryRow"
+                        matSort cdkDropList
                         cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)"
                         (contextmenu)="onHistoryTableContextMenu($event)">
 
@@ -507,7 +508,8 @@
                 </as-split-area>
                 <as-split-area [size]="40" *ngIf="clickedRow">
                     <as-split direction="horizontal" [gutterSize]=7>
-                        <as-split-area [size]="inspectorOpen ? 37 : 50">
+                        <as-split-area [size]="inspectorOpen ? 37 : 50" class="detail-panel">
+                            <div class="detail-loading" *ngIf="detailPanelLoading">Loading…</div>
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Request #{{clickedRow.position}}</span>
@@ -601,7 +603,8 @@
                                 <div id="req_body" [innerHTML]="requestHighlightedBody"></div>
                             </div>
                         </as-split-area>
-                        <as-split-area [size]="inspectorOpen ? 37 : 50">
+                        <as-split-area [size]="inspectorOpen ? 37 : 50" class="detail-panel">
+                            <div class="detail-loading" *ngIf="detailPanelLoading">Loading…</div>
                             <div class="panel-header">
                                 <div class="label">
                                     <span>Response</span>

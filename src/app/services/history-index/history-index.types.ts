@@ -6,6 +6,7 @@ export {
   extractRawPayload,
   extractTitleFromHttpResponse,
   indexRowBodies,
+  indexRowBodySearch,
   setDecodeBase64Impl,
   splitHeaderBody,
 } from './history-row-search';
@@ -26,8 +27,6 @@ export interface IndexedRowResult {
   position: number;
   bodySearchText: string;
   title: string;
-  request: import('./history-row-search').RequestResponseParts;
-  response: import('./history-row-search').RequestResponseParts;
 }
 
 export const INDEX_BATCH_SIZE = 300;

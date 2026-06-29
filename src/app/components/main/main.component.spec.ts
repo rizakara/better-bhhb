@@ -12,6 +12,7 @@ import { HttpDiffService } from '../../services/http-diff/http-diff.service';
 import { RequestReplayService } from '../../services/request-replay/request-replay.service';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
 import { HistoryIndexService } from '../../services/history-index/history-index.service';
+import { HistoryRowParseService } from '../../services/history-index/history-row-parse.service';
 import { InspectorPanelComponent } from '../inspector/inspector-panel.component';
 import { MainComponent } from './main.component';
 
@@ -62,6 +63,7 @@ describe('MainComponent', () => {
             cancel: () => undefined,
           },
         },
+        HistoryRowParseService,
         HttpDiffService,
         WorkspaceService,
       ],

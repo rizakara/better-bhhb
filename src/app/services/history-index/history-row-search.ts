@@ -124,6 +124,25 @@ export function buildBodySearchIndex(requestText: string, responseText: string):
   return parts.join(' ').toLowerCase();
 }
 
+export function indexRowBodySearch(
+  rawRequest: RawBurpPayload,
+  rawResponse: RawBurpPayload,
+): { bodySearchText: string; title: string } {
+  const requestText = decodeBurpPayload(rawRequest);
+  const responseText = decodeBurpPayload(rawResponse);
+  return {
+    bodySearchText: buildBodySearchIndex(requestText, responseText),
+    title: extractTitleFromHttpResponse(responseText),
+  };
+}
+
+export function estimateRawPayloadSize(
+  rawRequest: RawBurpPayload | undefined,
+  rawResponse: RawBurpPayload | undefined,
+): number {
+  return (rawRequest?.content?.length ?? 0) + (rawResponse?.content?.length ?? 0);
+}
+
 export function indexRowBodies(
   rawRequest: RawBurpPayload,
   rawResponse: RawBurpPayload,

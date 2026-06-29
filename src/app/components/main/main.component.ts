@@ -13,15 +13,17 @@ import {
 } from '../../services/history-index/history-index.service';
 import {
   buildMetadataSearchIndex,
+  estimateRawPayloadSize,
   extractRawPayload,
-  indexRowBodies,
 } from '../../services/history-index/history-row-search';
 import { IndexedRowResult } from '../../services/history-index/history-index.types';
+import { HistoryRowParseService } from '../../services/history-index/history-row-parse.service';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+
 import { NestedTreeControl } from '@angular/cdk/tree';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
@@ -69,6 +71,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
 };
 
 const DEFAULT_COLUMN_WIDTH_LIMITS = { min: 48, max: 800 };
+const LARGE_PAYLOAD_THRESHOLD = 512_000;
 const COLUMN_WIDTH_LIMITS: Record<string, { min: number; max: number }> = {
   position: { min: 36, max: 80 },
   method: { min: 56, max: 160 },
@@ -98,9 +101,12 @@ export class MainComponent implements OnInit, OnDestroy {
     private httpDiffService: HttpDiffService,
     private workspaceService: WorkspaceService,
     private historyIndexService: HistoryIndexService,
+    private historyRowParseService: HistoryRowParseService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
   ) { }
+
+  detailPanelLoading = false;
 
   fileSub!: Subscription
   beforeSaveSub!: Subscription
@@ -269,6 +275,7 @@ export class MainComponent implements OnInit, OnDestroy {
       }) => {
         if (!selectedFileData.selectedFileContent) {
           this.historyIndexService.cancel();
+          this.historyRowParseService.clear();
           this.dataSource = new MatTableDataSource();
           this.selectedFileContent = selectedFileData.selectedFileContent;
           this.clickedRow = undefined;
@@ -280,6 +287,7 @@ export class MainComponent implements OnInit, OnDestroy {
         }
         this.clearRequestEdits();
         this.historyIndexService.cancel();
+        this.historyRowParseService.clear();
         this.selectedFileContent = selectedFileData.selectedFileContent
         this.elementDataGen(this.selectedFileContent)
         this.buildSiteMapTree();
@@ -300,6 +308,10 @@ export class MainComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort, { static: false }) sort!: MatSort;
   @ViewChild('rowContextMenuTrigger', { static: false }) rowContextMenuTrigger!: MatMenuTrigger;
   @ViewChildren(MatMenuTrigger) private menuTriggers!: QueryList<MatMenuTrigger>;
+
+  trackHistoryRow(_index: number, row: any): number {
+    return row.position;
+  }
 
   elementDataGen(content: any) {
     this.ELEMENT_DATA = []
@@ -351,8 +363,6 @@ export class MainComponent implements OnInit, OnDestroy {
         return;
       }
 
-      row.request = result.request;
-      row.response = result.response;
       if (result.title) {
         row.title = result.title;
         titlesUpdated = true;
@@ -373,25 +383,57 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private ensureRowParsed(row: any): void {
-    if (row.request !== undefined && row.response !== undefined) {
+    if (!row) {
       return;
     }
 
-    const indexed = indexRowBodies(row.rawRequestPayload, row.rawResponsePayload);
-    row.request = indexed.request;
-    row.response = indexed.response;
+    if (this.historyRowParseService.attachToRow(row)) {
+      return;
+    }
+
+    if (row.request !== undefined && row.response !== undefined) {
+      this.historyRowParseService.setParsed(row.position, {
+        request: row.request,
+        response: row.response,
+        title: row.title ?? '',
+        bodySearchText: '',
+      });
+      return;
+    }
+
+    const parsed = this.historyRowParseService.getOrParse(
+      row.position,
+      row.rawRequestPayload,
+      row.rawResponsePayload,
+    );
+    row.request = parsed.request;
+    row.response = parsed.response;
     if (!row.title) {
-      row.title = indexed.title;
+      row.title = parsed.title;
     }
 
     if (!row.bodyIndexed) {
-      row.searchIndex = indexed.bodySearchText
-        ? `${row.metadataSearchIndex} ${indexed.bodySearchText}`
+      row.searchIndex = parsed.bodySearchText
+        ? `${row.metadataSearchIndex} ${parsed.bodySearchText}`
         : row.metadataSearchIndex;
       row.bodyIndexed = true;
       if (this.globalSearchTerm) {
         this.refreshTableFilter();
       }
+    }
+  }
+
+  private shouldDeferRowParse(row: any): boolean {
+    if (this.historyRowParseService.has(row.position)) {
+      return false;
+    }
+    return estimateRawPayloadSize(row.rawRequestPayload, row.rawResponsePayload) > LARGE_PAYLOAD_THRESHOLD;
+  }
+
+  private syncParsedRequest(position: number, request: any): void {
+    const cached = this.historyRowParseService.get(position);
+    if (cached) {
+      cached.request = request;
     }
   }
 
@@ -1426,6 +1468,8 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   private startRowCompare(primary: any, secondary: any): void {
+    this.ensureRowParsed(primary);
+    this.ensureRowParsed(secondary);
     this.clickedRow = primary;
     this.applyStoredRequestEdit(primary);
     this.applyStoredCommentEdit(primary);
@@ -1617,8 +1661,26 @@ export class MainComponent implements OnInit, OnDestroy {
         this.clearCompare();
       }
     }
-    this.ensureRowParsed(row);
+
     this.clickedRow = row;
+
+    if (this.shouldDeferRowParse(row)) {
+      this.detailPanelLoading = true;
+      queueMicrotask(() => {
+        if (this.clickedRow?.position !== row.position) {
+          return;
+        }
+        this.completeRowSelection(row);
+      });
+      return;
+    }
+
+    this.completeRowSelection(row);
+  }
+
+  private completeRowSelection(row: any): void {
+    this.ensureRowParsed(row);
+    this.detailPanelLoading = false;
     this.applyStoredRequestEdit(row);
     this.applyStoredCommentEdit(row);
     this.updateRequestHighlights();
@@ -1818,6 +1880,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.replayRequestRaw = original;
     this.FileHandleService.setRequestEdit(position, null);
     this.clickedRow.request = this.requestReplayService.rawRequestToParts(original);
+    this.syncParsedRequest(position, this.clickedRow.request);
     this.updateRequestHighlights();
     this.updateInspector();
   }
@@ -1907,6 +1970,7 @@ export class MainComponent implements OnInit, OnDestroy {
         this.clickedRow.request = this.requestReplayService.rawRequestToParts(
           this.originalRequestRaws.get(this.clickedRow.position)!,
         );
+        this.syncParsedRequest(this.clickedRow.position, this.clickedRow.request);
         this.updateRequestHighlights();
         this.updateInspector();
       }
@@ -1915,6 +1979,7 @@ export class MainComponent implements OnInit, OnDestroy {
 
     try {
       this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
+      this.syncParsedRequest(this.clickedRow.position, this.clickedRow.request);
       this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
       this.updateRequestHighlights();
       this.updateInspector();
@@ -1933,6 +1998,7 @@ export class MainComponent implements OnInit, OnDestroy {
     }
     try {
       row.request = this.requestReplayService.rawRequestToParts(editedRaw);
+      this.syncParsedRequest(row.position, row.request);
     } catch (error) {
       console.warn('Stored request edit could not be applied', error);
     }
@@ -1995,6 +2061,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
     try {
       this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
+      this.syncParsedRequest(this.clickedRow.position, this.clickedRow.request);
     } catch (error) {
       console.warn('Pending request edit could not be applied before export', error);
     }
@@ -2778,7 +2845,7 @@ export class MainComponent implements OnInit, OnDestroy {
   private scrollRowIntoView(row: any): void {
     this.cdr.detectChanges();
     requestAnimationFrame(() => {
-      const rowElement = document.querySelector(`tr.mat-row[data-row-position="${row.position}"]`);
+      const rowElement = document.querySelector(`tr.mat-row[data-row-position="${row.position}"], tr.mat-mdc-row[data-row-position="${row.position}"]`);
       rowElement?.scrollIntoView({ block: 'nearest' });
     });
   }

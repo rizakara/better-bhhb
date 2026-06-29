@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { indexRowBodies, setDecodeBase64Impl } from './history-row-search';
+import { indexRowBodySearch, setDecodeBase64Impl } from './history-row-search';
 import type { IndexableRowPayload, IndexedRowResult } from './history-index.types';
 
 function decodeBase64(value: string): string {
@@ -22,13 +22,11 @@ addEventListener('message', ({ data }) => {
   const batch = data.batch as IndexableRowPayload[];
   const batchId = data.batchId as number;
   const results: IndexedRowResult[] = batch.map((row) => {
-    const indexed = indexRowBodies(row.rawRequest, row.rawResponse);
+    const indexed = indexRowBodySearch(row.rawRequest, row.rawResponse);
     return {
       position: row.position,
       bodySearchText: indexed.bodySearchText,
       title: indexed.title,
-      request: indexed.request,
-      response: indexed.response,
     };
   });
 

@@ -6,7 +6,7 @@ import {
   IndexableRowPayload,
   IndexedRowResult,
   IndexingState,
-  indexRowBodies,
+  indexRowBodySearch,
   setDecodeBase64Impl,
 } from './history-index.types';
 
@@ -197,13 +197,11 @@ export class HistoryIndexService implements OnDestroy {
       }
 
       const results = batch.map((row) => {
-        const indexed = indexRowBodies(row.rawRequest, row.rawResponse);
+        const indexed = indexRowBodySearch(row.rawRequest, row.rawResponse);
         return {
           position: row.position,
           bodySearchText: indexed.bodySearchText,
           title: indexed.title,
-          request: indexed.request,
-          response: indexed.response,
         };
       });
 
