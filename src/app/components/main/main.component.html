@@ -609,6 +609,12 @@
                                     </div>
                                 </div>
                                 <br><br>
+                                <div class="body-truncate-notice" *ngIf="requestBodyTruncated">
+                                    Showing first 64 KB —
+                                    <button type="button" class="body-expand-btn" (click)="expandRequestBody()">
+                                        Show full ({{ formatOmittedBodySize(requestBodyOmittedSize) }} more)
+                                    </button>
+                                </div>
                                 <div id="req_body" [innerHTML]="requestHighlightedBody"></div>
                             </div>
                         </as-split-area>
@@ -686,6 +692,12 @@
                                     </div>
                                 </div>
                                 <br><br>
+                                <div class="body-truncate-notice" *ngIf="responseBodyTruncated">
+                                    Showing first 64 KB —
+                                    <button type="button" class="body-expand-btn" (click)="expandResponseBody()">
+                                        Show full ({{ formatOmittedBodySize(responseBodyOmittedSize) }} more)
+                                    </button>
+                                </div>
                                 <div id="res_body" [innerHTML]="responseHighlightedBody"></div>
                             </div>
                         </as-split-area>

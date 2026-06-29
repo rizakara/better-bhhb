@@ -72,6 +72,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
 
 const DEFAULT_COLUMN_WIDTH_LIMITS = { min: 48, max: 800 };
 const LARGE_PAYLOAD_THRESHOLD = 512_000;
+const BODY_DISPLAY_LIMIT_CHARS = 65_536;
 const FOOTER_SYNC_DEBOUNCE_MS = 300;
 const COLUMN_FILTER_OPTIONS_CAP = 200;
 const COLUMN_WIDTH_LIMITS: Record<string, { min: number; max: number }> = {
@@ -204,14 +205,22 @@ export class MainComponent implements OnInit, OnDestroy {
   responseMatchIndex: number = -1;
   requestHighlightedHeaders: { key: string; value: string; hasValue: boolean }[] = [];
   requestHighlightedBody: string = '';
+  requestBodyExpanded = false;
+  requestBodyTruncated = false;
+  requestBodyOmittedSize = 0;
   responseHighlightedHeaders: { key: string; value: string; hasValue: boolean }[] = [];
   responseHighlightedBody: string = '';
+  responseBodyExpanded = false;
+  responseBodyTruncated = false;
+  responseBodyOmittedSize = 0;
   inspectorOpen = true;
   inspectorTab: InspectorTab = 'attributes';
   inspectorAttributes: Array<{ name: string; value: string }> = [];
   inspectorRequestCookies: ParsedCookie[] = [];
   inspectorRequestHeaders: HttpHeaderRow[] = [];
   inspectorResponseHeaders: HttpHeaderRow[] = [];
+  private inspectorDataPosition: number | null = null;
+  private inspectorTabsLoaded = new Set<InspectorTab>();
   treeViewOpen = false;
   private siteMapTreeBuilt = false;
   private footerSyncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1760,6 +1769,7 @@ export class MainComponent implements OnInit, OnDestroy {
       this.resetRequestSearchState();
       this.resetResponseSearchState();
       this.resetReplayState();
+      this.resetBodyDisplayState();
       if (this.compareRow && this.compareRow !== row) {
         this.clearCompare();
       }
@@ -1794,6 +1804,29 @@ export class MainComponent implements OnInit, OnDestroy {
 
   setInspectorTab(tab: InspectorTab): void {
     this.inspectorTab = tab;
+    this.ensureInspectorTabData(tab);
+  }
+
+  expandRequestBody(): void {
+    this.requestBodyExpanded = true;
+    this.updateRequestHighlights();
+  }
+
+  expandResponseBody(): void {
+    this.responseBodyExpanded = true;
+    this.updateResponseHighlights();
+  }
+
+  formatOmittedBodySize(charCount: number): string {
+    if (charCount < 1024) {
+      return `${charCount} characters`;
+    }
+    const kb = charCount / 1024;
+    if (kb < 1024) {
+      return kb < 100 ? `${kb.toFixed(1)} KB` : `${Math.round(kb)} KB`;
+    }
+    const mb = kb / 1024;
+    return mb < 100 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
   }
 
   toggleInspector(): void {
@@ -1984,6 +2017,7 @@ export class MainComponent implements OnInit, OnDestroy {
     this.FileHandleService.setRequestEdit(position, null);
     this.clickedRow.request = this.requestReplayService.rawRequestToParts(original);
     this.syncParsedRequest(position, this.clickedRow.request);
+    this.invalidateInspectorRequestTabs();
     this.updateRequestHighlights();
     this.updateInspector();
   }
@@ -2074,6 +2108,7 @@ export class MainComponent implements OnInit, OnDestroy {
           this.originalRequestRaws.get(this.clickedRow.position)!,
         );
         this.syncParsedRequest(this.clickedRow.position, this.clickedRow.request);
+        this.invalidateInspectorRequestTabs();
         this.updateRequestHighlights();
         this.updateInspector();
       }
@@ -2084,6 +2119,7 @@ export class MainComponent implements OnInit, OnDestroy {
       this.clickedRow.request = this.requestReplayService.rawRequestToParts(this.replayRequestRaw);
       this.syncParsedRequest(this.clickedRow.position, this.clickedRow.request);
       this.FileHandleService.setRequestEdit(this.clickedRow.position, this.replayRequestRaw);
+      this.invalidateInspectorRequestTabs();
       this.updateRequestHighlights();
       this.updateInspector();
       return true;
@@ -2102,6 +2138,7 @@ export class MainComponent implements OnInit, OnDestroy {
     try {
       row.request = this.requestReplayService.rawRequestToParts(editedRaw);
       this.syncParsedRequest(row.position, row.request);
+      this.invalidateInspectorRequestTabs();
     } catch (error) {
       console.warn('Stored request edit could not be applied', error);
     }
@@ -2251,6 +2288,8 @@ export class MainComponent implements OnInit, OnDestroy {
     if (!this.clickedRow) {
       this.requestHighlightedHeaders = [];
       this.requestHighlightedBody = '';
+      this.requestBodyTruncated = false;
+      this.requestBodyOmittedSize = 0;
       return;
     }
 
@@ -2261,8 +2300,11 @@ export class MainComponent implements OnInit, OnDestroy {
       value: this.highlightTextWithIndex(row[1], this.requestSearch, state, activeIndex),
       hasValue: !!row[1],
     }));
+    const bodyDisplay = this.getDisplayBodyText(this.clickedRow.request[1] as string, 'request');
+    this.requestBodyTruncated = bodyDisplay.truncated;
+    this.requestBodyOmittedSize = bodyDisplay.omitted;
     this.requestHighlightedBody = this.highlightTextWithIndex(
-      this.clickedRow.request[1],
+      bodyDisplay.text,
       this.requestSearch,
       state,
       activeIndex
@@ -2273,6 +2315,8 @@ export class MainComponent implements OnInit, OnDestroy {
     if (!this.clickedRow) {
       this.responseHighlightedHeaders = [];
       this.responseHighlightedBody = '';
+      this.responseBodyTruncated = false;
+      this.responseBodyOmittedSize = 0;
       return;
     }
 
@@ -2283,24 +2327,77 @@ export class MainComponent implements OnInit, OnDestroy {
       value: this.highlightTextWithIndex(row[1], this.responseSearch, state, activeIndex),
       hasValue: !!row[1],
     }));
+    const bodyDisplay = this.getDisplayBodyText(this.clickedRow.response[1] as string, 'response');
+    this.responseBodyTruncated = bodyDisplay.truncated;
+    this.responseBodyOmittedSize = bodyDisplay.omitted;
     this.responseHighlightedBody = this.highlightTextWithIndex(
-      this.clickedRow.response[1],
+      bodyDisplay.text,
       this.responseSearch,
       state,
       activeIndex
     );
   }
 
+  private shouldTruncatePanelBody(panel: 'request' | 'response'): boolean {
+    const search = panel === 'request' ? this.requestSearch : this.responseSearch;
+    if (search.trim()) {
+      return false;
+    }
+    return panel === 'request' ? !this.requestBodyExpanded : !this.responseBodyExpanded;
+  }
+
+  private getDisplayBodyText(
+    fullBody: string,
+    panel: 'request' | 'response',
+  ): { text: string; truncated: boolean; omitted: number } {
+    if (!fullBody || !this.shouldTruncatePanelBody(panel) || fullBody.length <= BODY_DISPLAY_LIMIT_CHARS) {
+      return { text: fullBody, truncated: false, omitted: 0 };
+    }
+
+    return {
+      text: fullBody.slice(0, BODY_DISPLAY_LIMIT_CHARS),
+      truncated: true,
+      omitted: fullBody.length - BODY_DISPLAY_LIMIT_CHARS,
+    };
+  }
+
+  private resetBodyDisplayState(): void {
+    this.requestBodyExpanded = false;
+    this.responseBodyExpanded = false;
+    this.requestBodyTruncated = false;
+    this.responseBodyTruncated = false;
+    this.requestBodyOmittedSize = 0;
+    this.responseBodyOmittedSize = 0;
+  }
+
+  private resetInspectorLazyState(): void {
+    this.inspectorDataPosition = null;
+    this.inspectorTabsLoaded.clear();
+    this.inspectorRequestCookies = [];
+    this.inspectorRequestHeaders = [];
+    this.inspectorResponseHeaders = [];
+  }
+
+  private invalidateInspectorRequestTabs(): void {
+    this.inspectorTabsLoaded.delete('cookies');
+    this.inspectorTabsLoaded.delete('request-headers');
+    this.inspectorRequestCookies = [];
+    this.inspectorRequestHeaders = [];
+  }
+
   private updateInspector(): void {
     if (!this.clickedRow) {
       this.inspectorAttributes = [];
-      this.inspectorRequestCookies = [];
-      this.inspectorRequestHeaders = [];
-      this.inspectorResponseHeaders = [];
+      this.resetInspectorLazyState();
       return;
     }
 
     const row = this.clickedRow;
+    if (this.inspectorDataPosition !== row.position) {
+      this.resetInspectorLazyState();
+      this.inspectorDataPosition = row.position;
+    }
+
     this.inspectorAttributes = [
       { name: 'Method', value: row.method ?? '' },
       { name: 'URL', value: row.url ?? '' },
@@ -2317,18 +2414,38 @@ export class MainComponent implements OnInit, OnDestroy {
       { name: 'Title', value: row.title ?? '' },
     ].filter((entry) => entry.value !== '' && entry.value !== undefined && entry.value !== null);
 
+    this.ensureInspectorTabData(this.inspectorTab);
+  }
+
+  private ensureInspectorTabData(tab: InspectorTab): void {
+    if (!this.clickedRow || tab === 'attributes' || this.inspectorTabsLoaded.has(tab)) {
+      return;
+    }
+
+    const row = this.clickedRow;
     const requestHeaders = row.request?.[0] as Array<[string, string]> | undefined;
     const responseHeaders = row.response?.[0] as Array<[string, string]> | undefined;
 
-    this.inspectorRequestCookies = requestHeaders
-      ? this.requestReplayService.parseRequestCookies(requestHeaders)
-      : [];
-    this.inspectorRequestHeaders = requestHeaders
-      ? this.requestReplayService.extractHttpHeaders(requestHeaders)
-      : [];
-    this.inspectorResponseHeaders = responseHeaders
-      ? this.requestReplayService.extractHttpHeaders(responseHeaders)
-      : [];
+    switch (tab) {
+      case 'cookies':
+        this.inspectorRequestCookies = requestHeaders
+          ? this.requestReplayService.parseRequestCookies(requestHeaders)
+          : [];
+        this.inspectorTabsLoaded.add('cookies');
+        break;
+      case 'request-headers':
+        this.inspectorRequestHeaders = requestHeaders
+          ? this.requestReplayService.extractHttpHeaders(requestHeaders)
+          : [];
+        this.inspectorTabsLoaded.add('request-headers');
+        break;
+      case 'response-headers':
+        this.inspectorResponseHeaders = responseHeaders
+          ? this.requestReplayService.extractHttpHeaders(responseHeaders)
+          : [];
+        this.inspectorTabsLoaded.add('response-headers');
+        break;
+    }
   }
 
   private countPanelMatches(panelContent: any, search: string): number {

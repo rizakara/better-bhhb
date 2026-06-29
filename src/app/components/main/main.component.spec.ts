@@ -20,9 +20,17 @@ describe('MainComponent', () => {
   let component: MainComponent;
   let fixture: ComponentFixture<MainComponent>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
+  let requestReplayService: jasmine.SpyObj<RequestReplayService>;
 
   beforeEach(async () => {
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
+    requestReplayService = jasmine.createSpyObj('RequestReplayService', {
+      requestPartsToRaw: '',
+      rawRequestToParts: [[], ''],
+      rawRequestToCurl: '',
+      parseRequestCookies: [{ name: 'session', value: 'abc' }],
+      extractHttpHeaders: [{ key: 'Content-Type', value: 'text/html' }],
+    });
 
     await TestBed.configureTestingModule({
       declarations: [MainComponent, InspectorPanelComponent],
@@ -43,16 +51,7 @@ describe('MainComponent', () => {
             setCommentEdit: () => undefined,
           },
         },
-        {
-          provide: RequestReplayService,
-          useValue: {
-            requestPartsToRaw: () => '',
-            rawRequestToParts: () => [[], ''],
-            rawRequestToCurl: () => '',
-            parseRequestCookies: () => [],
-            extractHttpHeaders: () => [],
-          },
-        },
+        { provide: RequestReplayService, useValue: requestReplayService },
         { provide: MatSnackBar, useValue: snackBar },
         {
           provide: HistoryIndexService,
@@ -438,6 +437,81 @@ describe('MainComponent', () => {
     component.clearFilterChip('col:status');
     expect(component.columnFilters['status']).toBeNull();
     expect(component.activeFilterChips.length).toBe(0);
+  });
+
+  it('loads inspector tab data lazily on tab change', () => {
+    const row = {
+      position: 1,
+      method: 'GET',
+      url: 'https://example.com/',
+      host: 'https://example.com',
+      path: '/',
+      request: [[['GET / HTTP/1.1', ''], ['Cookie', 'session=abc']], ''],
+      response: [[['HTTP/1.1 200', '']], 'ok'],
+      comment: '',
+    };
+
+    requestReplayService.parseRequestCookies.calls.reset();
+    requestReplayService.extractHttpHeaders.calls.reset();
+
+    component.selectRow(row);
+
+    expect(component.inspectorAttributes.length).toBeGreaterThan(0);
+    expect(component.inspectorRequestCookies.length).toBe(0);
+    expect(component.inspectorRequestHeaders.length).toBe(0);
+    expect(component.inspectorResponseHeaders.length).toBe(0);
+    expect(requestReplayService.parseRequestCookies).not.toHaveBeenCalled();
+    expect(requestReplayService.extractHttpHeaders).not.toHaveBeenCalled();
+
+    component.setInspectorTab('cookies');
+
+    expect(requestReplayService.parseRequestCookies).toHaveBeenCalled();
+    expect(component.inspectorRequestCookies.length).toBe(1);
+    expect(requestReplayService.extractHttpHeaders).not.toHaveBeenCalled();
+
+    component.setInspectorTab('response-headers');
+
+    expect(requestReplayService.extractHttpHeaders).toHaveBeenCalledTimes(1);
+    expect(component.inspectorResponseHeaders.length).toBe(1);
+  });
+
+  it('truncates large response bodies until expanded', () => {
+    const largeBody = 'x'.repeat(70_000);
+    const row = {
+      position: 1,
+      request: [[['GET / HTTP/1.1', '']], ''],
+      response: [[['HTTP/1.1 200', '']], largeBody],
+      comment: '',
+    };
+
+    component.selectRow(row);
+
+    expect(component.responseBodyTruncated).toBeTrue();
+    expect(component.responseBodyOmittedSize).toBe(70_000 - 65_536);
+    expect(component.responseHighlightedBody.length).toBeLessThan(largeBody.length);
+
+    component.expandResponseBody();
+
+    expect(component.responseBodyTruncated).toBeFalse();
+    expect(component.responseBodyOmittedSize).toBe(0);
+    expect(component.responseHighlightedBody.length).toBe(largeBody.length);
+  });
+
+  it('shows full body while panel search is active', () => {
+    const largeBody = 'y'.repeat(70_000);
+    const row = {
+      position: 1,
+      request: [[['GET / HTTP/1.1', '']], largeBody],
+      response: [[['HTTP/1.1 200', '']], ''],
+      comment: '',
+    };
+
+    component.selectRow(row);
+    component.requestSearch = 'needle';
+    (component as unknown as { updateRequestHighlights(): void }).updateRequestHighlights();
+
+    expect(component.requestBodyTruncated).toBeFalse();
+    expect(component.requestHighlightedBody.length).toBe(largeBody.length);
   });
 
   it('captures and restores workspace filter state', () => {
