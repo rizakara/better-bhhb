@@ -211,6 +211,7 @@ export class HeaderComponent implements OnInit {
     if (this.dialog.openDialogs.length == 0) {
       this.dialog.open(InfoDialogComponent, {
         width: '900px',
+        maxHeight: '85vh',
         panelClass: 'bhhb-dialog',
       });
     }

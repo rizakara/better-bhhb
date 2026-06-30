@@ -3,7 +3,13 @@
 </h2>
 <mat-dialog-content class="mat-typography">
   <p align="center">
-    <svg class="app-logo" version="1.1" height="15" viewBox="0 0 108 22" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><text x="1" y="16" font-family="'Nunito', sans-serif" font-weight="900" font-size="16" fill="#177FC5">better<tspan fill="currentColor">-bhhb</tspan></text></svg> is a fork of bhhb — a tool to view HTTP history exported from Burp Suite Community Edition (CE).
+    <svg class="app-logo" version="1.1" height="15" viewBox="0 0 108 22" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><text x="1" y="16" font-family="'Nunito', sans-serif" font-weight="900" font-size="16" fill="#177FC5">better<tspan fill="currentColor">-bhhb</tspan></text></svg>
+    is a Swiss army knife for Burp HTTP history: import, filter, diff, replay, and export, all in the browser.
+  </p>
+  <p align="center">
+    Built for Burp Suite Community Edition. Runs as a
+    <a href="https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps"><code>PWA</code></a>:
+    install it, work offline, and keep your data on your device.
   </p>
 
   <div class="ext">
@@ -24,45 +30,52 @@
         <span>View Source on GitHub</span>
       </button>
     </a>
-    <a class="btn" href="https://github.com/adityatelange/bhhb">
+    <a class="btn" href="https://github.com/rizakara/better-bhhb/releases?q=burp-extension">
       <button mat-button>
         <svg role="img" viewBox="0 0 24 24" height='30' xmlns="http://www.w3.org/2000/svg" fill="currentColor"
           class="mat-icon notranslate material-icons mat-icon-no-color">
-          <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 
-                9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 
-                18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 
-                1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 
-                0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 
-                1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 
-                3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 
-                2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
         </svg>
-        <span>Original bhhb</span>
+        <span>Burp extension</span>
       </button>
     </a>
   </div>
+
   <hr>
+
+  <h3 class="info-section-title">What problem does this solve?</h3>
   <ul>
-    <li><code>Burp Suite Community Edition</code> has one BIG feature paywalled - Disk-based projects 💾.</li>
-    <li>Because of which Community Edition users cannot save their <code>HTTP history</code> and Sitemap info, which are
-      destroyed after the temporary session is closed 🗑️.</li>
-    <li>Although this is a thing, users can export their Burp CE's HTTP history by <em>selecting the records</em>
-      (Ctrl+A) and using <strong><code>Save items</code></strong> 💾 option in context menu of
-      <code>Proxy-&gt;HTTP history</code> or <code>Target-&gt;Sitemap</code> or <code>Logger</code>.
-    </li>
-    <li>Using that Burp will export the HTTP history along with Requests and Responses into a <em>XML file</em>.</li>
-    <li><strong><code>better-bhhb</code></strong> can open these exported items, parse it and display them in a well-formatted
-      manner. 📋</li>
-    <li>This application is a <a
-        href="https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps"><code>PWA</code></a>, which can be
-      installed in any chromium based browser and could run offline, with all of the processing done on device itself
-      ⚙️.</li>
-    <li>Linked Forum thread - <a
-        href="https://forum.portswigger.net/thread/how-do-i-view-items-export-from-burp-s-proxy-s-history-0ae0f99e">How
-        do I view items export from Burp's proxy's history?</a></li>
+    <li><code>Burp Suite Community Edition</code> does not include disk-based projects, so HTTP history, sitemap data, and Logger output are lost when a temporary session ends.</li>
+    <li>CE users can export records (Ctrl+A, then <strong><code>Save items</code></strong>) from
+      <code>Proxy-&gt;HTTP history</code>, <code>Target-&gt;Sitemap</code>, or <code>Logger</code> to a Burp XML file.</li>
+    <li><strong><code>better-bhhb</code></strong> opens those exports and presents them in a fast, filterable UI.</li>
   </ul>
 
-  <img width="100%" src="assets/bhhb.png" alt="">
+  <h3 class="info-section-title">Getting data in</h3>
+  <ul>
+    <li><strong>Burp extension (recommended):</strong> install the extension from
+      <a href="https://github.com/rizakara/better-bhhb/releases?q=burp-extension">GitHub Releases</a>,
+      keep this app open, then in Burp use <strong>Extensions &rarr; Send selected&hellip;</strong> (or
+      <strong>Send all&hellip;</strong> for proxy history / sitemap). The app imports automatically within a couple of seconds.</li>
+    <li><strong>Manual import:</strong> use <strong>Import files&hellip;</strong>, drag-and-drop XML onto the page, or reopen a file from
+      <strong>Imported sessions&hellip;</strong> (recent exports are remembered in IndexedDB).</li>
+    <li>On import you can merge, replace, or open a new workspace. Duplicate requests can be merged or skipped.</li>
+  </ul>
+
+  <h3 class="info-section-title">Features</h3>
+  <ul>
+    <li><strong>Import &amp; sessions:</strong> drag-and-drop, session history, duplicate merge/skip</li>
+    <li><strong>Workspaces:</strong> multi-tab layouts with <code>.bhhb-workspace.json</code> import/export</li>
+    <li><strong>Table &amp; filtering:</strong> column filters, tree view (<code>t</code>), global search (<code>/</code>, Ctrl+F)</li>
+    <li><strong>Analysis:</strong> diff, replay, cURL export, inspector, comments (<code>n</code>)</li>
+    <li><strong>More:</strong> fast indexing, themes, filtered export, keyboard navigation</li>
+  </ul>
+
+  <p class="info-license">
+    <a href="https://github.com/rizakara/better-bhhb/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+  </p>
+
+  <img width="100%" src="assets/bhhb.png" alt="Better-BHHB screenshot">
 
 </mat-dialog-content>
 <mat-dialog-actions align="end">

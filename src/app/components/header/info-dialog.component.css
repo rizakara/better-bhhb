@@ -22,7 +22,34 @@ a:visited {
 
 ul {
     padding: 0 15px;
+    margin: 0 0 12px;
 }
+
+.info-section-title {
+    margin: 16px 0 8px;
+    font-size: calc(15px * var(--font-scale));
+    font-weight: 600;
+}
+
+.info-license {
+    margin: 4px 0 16px;
+    padding: 0 15px;
+    text-align: left;
+    font-size: calc(12px * var(--font-scale));
+}
+
+.info-license a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.info-license a:hover,
+.info-license a:focus-visible {
+    color: inherit;
+    text-decoration: underline;
+}
+
+
 
 .ext {
     display: flex;
